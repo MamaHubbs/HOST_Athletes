@@ -245,35 +245,9 @@
         // The base path is intentionally empty as files are expected in the same directory.
         const jsonFilesBasePath = '';
         const weeklyFileNames = [
-            "2025resultsweek01.json",
-            "2025resultsweek02.json",
-            "2025resultsweek03.json"
+            "2025resultsweek01.json"
         ];
 
-        // This object holds the actual data only for Canvas preview/local testing fallback.
-        // DELETE THIS IN PRODUCTION if you are truly fetching from server.
-        const simulatedJsonData = {
-            "2025resultsweek01.json": [
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Freestyle", seedTime: "1:02.50", resultTime: "1:01.80", meetDate: "2025-06-08", place: 1, points: 50 },
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "50m Freestyle", seedTime: "0:28.00", resultTime: "0:27.50", meetDate: "2025-06-08", place: 2, points: 45 },
-                { id: 2, lastName: "Johnson", firstName: "Bob", category: "Male", age: 22, eventSwum: "50m Backstroke", seedTime: "0:28.15", resultTime: "0:27.90", meetDate: "2025-06-08", place: 1, points: 60 },
-                { id: 11, lastName: "Hubbard", firstName: "Zachary", category: "Male", age: 18, eventSwum: "50m Breaststroke", seedTime: "0:31.12", resultTime: "0:30.98", meetDate: "2025-06-08", place: 1, points: 8 },
-                { id: 11, lastName: "Hubbard", firstName: "Zachary", category: "Male", age: 18, eventSwum: "100m Freestyle", seedTime: "0:55.00", resultTime: "0:54.50", meetDate: "2025-06-08", place: 2, points: 7 },
-            ],
-            "2025resultsweek02.json": [
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Freestyle", seedTime: "1:01.00", resultTime: "1:00.50", meetDate: "2025-06-15", place: 1, points: 50 },
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Backstroke", seedTime: "1:12.00", resultTime: "1:11.50", meetDate: "2025-06-15", place: 2, points: 40 },
-                { id: 2, lastName: "Johnson", firstName: "Bob", category: "Male", age: 22, eventSwum: "100m Backstroke", seedTime: "0:59.00", resultTime: "0:58.80", meetDate: "2025-06-15", place: 1, points: 60 },
-                { id: 3, lastName: "Williams", firstName: "Charlie", category: "Male", age: 15, eventSwum: "200m IM", seedTime: "2:30.00", resultTime: "2:29.00", meetDate: "2025-06-15", place: 1, points: 50 },
-                { id: 11, lastName: "Hubbard", firstName: "Zachary", category: "Male", age: 18, eventSwum: "50m Breaststroke", seedTime: "0:31.00", resultTime: "0:30.50", meetDate: "2025-06-15", place: 1, points: 9 },
-            ],
-            "2025resultsweek03.json": [
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 15, eventSwum: "50m Freestyle", seedTime: "0:26.50", resultTime: "0:26.20", meetDate: "2025-06-22", place: 1, points: 55 },
-                { id: 2, lastName: "Johnson", firstName: "Bob", category: "Male", age: 22, eventSwum: "200m Backstroke", seedTime: "2:10.00", resultTime: "2:09.50", meetDate: "2025-06-22", place: 1, points: 65 },
-                { id: 4, lastName: "Jones", firstName: "Diana", category: "Female", age: 46, eventSwum: "50m Breaststroke", seedTime: "0:37.00", resultTime: "0:36.80", meetDate: "2025-06-22", place: 1, points: 45 },
-            ]
-        };
-        // --- End Simulated JSON Data ---
 
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
