@@ -233,30 +233,19 @@
             return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
         }
 
-        // --- Simulated JSON Data (for demonstration without a live server) ---
-        // In a real application, these would be separate JSON files accessible via HTTP.
-        const simulatedJsonData = {
-            "2025resultsweek01.json": [
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Freestyle", seedTime: "1:02.50", resultTime: "1:01.80", meetDate: "2025-06-08", place: 1, points: 50 },
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "50m Freestyle", seedTime: "0:28.00", resultTime: "0:27.50", meetDate: "2025-06-08", place: 2, points: 45 },
-                { id: 2, lastName: "Johnson", firstName: "Bob", category: "Male", age: 22, eventSwum: "50m Backstroke", seedTime: "0:28.15", resultTime: "0:27.90", meetDate: "2025-06-08", place: 1, points: 60 },
-                { id: 11, lastName: "Hubbard", firstName: "Zachary", category: "Male", age: 18, eventSwum: "50m Breaststroke", seedTime: "0:31.12", resultTime: "0:30.98", meetDate: "2025-06-08", place: 1, points: 8 },
-                { id: 11, lastName: "Hubbard", firstName: "Zachary", category: "Male", age: 18, eventSwum: "100m Freestyle", seedTime: "0:55.00", resultTime: "0:54.50", meetDate: "2025-06-08", place: 2, points: 7 },
-            ],
-            "2025resultsweek02.json": [
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Freestyle", seedTime: "1:01.00", resultTime: "1:00.50", meetDate: "2025-06-15", place: 1, points: 50 },
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Backstroke", seedTime: "1:12.00", resultTime: "1:11.50", meetDate: "2025-06-15", place: 2, points: 40 },
-                { id: 2, lastName: "Johnson", firstName: "Bob", category: "Male", age: 22, eventSwum: "100m Backstroke", seedTime: "0:59.00", resultTime: "0:58.80", meetDate: "2025-06-15", place: 1, points: 60 },
-                { id: 3, lastName: "Williams", firstName: "Charlie", category: "Male", age: 15, eventSwum: "200m IM", seedTime: "2:30.00", resultTime: "2:29.00", meetDate: "2025-06-15", place: 1, points: 50 },
-                { id: 11, lastName: "Hubbard", firstName: "Zachary", category: "Male", age: 18, eventSwum: "50m Breaststroke", seedTime: "0:31.00", resultTime: "0:30.50", meetDate: "2025-06-15", place: 1, points: 9 },
-            ],
-            "2025resultsweek03.json": [
-                { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 15, eventSwum: "50m Freestyle", seedTime: "0:26.50", resultTime: "0:26.20", meetDate: "2025-06-22", place: 1, points: 55 },
-                { id: 2, lastName: "Johnson", firstName: "Bob", category: "Male", age: 22, eventSwum: "200m Backstroke", seedTime: "2:10.00", resultTime: "2:09.50", meetDate: "2025-06-22", place: 1, points: 65 },
-                { id: 4, lastName: "Jones", firstName: "Diana", category: "Female", age: 46, eventSwum: "50m Breaststroke", seedTime: "0:37.00", resultTime: "0:36.80", meetDate: "2025-06-22", place: 1, points: 45 },
-            ]
-        };
-        // --- End Simulated JSON Data ---
+        // Helper to format date with year (e.g., "June 8, 2025")
+        function formatDateWithYear(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+
+        // --- Configuration for JSON file paths and mock data (for local development/testing) ---
+        // IMPORTANT: In your production environment, you should remove the `simulatedJsonData` object
+        // and ensure your web server serves the actual JSON files from the specified path.
+        const jsonFilesBasePath = './'; // JSON files are in the same directory, use './' for proper relative URL
+        const weeklyFileNames = [
+            "2025resultsweek01.json"
+        ];
 
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
@@ -283,88 +272,117 @@
             // Clear existing options
             jsonFileSelector.innerHTML = '';
 
-            // Add week-specific options with calculated date ranges
-            const fileNames = Object.keys(simulatedJsonData).sort(); // Sort files alphabetically
-            fileNames.forEach(fileName => {
-                const weekData = simulatedJsonData[fileName];
-                if (weekData.length > 0) {
-                    // Find the min and max date in the week's data
-                    const datesInWeek = weekData.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+            const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
+                // Ensure the filePath is correct for fetching JSON from the same directory
+                const filePath = `${jsonFilesBasePath}${fileName}`;
+                let weekData = [];
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        // Fallback to simulated data for option population if real fetch fails
+                        console.warn(`Could not fetch ${filePath}. Falling back to simulated data for dropdown option.`);
+                        weekData = simulatedJsonData[fileName];
+                        if (!weekData) {
+                             console.warn(`No simulated data for ${fileName} either.`);
+                             return null;
+                        }
+                    } else {
+                        weekData = await response.json();
+                    }
+                } catch (error) {
+                    console.error(`Error fetching ${filePath} for dropdown options:`, error);
+                    weekData = simulatedJsonData[fileName]; // Fallback
+                    if (!weekData) {
+                         console.warn(`No simulated data for ${fileName} either.`);
+                         return null;
+                    }
+                }
+
+                if (weekData && weekData.length > 0) {
+                    const datesInWeek = weekData.map(d => new Date(d.meetDate)).sort((a, b) => a - b);
                     const minDate = datesInWeek[0];
                     const maxDate = datesInWeek[datesInWeek.length - 1];
 
                     const option = document.createElement('option');
                     option.value = fileName;
-                    option.textContent = `${fileName.replace('.json', '')} - ${formatDate(minDate.toISOString().split('T')[0])} - ${formatDate(maxDate.toISOString().split('T')[0])}`;
-                    jsonFileSelector.appendChild(option);
+                    // Format: Week #1 (Jun 8 - Jun 13, 2025)
+                    option.textContent = `Week #${index + 1} (${formatDate(minDate.toISOString().split('T')[0])} - ${formatDate(maxDate.toISOString().split('T')[0])}, ${new Date(maxDate).getFullYear()})`;
+                    return option;
                 }
+                return null; // Return null for invalid data
             });
 
-            // Add the "All Results" option last
-            const allResultsOption = document.createElement('option');
-            allResultsOption.value = "all-results";
-            allResultsOption.textContent = "All Results (All Weeks)";
-            jsonFileSelector.appendChild(allResultsOption);
+            Promise.all(optionsPromises).then(options => {
+                options.filter(Boolean).forEach(option => jsonFileSelector.appendChild(option)); // Add valid options
 
-            // Set default selected file
-            jsonFileSelector.value = "2025resultsweek01.json";
+                // Add the "All Results" option last
+                const allResultsOption = document.createElement('option');
+                allResultsOption.value = "all-results";
+                allResultsOption.textContent = "All Results (All Weeks)";
+                jsonFileSelector.appendChild(allResultsOption);
+
+                // Set default selected file after all options are populated
+                jsonFileSelector.value = "2025resultsweek01.json";
+            });
         }
 
         /**
-         * Fetches data from a simulated JSON file(s) and updates the report.
-         * In a real application, this would use `fetch(url)` to load actual files.
+         * Fetches data from JSON file(s) and updates the report.
+         * IMPORTANT: This now uses actual `fetch` calls. Ensure your web server
+         * serves the JSON files from the `jsonFilesBasePath` directory.
          * @param {string} fileName - The name of the JSON file to load, or "all-results".
          */
         async function fetchAndRenderData(fileName) {
             let dataToLoad = [];
 
-            // --- REAL WORLD SCENARIO: Use actual fetch() calls here ---
-            // Example for fetching a single file:
-            // if (fileName !== "all-results") {
-            //     const filePath = `your/server/path/${fileName}`; // <--- IMPORTANT: Update this path!
-            //     try {
-            //         const response = await fetch(filePath);
-            //         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            //         dataToLoad = await response.json();
-            //     } catch (error) {
-            //         console.error(`Could not fetch ${fileName}:`, error);
-            //         // Optionally display an error message to the user
-            //         return; // Stop execution if fetch fails
-            //     }
-            // } else {
-            //     // Example for fetching all files (more complex, consider a backend endpoint for all data)
-            //     const allFileNames = Object.keys(simulatedJsonData); // Or hardcode your actual file names
-            //     for (const name of allFileNames) {
-            //         const filePath = `your/server/path/${name}`; // <--- IMPORTANT: Update this path!
-            //         try {
-            //             const response = await fetch(filePath);
-            //             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            //             const weekData = await response.json();
-            //             dataToLoad = dataToLoad.concat(weekData);
-            //         } catch (error) {
-            //             console.error(`Could not fetch ${name}:`, error);
-            //             // Continue trying other files, or stop based on your error handling policy
-            //         }
-            //     }
-            // }
-            // --- END REAL WORLD SCENARIO ---
-
-
-            // --- SIMULATED FETCH FOR CANVAS PREVIEW (DELETE IN PRODUCTION) ---
-            // This block simulates the fetch operation using the pre-defined `simulatedJsonData`
-            // so the code runs directly in the Canvas preview without needing an actual server.
-            await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-            if (fileName === "all-results") {
-                for (const weekData of Object.values(simulatedJsonData)) {
-                    dataToLoad = dataToLoad.concat(weekData);
+            if (fileName !== "all-results") {
+                // Prepend './' to the filename for proper relative URL parsing by fetch
+                const filePath = `${jsonFilesBasePath}${fileName}`;
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        // Fallback to simulated data if real fetch fails (for Canvas preview or local testing without server)
+                        console.warn(`Could not fetch ${filePath}. Using simulated data instead.`);
+                        dataToLoad = simulatedJsonData[fileName];
+                        if (!dataToLoad) throw new Error(`No simulated data available for ${fileName}`);
+                    } else {
+                        dataToLoad = await response.json();
+                    }
+                } catch (error) {
+                    console.error(`Error fetching ${filePath}:`, error);
+                    // Fallback to simulated data if network error occurs (for Canvas preview)
+                    console.warn(`Falling back to simulated data for ${fileName} due to network error.`);
+                    dataToLoad = simulatedJsonData[fileName];
+                    if (!dataToLoad) {
+                         console.error(`No simulated data available for ${fileName} after network error.`);
+                         // Consider displaying a more prominent error message to the user here
+                         dataToLoad = []; // Ensure it's an empty array if all else fails
+                    }
                 }
             } else {
-                dataToLoad = simulatedJsonData[fileName];
+                // Fetch all files if "all-results" is selected
+                const fetchPromises = weeklyFileNames.map(async (name) => {
+                    const filePath = `${jsonFilesBasePath}${name}`;
+                    try {
+                        const response = await fetch(filePath);
+                        if (!response.ok) {
+                            console.warn(`Could not fetch ${filePath}. Using simulated data for this week.`);
+                            return simulatedJsonData[name] || []; // Fallback to simulated or empty array
+                        }
+                        return await response.json();
+                    } catch (error) {
+                        console.error(`Error fetching ${filePath}:`, error);
+                        console.warn(`Falling back to simulated data for ${name} due to network error.`);
+                        return simulatedJsonData[name] || []; // Fallback to simulated or empty array
+                    }
+                });
+
+                const allWeeksData = await Promise.all(fetchPromises);
+                dataToLoad = allWeeksData.flat(); // Flatten the array of arrays into a single array
             }
-            // --- END SIMULATED FETCH ---
 
 
-            if (dataToLoad) {
+            if (dataToLoad && dataToLoad.length > 0) {
                 allAthleteData = dataToLoad;
                 applyFilters(); // Apply current filters (including date filters) after new data loads
                 populateSwimmerSelect(); // Repopulate swimmer select based on new data
@@ -378,7 +396,7 @@
                     if (progressionChartInstance) progressionChartInstance.destroy();
                 }
             } else {
-                console.error(`Error: Data for ${fileName} not found.`);
+                console.warn(`No data loaded for ${fileName}.`);
                 allAthleteData = [];
                 filteredAthleteData = [];
                 renderTable(filteredAthleteData);
@@ -530,7 +548,7 @@
             // Sort swimmers alphabetically by full name
             uniqueSwimmers.sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-            uniqueSwimmers.forEach(swimmer => {
+            uniqueSwmers.forEach(swimmer => {
                 const option = document.createElement('option');
                 option.value = swimmer.id;
                 option.textContent = swimmer.fullName;
