@@ -233,8 +233,8 @@
             return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
         }
 
-        // --- Simulated JSON Data ---
-        // In a real application, you would load these from actual files via fetch().
+        // --- Simulated JSON Data (for demonstration without a live server) ---
+        // In a real application, these would be separate JSON files accessible via HTTP.
         const simulatedJsonData = {
             "2025resultsweek01.json": [
                 { id: 1, lastName: "Smith", firstName: "Alice", category: "Female", age: 14, eventSwum: "100m Freestyle", seedTime: "1:02.50", resultTime: "1:01.80", meetDate: "2025-06-08", place: 1, points: 50 },
@@ -284,20 +284,18 @@
             jsonFileSelector.innerHTML = '';
 
             // Add week-specific options with calculated date ranges
-            const fileNames = Object.keys(simulatedJsonData);
+            const fileNames = Object.keys(simulatedJsonData).sort(); // Sort files alphabetically
             fileNames.forEach(fileName => {
                 const weekData = simulatedJsonData[fileName];
                 if (weekData.length > 0) {
-                    // Assuming the meetDate of the first entry represents the start of the week for display
-                    const startDate = weekData[0].meetDate;
-                    const dateObj = new Date(startDate);
-                    // Calculate end date (6 days after start date for a full week, as example)
-                    const endDateObj = new Date(dateObj);
-                    endDateObj.setDate(dateObj.getDate() + 6);
+                    // Find the min and max date in the week's data
+                    const datesInWeek = weekData.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+                    const minDate = datesInWeek[0];
+                    const maxDate = datesInWeek[datesInWeek.length - 1];
 
                     const option = document.createElement('option');
                     option.value = fileName;
-                    option.textContent = `${fileName.replace('.json', '')} - ${formatDate(startDate)} - ${formatDate(endDateObj.toISOString().split('T')[0])}`;
+                    option.textContent = `${fileName.replace('.json', '')} - ${formatDate(minDate.toISOString().split('T')[0])} - ${formatDate(maxDate.toISOString().split('T')[0])}`;
                     jsonFileSelector.appendChild(option);
                 }
             });
@@ -307,6 +305,9 @@
             allResultsOption.value = "all-results";
             allResultsOption.textContent = "All Results (All Weeks)";
             jsonFileSelector.appendChild(allResultsOption);
+
+            // Set default selected file
+            jsonFileSelector.value = "2025resultsweek01.json";
         }
 
         /**
@@ -316,15 +317,52 @@
          */
         async function fetchAndRenderData(fileName) {
             let dataToLoad = [];
+
+            // --- REAL WORLD SCENARIO: Use actual fetch() calls here ---
+            // Example for fetching a single file:
+            // if (fileName !== "all-results") {
+            //     const filePath = `your/server/path/${fileName}`; // <--- IMPORTANT: Update this path!
+            //     try {
+            //         const response = await fetch(filePath);
+            //         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            //         dataToLoad = await response.json();
+            //     } catch (error) {
+            //         console.error(`Could not fetch ${fileName}:`, error);
+            //         // Optionally display an error message to the user
+            //         return; // Stop execution if fetch fails
+            //     }
+            // } else {
+            //     // Example for fetching all files (more complex, consider a backend endpoint for all data)
+            //     const allFileNames = Object.keys(simulatedJsonData); // Or hardcode your actual file names
+            //     for (const name of allFileNames) {
+            //         const filePath = `your/server/path/${name}`; // <--- IMPORTANT: Update this path!
+            //         try {
+            //             const response = await fetch(filePath);
+            //             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            //             const weekData = await response.json();
+            //             dataToLoad = dataToLoad.concat(weekData);
+            //         } catch (error) {
+            //             console.error(`Could not fetch ${name}:`, error);
+            //             // Continue trying other files, or stop based on your error handling policy
+            //         }
+            //     }
+            // }
+            // --- END REAL WORLD SCENARIO ---
+
+
+            // --- SIMULATED FETCH FOR CANVAS PREVIEW (DELETE IN PRODUCTION) ---
+            // This block simulates the fetch operation using the pre-defined `simulatedJsonData`
+            // so the code runs directly in the Canvas preview without needing an actual server.
+            await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
             if (fileName === "all-results") {
-                // Concatenate all data from all simulated weeks
                 for (const weekData of Object.values(simulatedJsonData)) {
                     dataToLoad = dataToLoad.concat(weekData);
                 }
             } else {
-                // Load data for a specific week
                 dataToLoad = simulatedJsonData[fileName];
             }
+            // --- END SIMULATED FETCH ---
+
 
             if (dataToLoad) {
                 allAthleteData = dataToLoad;
@@ -340,7 +378,7 @@
                     if (progressionChartInstance) progressionChartInstance.destroy();
                 }
             } else {
-                console.error(`Error: Data for ${fileName} not found in simulated data.`);
+                console.error(`Error: Data for ${fileName} not found.`);
                 allAthleteData = [];
                 filteredAthleteData = [];
                 renderTable(filteredAthleteData);
@@ -798,10 +836,11 @@
         // Initial render on page load: populate selector, then load default data
         document.addEventListener('DOMContentLoaded', () => {
             populateJsonFileSelector();
-            const defaultFile = jsonFileSelector.value; // Get the initially selected value
+            // Set the default selected value to "2025resultsweek01.json"
+            jsonFileSelector.value = "2025resultsweek01.json";
+            const defaultFile = jsonFileSelector.value;
             fetchAndRenderData(defaultFile);
         });
     </script>
 </body>
 </html>
-
