@@ -206,7 +206,7 @@
     <script>
         // Helper function to convert time string (MM:SS.ms or SS.ms) to seconds
         function timeToSeconds(timeStr) {
-            if (!timeStr || timeStr === 'NS' || timeStr === 'DQ') return Infinity;
+            if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity; // Added 'NT' for No Time
             const parts = String(timeStr).split(':'); // Ensure timeStr is a string
             if (parts.length === 2) {
                 const minutes = parseInt(parts[0]);
@@ -239,13 +239,12 @@
             return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         }
 
-        // --- Configuration for JSON file paths and mock data (for local development/testing) ---
-        // IMPORTANT: In your production environment, you should remove the `simulatedJsonData` object
-        // and ensure your web server serves the actual JSON files from the specified path.
-        // The base path is intentionally empty as files are expected in the same directory.
-        const jsonFilesBasePath = '';
+        // --- Configuration for JSON file paths and weekly file names ---
         const weeklyFileNames = [
-            "2025resultsweek01.json"
+            "2025resultsweek01.json",
+            // Add more weeks here as you get new JSON files, e.g.,
+            // "2025resultsweek02.json",
+            // "2025resultsweek03.json"
         ];
 
 
@@ -268,6 +267,49 @@
         let progressionChartInstance = null;
 
         /**
+         * Transforms raw data from the JSON "values" array into an array of objects
+         * with meaningful property names and adds an 'id' and 'meetDate'.
+         * @param {Array<Array>} rawValues - The "values" array from the JSON.
+         * @param {Array<string>} fieldNames - The "fields" array from the JSON.
+         * @param {string} meetDateString - The meet date to assign to all records from this file.
+         * @returns {Array<Object>} Transformed athlete data.
+         */
+        function transformRawData(rawValues, fieldNames, meetDateString) {
+            const transformed = [];
+            // Assuming the `fields` array corresponds directly to the order in `values`
+            const lastNameIndex = fieldNames.indexOf('last_name');
+            const firstNameIndex = fieldNames.indexOf('first_name');
+            const genderIndex = fieldNames.indexOf('competition_category'); // This is 'gender'
+            const ageIndex = fieldNames.indexOf('age');
+            const eventSwumIndex = fieldNames.indexOf('event_swum');
+            const seedTimeIndex = fieldNames.indexOf('seed_time');
+            const resultTimeIndex = fieldNames.indexOf('result_time');
+            const placeIndex = fieldNames.indexOf('place');
+            const pointsIndex = fieldNames.indexOf('points');
+
+            rawValues.forEach((row, index) => {
+                // Generate a simple ID for the athlete (not globally unique, but unique within this dataset)
+                // A more robust ID would come from a database.
+                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
+                
+                transformed.push({
+                    id: athleteId, // Generated ID
+                    lastName: row[lastNameIndex],
+                    firstName: row[firstNameIndex],
+                    category: row[genderIndex], // Renamed to category in JS for consistency with display
+                    age: row[ageIndex],
+                    eventSwum: row[eventSwumIndex],
+                    seedTime: String(row[seedTimeIndex]), // Ensure it's a string for timeToSeconds
+                    resultTime: String(row[resultTimeIndex]), // Ensure it's a string for timeToSeconds
+                    meetDate: meetDateString.split(' ')[0], // Extract just the date part (e.g., "YYYY-MM-DD")
+                    place: row[placeIndex],
+                    points: row[pointsIndex]
+                });
+            });
+            return transformed;
+        }
+
+        /**
          * Populates the JSON file selector with options including date ranges.
          */
         function populateJsonFileSelector() {
@@ -275,43 +317,47 @@
             jsonFileSelector.innerHTML = '';
 
             const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
-                // Construct full URL using new URL() for robustness
                 const filePath = new URL(fileName, window.location.href).toString();
-                let weekData = [];
+                let rawFileData = null; // Will store the raw object from the JSON file
+
                 try {
                     const response = await fetch(filePath);
                     if (!response.ok) {
-                        // Fallback to simulated data for option population if real fetch fails
                         console.warn(`Could not fetch ${filePath}. Falling back to simulated data for dropdown option.`);
-                        weekData = simulatedJsonData[fileName];
-                        if (!weekData) {
-                             console.warn(`No simulated data for ${fileName} either.`);
+                        rawFileData = simulatedJsonData[fileName];
+                        if (!rawFileData) {
+                             console.warn(`No simulated data for ${fileName} either. Option will be skipped.`);
                              return null;
                         }
                     } else {
-                        weekData = await response.json();
+                        rawFileData = await response.json();
                     }
                 } catch (error) {
                     console.error(`Error fetching ${filePath} for dropdown options:`, error);
-                    weekData = simulatedJsonData[fileName]; // Fallback
-                    if (!weekData) {
-                         console.warn(`No simulated data for ${fileName} either.`);
+                    rawFileData = simulatedJsonData[fileName]; // Fallback
+                    if (!rawFileData) {
+                         console.warn(`No simulated data for ${fileName} either. Option will be skipped.`);
                          return null;
                     }
                 }
 
-                if (weekData && weekData.length > 0) {
-                    const datesInWeek = weekData.map(d => new Date(d.meetDate)).sort((a, b) => a - b);
-                    const minDate = datesInWeek[0];
-                    const maxDate = datesInWeek[datesInWeek.length - 1];
-
+                // Ensure rawFileData and its properties exist before proceeding
+                if (rawFileData && rawFileData.values && rawFileData.values.length > 0) {
+                    // Use the 'started_at' from the JSON file as the single meet date for this file's data
+                    const meetDateFromFile = rawFileData.started_at ? rawFileData.started_at.split(' ')[0] : 'UNKNOWN_DATE';
+                    
                     const option = document.createElement('option');
                     option.value = fileName;
                     // Format: Week #1 (Jun 8 - Jun 13, 2025)
-                    option.textContent = `Week #${index + 1} (${formatDate(minDate.toISOString().split('T')[0])} - ${formatDate(maxDate.toISOString().split('T')[0])}, ${new Date(maxDate).getFullYear()})`;
+                    // The date range here is an approximation; ideally, you'd calculate it from data or metadata
+                    const startOfMonth = new Date(meetDateFromFile);
+                    const endOfWeek = new Date(startOfMonth);
+                    endOfWeek.setDate(startOfMonth.getDate() + 5); // Assuming 5 days after start for the range
+                    
+                    option.textContent = `Week #${index + 1} (${formatDate(startOfMonth.toISOString().split('T')[0])} - ${formatDate(endOfWeek.toISOString().split('T')[0])}, ${new Date(meetDateFromFile).getFullYear()})`;
                     return option;
                 }
-                return null; // Return null for invalid data
+                return null; // Return null for invalid data or empty values
             });
 
             Promise.all(optionsPromises).then(options => {
@@ -330,62 +376,69 @@
 
         /**
          * Fetches data from JSON file(s) and updates the report.
-         * IMPORTANT: This now uses actual `fetch` calls. Ensure your web server
-         * serves the JSON files from the `jsonFilesBasePath` directory.
          * @param {string} fileName - The name of the JSON file to load, or "all-results".
          */
         async function fetchAndRenderData(fileName) {
-            let dataToLoad = [];
+            let dataToProcess = []; // This will be the raw JSON object (with .values, .fields, etc.)
 
             if (fileName !== "all-results") {
-                // Construct full URL using new URL() for robustness
                 const filePath = new URL(fileName, window.location.href).toString();
                 try {
                     const response = await fetch(filePath);
                     if (!response.ok) {
-                        // Fallback to simulated data if real fetch fails (for Canvas preview or local testing without server)
                         console.warn(`Could not fetch ${filePath}. Using simulated data instead.`);
-                        dataToLoad = simulatedJsonData[fileName];
-                        if (!dataToLoad) throw new Error(`No simulated data available for ${fileName}`);
+                        dataToProcess = simulatedJsonData[fileName];
+                        if (!dataToProcess) throw new Error(`No simulated data available for ${fileName}`);
                     } else {
-                        dataToLoad = await response.json();
+                        dataToProcess = await response.json();
                     }
                 } catch (error) {
                     console.error(`Error fetching ${filePath}:`, error);
-                    // Fallback to simulated data if network error occurs (for Canvas preview)
                     console.warn(`Falling back to simulated data for ${fileName} due to network error.`);
-                    dataToLoad = simulatedJsonData[fileName];
-                    if (!dataToLoad) {
+                    dataToProcess = simulatedJsonData[fileName];
+                    if (!dataToProcess) {
                          console.error(`No simulated data available for ${fileName} after network error.`);
-                         // Consider displaying a more prominent error message to the user here
                          dataToLoad = []; // Ensure it's an empty array if all else fails
+                         return; // Exit if no data can be retrieved
                     }
                 }
+                
+                // Transform the single week's data
+                allAthleteData = transformRawData(dataToProcess.values, dataToProcess.fields, dataToProcess.started_at);
+
             } else {
                 // Fetch all files if "all-results" is selected
                 const fetchPromises = weeklyFileNames.map(async (name) => {
-                    const filePath = new URL(name, window.location.href).toString(); // Construct URL for each file
+                    const filePath = new URL(name, window.location.href).toString();
+                    let rawFileData = null;
                     try {
                         const response = await fetch(filePath);
                         if (!response.ok) {
                             console.warn(`Could not fetch ${filePath}. Using simulated data for this week.`);
-                            return simulatedJsonData[name] || []; // Fallback to simulated or empty array
+                            rawFileData = simulatedJsonData[name];
+                            if (!rawFileData) return []; // Return empty array if no simulated data
+                        } else {
+                            rawFileData = await response.json();
                         }
-                        return await response.json();
                     } catch (error) {
                         console.error(`Error fetching ${filePath}:`, error);
                         console.warn(`Falling back to simulated data for ${name} due to network error.`);
-                        return simulatedJsonData[name] || []; // Fallback to simulated or empty array
+                        rawFileData = simulatedJsonData[name]; // Fallback
+                        if (!rawFileData) return [];
                     }
+                    // Transform each week's data and include the meet date from its 'started_at'
+                    if (rawFileData && rawFileData.values && rawFileData.fields && rawFileData.started_at) {
+                         return transformRawData(rawFileData.values, rawFileData.fields, rawFileData.started_at);
+                    }
+                    return [];
                 });
 
-                const allWeeksData = await Promise.all(fetchPromises);
-                dataToLoad = allWeeksData.flat(); // Flatten the array of arrays into a single array
+                const allWeeksTransformedData = await Promise.all(fetchPromises);
+                allAthleteData = allWeeksTransformedData.flat(); // Flatten the array of arrays into a single array
             }
 
 
-            if (dataToLoad && dataToLoad.length > 0) {
-                allAthleteData = dataToLoad;
+            if (allAthleteData && allAthleteData.length > 0) {
                 applyFilters(); // Apply current filters (including date filters) after new data loads
                 populateSwimmerSelect(); // Repopulate swimmer select based on new data
                 // Clear and update charts if a swimmer was previously selected
@@ -398,8 +451,7 @@
                     if (progressionChartInstance) progressionChartInstance.destroy();
                 }
             } else {
-                console.warn(`No data loaded for ${fileName}.`);
-                allAthleteData = [];
+                console.warn(`No data loaded for ${fileName} after transformation.`);
                 filteredAthleteData = [];
                 renderTable(filteredAthleteData);
                 populateSwimmerSelect();
@@ -417,10 +469,13 @@
 
             // Group data by athlete
             const athletesGrouped = data.reduce((acc, current) => {
-                const key = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
-                if (!acc[key]) {
-                    acc[key] = {
-                        id: current.id, // Store ID for chart selection
+                // Using a combination of id and meetDate for a more robust key if an athlete swims multiple times
+                const athleteIdAndName = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
+                
+                // Group by athlete, but keep events distinct
+                if (!acc[athleteIdAndName]) {
+                    acc[athleteIdAndName] = {
+                        id: current.id, // Keep original ID for chart selection
                         details: {
                             lastName: current.lastName,
                             firstName: current.firstName,
@@ -430,7 +485,7 @@
                         events: []
                     };
                 }
-                acc[key].events.push(current);
+                acc[athleteIdAndName].events.push(current);
                 return acc;
             }, {});
 
@@ -533,7 +588,7 @@
             const swimmerMap = new Map(); // Using a map to track unique swimmer by ID and name
 
             allAthleteData.forEach(athlete => {
-                const key = `${athlete.id}-${athlete.firstName}-${athlete.lastName}`;
+                const key = `${athlete.id}`; // Use the ID which is now guaranteed unique per athlete-record
                 if (!swimmerMap.has(key)) {
                     swimmerMap.set(key, {
                         id: athlete.id,
@@ -571,7 +626,7 @@
             const specialtyScores = {};
             strokes.forEach(stroke => {
                 // Filter for events containing the stroke, ignoring distance for this general specialty score
-                const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
+                const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
                 if (relevantEvents.length > 0) {
                     // Calculate average time in seconds for this stroke
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
@@ -607,7 +662,7 @@
          */
         function getProgressionChartData(swimmerId, eventSwum) {
             const swimmerEventData = allAthleteData
-                .filter(d => d.id == swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
+                .filter(d => d.id == swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
                 .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate)); // Sort by date
 
             if (swimmerEventData.length === 0) return null;
