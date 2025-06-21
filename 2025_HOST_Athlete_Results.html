@@ -104,6 +104,11 @@
     <div class="container mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg max-w-7xl w-full">
         <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 text-center">Athlete Meet Summary Dashboard</h1>
 
+        <!-- Report Header Info (for screen and print) -->
+        <div id="reportHeaderInfo" class="text-lg text-gray-700 text-center mb-4 font-semibold">
+            <!-- Content will be dynamically updated by JavaScript -->
+        </div>
+
         <!-- Filter Controls - No Print -->
         <div class="no-print mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
@@ -192,6 +197,7 @@
                     <!-- This header is just for screen readers/initial structure, actual headers are per athlete -->
                     <tr>
                         <th class="hidden">Athlete Details</th>
+                        <th class="hidden">Meet Name</th> <!-- Added Meet Name Header -->
                         <th class="hidden">Event</th>
                         <th class="hidden">Seed Time</th>
                         <th class="hidden">Final Time</th>
@@ -246,12 +252,238 @@
         // --- Configuration for JSON file paths and weekly file names ---
         const weeklyFileNames = [
             "2025resultsweek01.json",
-            "2025resultsweek02.json", // Add your other weekly files here
+            "2025resultsweek02.json",
+            "2025resultsweek03.json"
         ];
 
+        // --- Simulated JSON Data (for Canvas preview fallback) ---
+        // This object is a fallback for when the actual fetch calls fail (e.g., when viewing the HTML locally
+        // without a web server, or if the files are not correctly placed/accessible).
+        // For production, you can remove this object entirely.
+        const simulatedJsonData = {
+            "2025resultsweek01.json": {
+                "title": "Lake Wilderness at Hurricanes", // Updated title - 2025 removed
+                "values": [
+                    ["Ackerson", "Adam", "M", 13, "13-14 Boys 50m Butterfly", "NT", "41.68", 3, 3.0],
+                    ["Ackerson", "Adam", "M", 13, "13-14 Boys 50m Freestyle", "NT", "35.10", 10, 0.0],
+                    ["Ackerson", "Mary", "F", 12, "11-12 Girls 50m Freestyle", "NT", "37.73", 2, 4.0],
+                    ["Ackerson", "Mary", "F", 12, "12&U Girls 100m Freestyle", "NT", "1:22.24", 2, 4.0],
+                    ["Albright", "Reese", "F", 16, "13-18 Girls 100m Freestyle", "NT", "1:18.95", 2, 4.0],
+                    ["Albright", "Reese", "F", 16, "15-18 Girls 50m Butterfly", "42.30", "42.81", 2, 4.0],
+                    ["Beirne", "Mason", "M", 15, "15-18 Boys 50m Butterfly", "34.37", "32.87", 1, 6.0],
+                    ["Beirne", "Mason", "M", 15, "15-18 Boys 50m Freestyle", "31.18", "30.99", 3, 3.0],
+                    ["Bell", "Heather", "F", 10, "9-10 Girls 25m Backstroke", "NT", "28.61", 5, 1.0],
+                    ["Bell", "Heather", "F", 10, "9-10 Girls 25m Butterfly", "NT", "28.22", 4, 2.0],
+                    ["Bell", "Heather", "F", 10, "9-10 Girls 25m Freestyle", "22.68", "21.86", 4, 2.0],
+                    ["Bell", "John", "M", 9, "9-10 Boys 25m Backstroke", "NT", "37.06", 8, 0.0],
+                    ["Bell", "John", "M", 9, "9-10 Boys 25m Butterfly", "NT", "29.02", 4, 2.0],
+                    ["Bell", "John", "M", 9, "9-10 Boys 25m Freestyle", "28.98", "24.90", 11, 0.0],
+                    ["Bell", "Liliana", "F", 12, "11-12 Girls 50m Freestyle", "NT", "56.75", 15, 0.0],
+                    ["Berger", "Beau", "M", 6, "6&U Boys 25m Backstroke", "NT", "1:43.61", 2, 4.0],
+                    ["Berger", "Beau", "M", 6, "6&U Boys 25m Freestyle", "NT", "1:14.03", 2, 4.0],
+                    ["Berger", "Huck", "M", 9, "9-10 Boys 25m Freestyle", "29.84", "26.37", 12, 0.0],
+                    ["Berger", "Mae", "F", 8, "7-8 Girls 25m Freestyle", "55.46", "45.92", 8, 0.0],
+                    ["Cantwell", "Chelsea", "F", 14, "13-14 Girls 50m Freestyle", "40.28", "41.34", 12, 0.0],
+                    ["Cantwell", "Reagan", "F", 11, "11-12 Girls 50m Backstroke", "NT", "1:27.38", 7, 0.0],
+                    ["Cantwell", "Reagan", "F", 11, "11-12 Girls 50m Freestyle", "50.60", "53.94", 14, 0.0],
+                    ["Carlson", "Claire", "F", 7, "7-8 Girls 25m Backstroke", "54.43", "42.66", 5, 1.0],
+                    ["Carlson", "Claire", "F", 7, "7-8 Girls 25m Freestyle", "47.68", "50.75", 9, 0.0],
+                    ["Carlson", "Theresa", "F", 10, "9-10 Girls 25m Backstroke", "NT", "27.79", 3, 3.0],
+                    ["Carlson", "Theresa", "F", 10, "9-10 Girls 25m Butterfly", "NT", "26.92", 2, 4.0],
+                    ["Carlson", "Theresa", "F", 10, "9-10 Girls 25m Freestyle", "22.29", "23.73", 5, 1.0],
+                    ["Cassavella", "Carla", "F", 10, "9-10 Girls 25m Freestyle", "NT", "33.43", 14, 0.0],
+                    ["Cassavella", "Dominick", "M", 8, "7-8 Boys 25m Freestyle", "NT", "29.49", 5, 0.0],
+                    ["Christianson", "Charles", "M", 9, "9-10 Boys 25m Freestyle", "NT", "36.44", 16, 0.0],
+                    ["Christianson", "Matthew", "M", 15, "15-18 Boys 50m Backstroke", "NT", "39.80", 2, 4.0],
+                    ["Christianson", "Matthew", "M", 15, "15-18 Boys 50m Freestyle", "NT", "32.97", 6, 0.0],
+                    ["Christianson", "Ryan", "M", 12, "11-12 Boys 50m Freestyle", "46.00", "45.60", 3, 3.0],
+                    ["Christianson", "Ryan", "M", 12, "12&U Boys 100m Freestyle", "NT", "1:43.16", 5, 1.0],
+                    ["Cooper", "Dalton", "M", 10, "9-10 Boys 25m Freestyle", "NT", "18.37", 1, 6.0],
+                    ["Cooper", "Jason", "M", 13, "13-14 Boys 50m Backstroke", "NT", "40.41", 4, 2.0],
+                    ["Cooper", "Jason", "M", 13, "13-14 Boys 50m Freestyle", "NT", "30.90", 4, 0.0],
+                    ["Crook", "Jocelyn", "F", 14, "13-14 Girls 50m Freestyle", "36.86", "38.09", 7, 0.0],
+                    ["Daniels", "Ethen", "M", 11, "11-12 Boys 50m Butterfly", "38.82", "41.01", 2, 4.0],
+                    ["Daniels", "Ethen", "M", 11, "12&U Boys 100m Freestyle", "NT", "1:15.54", 2, 4.0],
+                    ["Douglas", "Brechan", "M", 14, "13-14 Boys 50m Backstroke", "35.03", "34.06", 3, 3.0],
+                    ["Douglas", "Brechan", "M", 14, "13-14 Boys 50m Freestyle", "29.92", "29.71", 1, 6.0],
+                    ["Douglas", "Maezy", "F", 11, "11-12 Girls 50m Backstroke", "NT", "54.13", 2, 4.0],
+                    ["Douglas", "Maezy", "F", 11, "11-12 Girls 50m Freestyle", "42.97", "44.43", 8, 0.0],
+                    ["Elliott", "Matthew", "M", 18, "15-18 Boys 50m Backstroke", "NT", "37.62", 1, 6.0],
+                    ["Elliott", "Matthew", "M", 18, "15-18 Boys 50m Butterfly", "35.68", "34.53", 2, 4.0],
+                    ["Fenton", "Jillian", "F", 14, "13-14 Girls 50m Freestyle", "NT", "40.76", 11, 0.0],
+                    ["Fenton", "Jillian", "F", 14, "13-18 Girls 100m Freestyle", "NT", "1:26.00", 5, 1.0],
+                    ["Fenton", "Phoebe", "F", 12, "11-12 Girls 50m Freestyle", "NT", "40.29", 5, 1.0],
+                    ["Fenton", "Phoebe", "F", 12, "12&U Girls 100m Freestyle", "NT", "1:34.13", 4, 0.0],
+                    ["Fenton", "Scarlett", "F", 15, "15-18 Girls 50m Backstroke", "51.85", "48.17", 2, 4.0],
+                    ["Fenton", "Scarlett", "F", 15, "15-18 Girls 50m Freestyle", "38.05", "36.18", 1, 6.0],
+                    ["Francis", "Sanaa", "F", 10, "9-10 Girls 25m Backstroke", "24.70", "27.89", 4, 2.0],
+                    ["Francis", "Sanaa", "F", 10, "9-10 Girls 25m Freestyle", "19.84", "19.78", 3, 3.0],
+                    ["Garcia", "Ryan", "M", 14, "13-14 Boys 50m Butterfly", "33.28", "32.63", 2, 4.0],
+                    ["Garcia", "Ryan", "M", 14, "13-18 Boys 100m Freestyle", "NT", "1:05.46", 3, 3.0],
+                    ["Gianakas", "Alexander", "M", 6, "6&U Boys 25m Backstroke", "NT", "58.32", 1, 6.0],
+                    ["Gianakas", "Alexander", "M", 6, "6&U Boys 25m Freestyle", "1:06.45", "1:01.63", 1, 6.0],
+                    ["Gianakas", "Benjamin", "M", 8, "7-8 Boys 25m Backstroke", "30.04", "31.32", 2, 4.0],
+                    ["Gianakas", "Benjamin", "M", 8, "7-8 Boys 25m Freestyle", "25.65", "25.16", 3, 3.0],
+                    ["Goetsch", "Colton", "M", 11, "11-12 Boys 50m Freestyle", "45.46", "46.88", 5, 0.0],
+                    ["Goetsch", "Denver", "M", 9, "9-10 Boys 25m Freestyle", "27.33", "21.84", 6, 0.0],
+                    ["Goetsch", "Mason", "M", 13, "13-14 Boys 50m Freestyle", "31.35", "30.89", 3, 3.0],
+                    ["Green", "Christian", "M", 12, "11-12 Boys 50m Butterfly", "39.19", "37.49", 1, 6.0],
+                    ["Green", "Christian", "M", 12, "12&U Boys 100m Freestyle", "NT", "1:13.25", 1, 6.0],
+                    ["Green", "Hudson", "M", 15, "13-18 Boys 100m Freestyle", "NT", "1:13.24", 7, 0.0],
+                    ["Green", "Madison", "F", 14, "13-14 Girls 50m Backstroke", "52.38", "51.36", 5, 0.0],
+                    ["Green", "Madison", "F", 14, "13-14 Girls 50m Freestyle", "39.89", "38.91", 8, 0.0],
+                    ["Green", "Tenley", "F", 13, "13-14 Girls 50m Freestyle", "NT", "46.41", 16, 0.0],
+                    ["Haight", "Owen", "M", 14, "13-14 Boys 50m Freestyle", "NT", "35.29", 12, 0.0],
+                    ["Hall", "Cayson", "M", 9, "9-10 Boys 25m Freestyle", "NT", "47.48", 18, 0.0],
+                    ["Hall", "Christopher", "M", 15, "13-18 Boys 100m Freestyle", "NT", "1:22.44", 9, 0.0],
+                    ["Hall", "Christopher", "M", 15, "15-18 Boys 50m Freestyle", "36.47", "37.19", 11, 0.0],
+                    ["Hall", "Lincoln", "M", 12, "11-12 Boys 50m Freestyle", "42.99", "41.86", 2, 4.0],
+                    ["Hall", "Lincoln", "M", 12, "12&U Boys 100m Freestyle", "NT", "1:35.21", 4, 2.0],
+                    ["Hoole", "Andrew", "M", 9, "9-10 Boys 25m Freestyle", "54.75", "47.25", 17, 0.0],
+                    ["Hoole", "David", "M", 12, "11-12 Boys 50m Freestyle", "NT", "46.81", 4, 0.0],
+                    ["Jackson", "Austin", "M", 8, "7-8 Boys 25m Freestyle", "22.10", "21.69", 1, 6.0],
+                    ["Jackson", "Austin", "M", 8, "8&U Boys 25m Butterfly", "34.01", "37.77", 1, 6.0],
+                    ["Jackson", "Connor", "M", 13, "13-14 Boys 50m Freestyle", "NT", "32.45", 5, 0.0],
+                    ["Jackson", "Dillon", "M", 15, "13-18 Boys 100m Freestyle", "NT", "1:18.23", 8, 0.0],
+                    ["Jackson", "Dillon", "M", 15, "15-18 Boys 50m Butterfly", "NT", "46.11", 5, 1.0],
+                    ["Jackson", "Dillon", "M", 15, "15-18 Boys 50m Freestyle", "NT", "34.71", 7, 0.0],
+                    ["Jackson", "Everett", "M", 11, "11-12 Boys 50m Butterfly", "NT", "1:03.29", 4, 2.0],
+                    ["Jackson", "Everett", "M", 11, "12&U Boys 100m Freestyle", "NT", "1:52.80", 6, 0.0],
+                    ["Kerr", "Mirabel", "F", 6, "6&U Girls 25m Backstroke", "NT", "37.12", 3, 3.0],
+                    ["Kerr", "Mirabel", "F", 6, "6&U Girls 25m Freestyle", "45.01", "39.81", 3, 3.0],
+                    ["Kerr", "Thomas", "M", 10, "9-10 Boys 25m Backstroke", "23.84", "24.42", 2, 4.0],
+                    ["Kerr", "Thomas", "M", 10, "9-10 Boys 25m Butterfly", "NT", "34.75", 6, 0.0],
+                    ["Kerr", "Thomas", "M", 10, "9-10 Boys 25m Freestyle", "20.88", "20.37", 5, 1.0],
+                    ["Kress", "Ava", "F", 16, "15-18 Girls 50m Butterfly", "NT", "54.91", 4, 2.0],
+                    ["Kress", "Ava", "F", 16, "15-18 Girls 50m Freestyle", "43.94", "44.91", 4, 2.0],
+                    ["Kress", "Connor", "M", 14, "13-14 Boys 50m Freestyle", "31.07", "30.25", 2, 4.0],
+                    ["Kruk", "Caiden", "M", 9, "9-10 Boys 25m Backstroke", "31.58", "31.17", 5, 0.0],
+                    ["Kruk", "Caiden", "M", 9, "9-10 Boys 25m Freestyle", "19.96", "19.43", 4, 2.0],
+                    ["Kruk", "Madison", "F", 8, "7-8 Girls 25m Freestyle", "31.30", "36.02", 6, 0.0],
+                    ["Kuhfuss", "Brooke", "F", 9, "9-10 Girls 25m Backstroke", "35.36", "35.25", 7, 0.0],
+                    ["Kuhfuss", "Brooke", "F", 9, "9-10 Girls 25m Butterfly", "NT", "31.53", 5, 1.0],
+                    ["Kuhfuss", "Brooke", "F", 9, "9-10 Girls 25m Freestyle", "26.47", "27.10", 9, 0.0],
+                    ["Kuhfuss", "Jacquelyn", "F", 7, "7-8 Girls 25m Backstroke", "46.03", "43.22", 6, 0.0],
+                    ["Kuhfuss", "Jacquelyn", "F", 7, "7-8 Girls 25m Freestyle", "36.20", "34.84", 4, 2.0],
+                    ["Lewis", "Zoey", "F", 7, "7-8 Girls 25m Freestyle", "NT", "56.67", 10, 0.0],
+                    ["Lopez", "Dominik", "M", 13, "13-14 Boys 50m Butterfly", "NT", "52.81", 5, 1.0],
+                    ["Lopez", "Dominik", "M", 13, "13-14 Boys 50m Freestyle", "NT", "35.17", 11, 0.0],
+                    ["Maynard", "Brooke", "F", 12, "11-12 Girls 50m Butterfly", "NT", "52.27", 3, 3.0],
+                    ["Maynard", "Brooke", "F", 12, "11-12 Girls 50m Freestyle", "NT", "40.17", 4, 2.0],
+                    ["McGhee", "Elizabeth", "F", 14, "13-14 Girls 50m Freestyle", "NT", "45.56", 15, 0.0],
+                    ["McGowan", "James", "M", 7, "7-8 Boys 25m Backstroke", "35.08", "33.43", 3, 3.0],
+                    ["McGowan", "James", "M", 7, "7-8 Boys 25m Freestyle", "35.85", "35.99", 6, 0.0],
+                    ["McIntyre", "Bryan", "M", 8, "7-8 Boys 25m Backstroke", "28.90", "29.97", 1, 6.0],
+                    ["McIntyre", "Bryan", "M", 8, "7-8 Boys 25m Freestyle", "22.62", "23.35", 2, 4.0],
+                    ["McIntyre", "Elliana", "F", 11, "12&U Girls 100m Freestyle", "NT", "1:33.44", 3, 3.0],
+                    ["Miller", "Eden", "F", 13, "13-14 Girls 50m Backstroke", "NT", "39.12", 2, 4.0],
+                    ["Miller", "Eden", "F", 13, "13-14 Girls 50m Freestyle", "NT", "32.90", 3, 3.0],
+                    ["Monge", "Victoria", "F", 12, "11-12 Girls 50m Butterfly", "NT", "1:00.77", 4, 2.0],
+                    ["Monge", "Victoria", "F", 12, "12&U Girls 100m Freestyle", "NT", "1:39.69", 6, 0.0],
+                    ["Moore", "Theo", "M", 7, "7-8 Boys 25m Freestyle", "NT", "36.92", 7, 0.0],
+                    ["Morales", "Katherine", "F", 12, "11-12 Girls 50m Backstroke", "NT", "55.29", 3, 3.0],
+                    ["Morales", "Katherine", "F", 12, "12&U Girls 100m Freestyle", "NT", "1:36.91", 5, 0.0],
+                    ["Morales", "Madelyn", "F", 14, "13-14 Girls 50m Butterfly", "NT", "40.71", 2, 4.0],
+                    ["Morales", "Madelyn", "F", 14, "13-14 Girls 50m Freestyle", "NT", "35.46", 4, 0.0],
+                    ["Mulder", "Asher", "M", 13, "13-14 Boys 50m Freestyle", "42.45", "39.91", 14, 0.0],
+                    ["Mulder", "Nora", "F", 16, "13-18 Girls 100m Freestyle", "NT", "1:28.77", 6, 0.0],
+                    ["Mulder", "Nora", "F", 16, "15-18 Girls 50m Backstroke", "NT", "50.51", 4, 2.0],
+                    ["Mulder", "Tori", "F", 11, "11-12 Girls 50m Butterfly", "NT", "1:05.50", 6, 0.0],
+                    ["Mulder", "Tori", "F", 11, "11-12 Girls 50m Freestyle", "53.31", "49.63", 13, 0.0],
+                    ["Nelson", "Genevieve", "F", 12, "11-12 Girls 50m Freestyle", "NT", "42.66", 6, 0.0],
+                    ["Orrison", "Carter", "M", 12, "11-12 Boys 50m Freestyle", "53.29", "50.19", 6, 0.0],
+                    ["Orrison", "Grayson", "M", 8, "7-8 Boys 25m Freestyle", "44.07", "40.32", 8, 0.0],
+                    ["Parker", "Emmalyn", "F", 6, "6&U Girls 25m Backstroke", "NT", "32.69", 2, 4.0],
+                    ["Parker", "Emmalyn", "F", 6, "6&U Girls 25m Freestyle", "NT", "35.87", 2, 4.0],
+                    ["Parker", "William", "M", 9, "9-10 Boys 25m Backstroke", "NT", "27.91", 4, 0.0],
+                    ["Parker", "William", "M", 9, "9-10 Boys 25m Butterfly", "NT", "28.05", 3, 3.0],
+                    ["Parker", "William", "M", 9, "9-10 Boys 25m Freestyle", "NT", "22.30", 8, 0.0],
+                    ["Pattillo", "Jackson", "M", 12, "11-12 Boys 50m Backstroke", "NT", "1:34.80", 3, 3.0],
+                    ["Pattillo", "Jackson", "M", 12, "11-12 Boys 50m Freestyle", "NT", "1:04.04", 8, 0.0],
+                    ["Paxton", "Laila", "F", 14, "13-14 Girls 50m Freestyle", "NT", "35.51", 5, 0.0],
+                    ["Phillips", "Hayleigh", "F", 9, "9-10 Girls 25m Freestyle", "32.03", "30.55", 12, 0.0],
+                    ["Powell", "Sean", "M", 8, "7-8 Boys 25m Freestyle", "NT", "41.46", 9, 0.0],
+                    ["Rattray", "Elisia", "F", 12, "11-12 Girls 50m Backstroke", "NT", "52.02", 1, 6.0],
+                    ["Rattray", "Elisia", "F", 12, "11-12 Girls 50m Butterfly", "52.78", "48.18", 1, 6.0],
+                    ["Rattray", "John", "M", 12, "11-12 Boys 50m Freestyle", "41.53", "41.38", 1, 6.0],
+                    ["Rattray", "Mara", "F", 8, "7-8 Girls 25m Backstroke", "31.21", "30.15", 1, 6.0],
+                    ["Rattray", "Mara", "F", 8, "7-8 Girls 25m Freestyle", "29.82", "30.11", 2, 4.0],
+                    ["Roussos", "Ava", "F", 14, "13-14 Girls 50m Butterfly", "NT", "51.51", 4, 2.0],
+                    ["Roussos", "Ava", "F", 14, "13-18 Girls 100m Freestyle", "NT", "1:33.59", 7, 0.0],
+                    ["Stewart", "Ava", "F", 13, "13-14 Girls 50m Butterfly", "NT", "44.30", 3, 3.0],
+                    ["Stewart", "Ava", "F", 13, "13-14 Girls 50m Freestyle", "40.11", "39.98", 10, 0.0],
+                    ["Strait", "Abel", "M", 10, "9-10 Boys 25m Backstroke", "NT", "25.47", 3, 3.0],
+                    ["Strait", "Abel", "M", 10, "9-10 Boys 25m Freestyle", "NT", "22.37", 9, 0.0],
+                    ["Troidl", "Dylan", "M", 13, "13-14 Boys 50m Freestyle", "NT", "33.29", 7, 0.0],
+                    ["Troidl", "Michael", "M", 17, "13-18 Boys 100m Freestyle", "NT", "1:05.80", 4, 2.0],
+                    ["Troidl", "Michael", "M", 17, "15-18 Boys 50m Freestyle", "NT", "29.74", 1, 6.0],
+                    ["Whitis", "Elijah", "M", 14, "13-14 Boys 50m Freestyle", "34.57", "32.59", 6, 0.0],
+                    ["Whitis", "Finneas", "M", 13, "13-14 Boys 50m Backstroke", "33.26", "33.08", 2, 4.0],
+                    ["Whitis", "Finneas", "M", 13, "13-18 Boys 100m Freestyle", "NT", "1:05.22", 2, 4.0],
+                    ["Whitis", "Gradie", "F", 9, "9-10 Girls 25m Butterfly", "NT", "25.18", 1, 6.0],
+                    ["Whitis", "Gradie", "F", 9, "9-10 Girls 25m Freestyle", "19.28", "19.61", 2, 4.0],
+                    ["Whitis", "Willa", "F", 7, "7-8 Girls 25m Backstroke", "33.07", "38.31", 3, 3.0],
+                    ["Whitis", "Willa", "F", 7, "7-8 Girls 25m Freestyle", "30.66", "32.58", 3, 3.0],
+                    ["Wittwer", "Benjamin", "M", 15, "15-18 Boys 50m Backstroke", "NT", "44.63", 4, 2.0],
+                    ["Wittwer", "Benjamin", "M", 15, "15-18 Boys 50m Freestyle", "NT", "36.40", 8, 0.0],
+                    ["Wittwer", "Eleanor", "F", 9, "9-10 Girls 25m Freestyle", "30.80", "27.29", 10, 0.0],
+                    ["Wittwer", "Elizabeth", "F", 12, "11-12 Girls 50m Freestyle", "NT", "44.36", 7, 0.0],
+                    ["Woodruff", "Ally", "F", 12, "11-12 Girls 50m Freestyle", "32.26", "33.15", 1, 6.0],
+                    ["Woodruff", "Ally", "F", 12, "12&U Girls 100m Freestyle", "NT", "1:15.71", 1, 6.0],
+                    ["Woodruff", "Jaden", "M", 9, "9-10 Boys 25m Freestyle", "28.70", "35.34", 15, 0.0],
+                    ["Woodruff", "Jamela", "F", 13, "13-14 Girls 50m Backstroke", "NT", "41.26", 3, 3.0],
+                    ["Woodruff", "Jamela", "F", 13, "13-14 Girls 50m Freestyle", "33.03", "32.62", 2, 4.0],
+                    ["Woodruff", "Kyra", "F", 16, "13-18 Girls 100m Freestyle", "NT", "1:10.84", 1, 6.0],
+                    ["Woodruff", "Kyra", "F", 16, "15-18 Girls 50m Butterfly", "37.59", "37.06", 1, 6.0],
+                    ["Woodruff", "Leo", "M", 9, "9-10 Boys 25m Butterfly", "NT", "31.46", 5, 1.0],
+                    ["Woodruff", "Leo", "M", 9, "9-10 Boys 25m Freestyle", "20.31", "22.14", 7, 0.0],
+                    ["Woodruff", "Manion", "M", 13, "13-14 Boys 50m Freestyle", "35.14", "34.49", 8, 0.0],
+                    ["Woodruff", "Mia", "F", 14, "13-14 Girls 50m Backstroke", "38.09", "36.40", 1, 6.0],
+                    ["Woodruff", "Mia", "F", 14, "13-14 Girls 50m Freestyle", "32.64", "31.73", 1, 6.0],
+                    ["Woodruff", "Owen", "M", 9, "9-10 Boys 25m Backstroke", "NT", "23.15", 1, 6.0],
+                    ["Woodruff", "Owen", "M", 9, "9-10 Boys 25m Butterfly", "24.80", "23.66", 1, 6.0],
+                    ["Woodruff", "Owen", "M", 9, "9-10 Boys 25m Freestyle", "19.62", "19.24", 3, 3.0],
+                    ["Zirkle", "Kyrie", "F", 10, "9-10 Girls 25m Freestyle", "23.51", "23.98", 6, 0.0]
+                ],
+                "fields": ["last_name", "first_name", "competition_category", "age", "event_swum", "seed_time", "result_time", "place", "points"],
+                "types": [25, 25, 25, 23, 25, 25, 25, 23, 701],
+                "type_names": ["text", "text", "text", "integer", "text", "text", "text", "integer", "float"],
+                "started_at": "2025-06-11 12:00:00 +0000", // Updated to match your specific date
+                "finished_at": "2025-06-11 15:00:00 +0000",
+                "checksum": "4e67cac98c8a873f4102ce29f43dc390"
+            },
+            "2025resultsweek02.json": {
+                "title": "Hampton Oaks Invitational", // Example title for week 02
+                "values": [
+                    ["Smith", "Alice", "F", 14, "100m Freestyle", "1:00.50", "1:00.00", 1, 50],
+                    ["Johnson", "Bob", "M", 22, "50m Backstroke", "0:27.50", "0:27.00", 1, 60],
+                    ["Williams", "Charlie", "M", 15, "200m IM", "2:34.00", "2:32.50", 2, 40]
+                ],
+                "fields": ["last_name", "first_name", "competition_category", "age", "event_swum", "seed_time", "result_time", "place", "points"],
+                "types": [25, 25, 25, 23, 25, 25, 25, 23, 701],
+                "type_names": ["text", "text", "text", "integer", "text", "text", "text", "integer", "float"],
+                "started_at": "2025-06-15 12:00:00 +0000",
+                "finished_at": "2025-06-15 15:00:00 +0000",
+                "checksum": "mock_checksum_week02"
+            },
+            "2025resultsweek03.json": {
+                "title": "Summer Championship Warmup", // Example title for week 03
+                "values": [
+                    ["Smith", "Alice", "F", 15, "50m Freestyle", "0:26.50", "0:26.20", 1, 55],
+                    ["Johnson", "Bob", "M", 22, "200m Backstroke", "2:10.00", "2:09.50", 1, 65]
+                ],
+                "fields": ["last_name", "first_name", "competition_category", "age", "event_swum", "seed_time", "result_time", "place", "points"],
+                "type_names": ["text", "text", "text", "integer", "text", "text", "text", "integer", "float"],
+                "started_at": "2025-06-22 12:00:00 +0000",
+                "finished_at": "2025-06-22 15:00:00 +0000",
+                "checksum": "mock_checksum_week03"
+            }
+        };
+        // --- End Simulated JSON Data ---
 
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
+        let currentLoadedMeetInfo = { title: '', dateRange: '' }; // Stores current meet title and date range
 
         const reportTableBody = document.getElementById('reportTableBody');
         const filterNameInput = document.getElementById('filterName');
@@ -264,24 +496,26 @@
         const printReportButton = document.getElementById('printReport');
         const selectSwimmer = document.getElementById('selectSwimmer');
         const jsonFileSelector = document.getElementById('jsonFileSelector');
+        const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
 
         let specialtyChartInstance = null;
         let progressionChartInstance = null;
 
         /**
          * Transforms raw data from the JSON "values" array into an array of objects
-         * with meaningful property names and adds an 'id' and 'meetDate'.
+         * with meaningful property names and adds an 'id', 'meetDate', and 'meetName'.
          * @param {Array<Array>} rawValues - The "values" array from the JSON.
          * @param {Array<string>} fieldNames - The "fields" array from the JSON.
-         * @param {string} meetDateString - The meet date to assign to all records from this file.
+         * @param {string} meetDateString - The meet date to assign to all records from this file (from 'started_at').
+         * @param {string} meetTitle - The title of the meet (from the JSON's 'title' field).
          * @returns {Array<Object>} Transformed athlete data.
          */
-        function transformRawData(rawValues, fieldNames, meetDateString) {
+        function transformRawData(rawValues, fieldNames, meetDateString, meetTitle) {
             const transformed = [];
-            // Assuming the `fields` array corresponds directly to the order in `values`
+            // Mapping indices based on your 'fields' array
             const lastNameIndex = fieldNames.indexOf('last_name');
             const firstNameIndex = fieldNames.indexOf('first_name');
-            const genderIndex = fieldNames.indexOf('competition_category'); // This is 'gender'
+            const genderIndex = fieldNames.indexOf('competition_category'); // Maps to 'M' or 'F'
             const ageIndex = fieldNames.indexOf('age');
             const eventSwumIndex = fieldNames.indexOf('event_swum');
             const seedTimeIndex = fieldNames.indexOf('seed_time');
@@ -290,20 +524,20 @@
             const pointsIndex = fieldNames.indexOf('points');
 
             rawValues.forEach((row, index) => {
-                // Generate a simple ID for the athlete (not globally unique, but unique within this dataset)
-                // A more robust ID would come from a database.
+                // Generate a consistent ID for the athlete (lastName-firstName-age)
                 const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
                 
                 transformed.push({
-                    id: athleteId, // Generated ID
+                    id: athleteId, // Consistent ID for the athlete (used for charts across different dates)
                     lastName: row[lastNameIndex],
                     firstName: row[firstNameIndex],
-                    category: row[genderIndex], // Renamed to category in JS for consistency with display
+                    category: row[genderIndex], // This is 'gender' from your JSON, used as 'category' for display
                     age: row[ageIndex],
                     eventSwum: row[eventSwumIndex],
                     seedTime: String(row[seedTimeIndex]), // Ensure it's a string for timeToSeconds
                     resultTime: String(row[resultTimeIndex]), // Ensure it's a string for timeToSeconds
-                    meetDate: meetDateString.split(' ')[0], // Extract just the date part (e.g., "YYYY-MM-DD")
+                    meetDate: meetDateString.split(' ')[0], // Use the date part (e.g., "YYYY-MM-DD") from 'started_at'
+                    meetName: meetTitle.replace('2025 ', ''), // New: Add meet name and remove "2025 "
                     place: row[placeIndex],
                     points: row[pointsIndex]
                 });
@@ -312,21 +546,19 @@
         }
 
         /**
-         * Populates the JSON file selector with options including date ranges.
+         * Populates the JSON file selector with options including meet titles and date ranges.
          */
         function populateJsonFileSelector() {
-            // Clear existing options
-            jsonFileSelector.innerHTML = '';
+            jsonFileSelector.innerHTML = ''; // Clear existing options
 
             const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
-                // You were correct to use `new URL(fileName, window.location.href).toString();` for robustness.
                 const filePath = new URL(fileName, window.location.href).toString();
-                let rawFileData = null; // Will store the raw object from the JSON file
+                let rawFileData = null;
 
                 try {
                     const response = await fetch(filePath);
                     if (!response.ok) {
-                        console.warn(`Could not fetch ${filePath}. Falling back to simulated data for dropdown option.`);
+                        console.warn(`Could not fetch ${filePath} for dropdown options. Falling back to simulated data.`);
                         rawFileData = simulatedJsonData[fileName];
                         if (!rawFileData) {
                              console.warn(`No simulated data for ${fileName} either. Option will be skipped.`);
@@ -344,37 +576,51 @@
                     }
                 }
 
-                // Ensure rawFileData and its properties exist before proceeding
-                if (rawFileData && rawFileData.values && rawFileData.values.length > 0) {
-                    // Use the 'started_at' from the JSON file as the single meet date for this file's data
-                    const meetDateFromFile = rawFileData.started_at ? rawFileData.started_at.split(' ')[0] : 'UNKNOWN_DATE';
-                    
+                if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.started_at) {
+                    // Remove "2025 " from the meet title for display
+                    const meetTitleForDisplay = (rawFileData.title || 'Unknown Meet').replace('2025 ', '');
+                    const meetStartDate = rawFileData.started_at.split(' ')[0]; // YYYY-MM-DD
+
+                    let displayEndDate = '';
+                    if (fileName === "2025resultsweek01.json") {
+                        displayEndDate = "2025-06-13"; // Specific requested end date
+                    } else {
+                        const start = new Date(meetStartDate);
+                        const end = new Date(start);
+                        end.setDate(start.getDate() + 5); // Approximate 6-day week for others
+                        displayEndDate = end.toISOString().split('T')[0];
+                    }
+
                     const option = document.createElement('option');
                     option.value = fileName;
-                    // Format: Week #1 (Jun 8 - Jun 13, 2025)
-                    // The date range here is an approximation; ideally, you'd calculate it from data or metadata
-                    const startOfMonth = new Date(meetDateFromFile);
-                    const endOfWeek = new Date(startOfMonth);
-                    endOfWeek.setDate(startOfMonth.getDate() + 5); // Assuming 5 days after start for the range
-                    
-                    option.textContent = `Week #${index + 1} (${formatDate(startOfMonth.toISOString().split('T')[0])} - ${formatDate(endOfWeek.toISOString().split('T')[0])}, ${new Date(meetDateFromFile).getFullYear()})`;
+                    // Format: Week #1 (Meet Title - Jun 8 - Jun 13, 2025)
+                    option.textContent = `Week #${index + 1} (${meetTitleForDisplay} - ${formatDate(meetStartDate)} - ${formatDate(displayEndDate)}, ${new Date(meetStartDate).getFullYear()})`;
                     return option;
                 }
                 return null; // Return null for invalid data or empty values
             });
 
             Promise.all(optionsPromises).then(options => {
-                options.filter(Boolean).forEach(option => jsonFileSelector.appendChild(option)); // Add valid options
+                options.filter(Boolean).forEach(option => jsonFileSelector.appendChild(option));
 
-                // Add the "All Results" option last
                 const allResultsOption = document.createElement('option');
                 allResultsOption.value = "all-results";
                 allResultsOption.textContent = "All Results (All Weeks)";
                 jsonFileSelector.appendChild(allResultsOption);
 
-                // Set default selected file after all options are populated
                 jsonFileSelector.value = "2025resultsweek01.json";
             });
+        }
+
+        /**
+         * Updates the header display with current meet information.
+         * @param {string} title - The title of the current meet/report.
+         * @param {string} dateRange - The formatted date range for the current data.
+         */
+        function updateReportHeaderDisplay(title, dateRange) {
+            // Remove "2025 " from the title before displaying
+            const cleanedTitle = title.replace('2025 ', '');
+            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${dateRange}`;
         }
 
         /**
@@ -382,7 +628,9 @@
          * @param {string} fileName - The name of the JSON file to load, or "all-results".
          */
         async function fetchAndRenderData(fileName) {
-            let dataToProcess = null; // This will be the raw JSON object (with .values, .fields, etc.)
+            let dataToProcess = null; // Raw JSON object (with .values, .fields, etc.)
+            let currentMeetTitle = '';
+            let currentMeetDateRange = '';
 
             if (fileName !== "all-results") {
                 const filePath = new URL(fileName, window.location.href).toString();
@@ -401,13 +649,22 @@
                     dataToProcess = simulatedJsonData[fileName];
                     if (!dataToProcess) {
                          console.error(`No simulated data available for ${fileName} after network error.`);
-                         allAthleteData = []; // Ensure data is empty if all else fails
-                         return; // Exit if no data can be retrieved
+                         allAthleteData = [];
+                         return;
                     }
                 }
                 
-                // Transform the single week's data
-                allAthleteData = transformRawData(dataToProcess.values, dataToProcess.fields, dataToProcess.started_at);
+                // Pass the original title to transformRawData, it will clean it for meetName
+                allAthleteData = transformRawData(dataToProcess.values, dataToProcess.fields, dataToProcess.started_at, dataToProcess.title || 'Unknown Meet');
+                currentMeetTitle = dataToProcess.title || 'Selected Week';
+                const start = new Date(dataToProcess.started_at.split(' ')[0]);
+                let end = new Date(start);
+                if (fileName === "2025resultsweek01.json") {
+                    end = new Date("2025-06-13"); // Specific requested
+                } else {
+                    end.setDate(start.getDate() + 5); // Approximate 6-day week for others
+                }
+                currentMeetDateRange = `${formatDate(start.toISOString().split('T')[0])} - ${formatDate(end.toISOString().split('T')[0])}, ${start.getFullYear()}`;
 
             } else {
                 // Fetch all files if "all-results" is selected
@@ -419,31 +676,45 @@
                         if (!response.ok) {
                             console.warn(`Could not fetch ${filePath}. Using simulated data for this week.`);
                             rawFileData = simulatedJsonData[name];
-                            if (!rawFileData) return []; // Return empty array if no simulated data
+                            if (!rawFileData) return [];
                         } else {
                             rawFileData = await response.json();
                         }
                     } catch (error) {
                         console.error(`Error fetching ${filePath}:`, error);
                         console.warn(`Falling back to simulated data for ${name} due to network error.`);
-                        rawFileData = simulatedJsonData[name]; // Fallback
+                        rawFileData = simulatedJsonData[name];
                         if (!rawFileData) return [];
                     }
-                    // Transform each week's data and include the meet date from its 'started_at'
                     if (rawFileData && rawFileData.values && rawFileData.fields && rawFileData.started_at) {
-                         return transformRawData(rawFileData.values, rawFileData.fields, rawFileData.started_at);
+                         return transformRawData(rawFileData.values, rawFileData.fields, rawFileData.started_at, rawFileData.title || 'Unknown Meet');
                     }
                     return [];
                 });
 
                 const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
-                allAthleteData = allWeeksTransformedData.flat(); // Flatten the array of arrays into a single array
+                allAthleteData = allWeeksTransformedData.flat();
+
+                // Calculate overall date range for "All Results"
+                if (allAthleteData.length > 0) {
+                    const allDates = allAthleteData.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+                    const overallMinDate = allDates[0];
+                    const overallMaxDate = allDates[allDates.length - 1];
+                    currentMeetTitle = "All Meets Combined";
+                    currentMeetDateRange = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
+                } else {
+                    currentMeetTitle = "No Data Loaded";
+                    currentMeetDateRange = "";
+                }
             }
 
 
             if (allAthleteData && allAthleteData.length > 0) {
                 applyFilters(); // Apply current filters (including date filters) after new data loads
                 populateSwimmerSelect(); // Repopulate swimmer select based on new data
+                // Update header display
+                updateReportHeaderDisplay(currentMeetTitle, currentMeetDateRange);
+
                 // Clear and update charts if a swimmer was previously selected
                 if (selectSwimmer.value) {
                     updateSpecialtyChart(selectSwimmer.value);
@@ -458,6 +729,7 @@
                 filteredAthleteData = [];
                 renderTable(filteredAthleteData);
                 populateSwimmerSelect();
+                updateReportHeaderDisplay("No Data Loaded", ""); // Clear header info
                 if (specialtyChartInstance) specialtyChartInstance.destroy();
                 if (progressionChartInstance) progressionChartInstance.destroy();
             }
@@ -472,33 +744,36 @@
 
             // Group data by athlete
             const athletesGrouped = data.reduce((acc, current) => {
-                // Using a combination of id and meetDate for a more robust key if an athlete swims multiple times
-                const athleteIdAndName = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
+                const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
+                // Use a combination of athleteId and meetDate to ensure uniqueness for individual rows in charts
+                // This is needed because a single athlete can appear multiple times if there are multiple meetDates in "All Results"
+                const uniqueAthleteIdForGrouping = `${current.lastName}-${current.firstName}-${current.age}-${current.meetDate}`; // More robust grouping for table
                 
-                // Group by athlete, but keep events distinct
-                if (!acc[athleteIdAndName]) {
-                    acc[athleteIdAndName] = {
-                        id: current.id, // Keep original ID for chart selection
+                if (!acc[uniqueAthleteIdForGrouping]) {
+                    acc[uniqueAthleteIdForGrouping] = {
+                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Base ID for charts to track performance across dates
+                        displayKey: athleteDisplayKey, // For table header
                         details: {
                             lastName: current.lastName,
                             firstName: current.firstName,
                             age: current.age,
                             category: current.category // This is 'gender' from SQL
                         },
-                        events: []
+                        events: [],
+                        meetName: current.meetName // Storing meet name for grouping/display
                     };
                 }
-                acc[athleteIdAndName].events.push(current);
+                acc[uniqueAthleteIdForGrouping].events.push(current);
                 return acc;
             }, {});
 
-            const athleteKeys = Object.keys(athletesGrouped).sort(); // Sort athletes alphabetically
+            const athleteKeys = Object.keys(athletesGrouped).sort(); // Sort grouped athletes alphabetically by display key
 
             if (athleteKeys.length === 0) {
                 const noResultsRow = document.createElement('tr');
-                // Colspan needs to be adjusted based on the new total columns (6 for events + 1 for main header)
+                // Colspan adjusted for the new 'Meet Name' column
                 noResultsRow.innerHTML = `
-                    <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    <td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         No results found matching your filters.
                     </td>
                 `;
@@ -512,8 +787,9 @@
                 // Athlete Header Row
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
+                // Colspan adjusted for the new 'Meet Name' column
                 athleteHeaderRow.innerHTML = `
-                    <td colspan="7" class="px-6 py-3">${athlete.details.lastName}, ${athlete.details.firstName} (${athlete.details.age}) - ${athlete.details.category}</td>
+                    <td colspan="8" class="px-6 py-3">${athlete.displayKey}</td>
                 `;
                 reportTableBody.appendChild(athleteHeaderRow);
 
@@ -521,6 +797,7 @@
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
                 eventSubHeaderRow.innerHTML = `
+                    <th>Meet Name</th> <!-- New column header -->
                     <th>Event</th>
                     <th>Seed</th>
                     <th>Final</th>
@@ -528,9 +805,8 @@
                     <th>Points</th>
                     <th>% Improvement</th>
                 `;
-                // Add an empty th to align with the first column of the athlete header
                 const emptyTh = document.createElement('th');
-                emptyTh.style.width = '1%'; // Small width to avoid large gap
+                emptyTh.style.width = '1%';
                 eventSubHeaderRow.prepend(emptyTh);
                 reportTableBody.appendChild(eventSubHeaderRow);
 
@@ -552,7 +828,6 @@
                     let improvement = 'N/A';
                     if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
                         improvement = (((seedSeconds - resultSeconds) / seedSeconds) * 100).toFixed(2);
-                        // Add a plus sign for positive improvement, for clarity
                         if (parseFloat(improvement) > 0) {
                              improvement = `+${improvement}%`;
                         } else {
@@ -563,6 +838,7 @@
                     const eventRow = document.createElement('tr');
                     eventRow.className = 'event-data-row hover:bg-gray-50 transition duration-150 ease-in-out';
                     eventRow.innerHTML = `
+                        <td>${eventData.meetName}</td> <!-- New column for meet name -->
                         <td>${eventData.eventSwum}</td>
                         <td>${eventData.seedTime}</td>
                         <td>${eventData.resultTime}</td>
@@ -570,8 +846,8 @@
                         <td>${eventData.points}</td>
                         <td>${improvement}</td>
                     `;
-                    // Add an empty td for alignment with the first column of the athlete header
                     const emptyTd = document.createElement('td');
+                    emptyTd.style.width = '1%'; // Keep the first column for visual alignment
                     eventRow.prepend(emptyTd);
                     reportTableBody.appendChild(eventRow);
                 });
@@ -582,30 +858,28 @@
          * Initializes the swimmer selection dropdown.
          */
         function populateSwimmerSelect() {
-            // Clear existing options, but keep the default "Select an Athlete"
             while (selectSwimmer.children.length > 1) {
                 selectSwimmer.removeChild(selectSwimmer.lastChild);
             }
 
             const uniqueSwimmers = [];
-            const swimmerMap = new Map(); // Using a map to track unique swimmer by ID and name
+            const swimmerMap = new Map();
 
             allAthleteData.forEach(athlete => {
-                const key = `${athlete.id}`; // Use the ID which is now guaranteed unique per athlete-record
+                const key = `${athlete.lastName}-${athlete.firstName}-${athlete.age}`; // Consistent ID for charts
                 if (!swimmerMap.has(key)) {
                     swimmerMap.set(key, {
-                        id: athlete.id,
+                        id: key, // Use this consistent key as the ID for chart selection
                         firstName: athlete.firstName,
                         lastName: athlete.lastName
                     });
                     uniqueSwimmers.push({
-                        id: athlete.id,
+                        id: key,
                         fullName: `${athlete.firstName} ${athlete.lastName}`
                     });
                 }
             });
 
-            // Sort swimmers alphabetically by full name
             uniqueSwimmers.sort((a, b) => a.fullName.localeCompare(b.fullName));
 
             uniqueSwimmers.forEach(swimmer => {
@@ -618,32 +892,25 @@
 
         /**
          * Generates data for the Specialty (Radar) Chart for a given swimmer.
-         * For mock data, this generates a plausible but arbitrary "specialty" profile.
-         * In a real app, this would analyze actual performance across strokes.
          */
         function getSpecialtyChartData(swimmerId) {
-            const swimmerData = allAthleteData.filter(d => d.id == swimmerId);
+            const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
             if (swimmerData.length === 0) return null;
 
             const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
             const specialtyScores = {};
             strokes.forEach(stroke => {
-                // Filter for events containing the stroke, ignoring distance for this general specialty score
                 const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
                 if (relevantEvents.length > 0) {
-                    // Calculate average time in seconds for this stroke
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    // Normalize the average time into a score (e.g., 0-100)
-                    // Lower time is better, so a lower avgTime should yield a higher score.
-                    // Max expected average time for a stroke (adjust as needed for your data range)
-                    const max_expected_avg_time = 120; // Example: 2 minutes for an average stroke performance
+                    const max_expected_avg_time = 120;
                     let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
-                    score = Math.max(0, Math.min(100, score)); // Clamp between 0 and 100
+                    score = Math.max(0, Math.min(100, score));
                     specialtyScores[stroke] = score;
                 } else {
-                    specialtyScores[stroke] = 0; // If no data for stroke, score is 0
+                    specialtyScores[stroke] = 0;
                 }
             });
 
@@ -665,13 +932,13 @@
          */
         function getProgressionChartData(swimmerId, eventSwum) {
             const swimmerEventData = allAthleteData
-                .filter(d => d.id == swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
-                .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate)); // Sort by date
+                .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
+                .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
 
             if (swimmerEventData.length === 0) return null;
 
             return {
-                labels: swimmerEventData.map(d => d.meetDate),
+                labels: swimmerEventData.map(d => `${d.meetDate} (${d.meetName})`), // Include meet date for unique labels
                 datasets: [{
                     label: `${eventSwum} Time Progression`,
                     data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
@@ -688,13 +955,13 @@
          */
         function updateSpecialtyChart(swimmerId) {
             if (specialtyChartInstance) {
-                specialtyChartInstance.destroy(); // Destroy existing chart
+                specialtyChartInstance.destroy();
             }
             const chartData = getSpecialtyChartData(swimmerId);
             const ctx = document.getElementById('specialtyChart').getContext('2d');
 
             if (!chartData) {
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Clear canvas
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                 return;
             }
 
@@ -707,24 +974,27 @@
                     scales: {
                         r: {
                             angleLines: {
-                                color: '#e2e8f0' // gray-200
+                                color: '#e2e8f0'
                             },
                             grid: {
-                                color: '#cbd5e0' // gray-300
+                                color: '#cbd5e0'
                             },
                             pointLabels: {
                                 font: {
-                                    size: 14,
+                                    size: 10, // Smaller font for radar labels
                                     weight: 'bold'
                                 },
-                                color: '#4a5568' // gray-700
+                                color: '#4a5568'
                             },
                             min: 0,
-                            max: 100, // Assuming scores from 0-100
+                            max: 100,
                             ticks: {
                                 stepSize: 20,
                                 backdropColor: 'rgba(255, 255, 255, 0.75)',
-                                color: '#4a5568'
+                                color: '#4a5568',
+                                font: {
+                                    size: 9 // Smaller tick labels
+                                }
                             }
                         }
                     },
@@ -733,17 +1003,23 @@
                             display: true,
                             position: 'top',
                             labels: {
-                                color: '#4a5568'
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller legend font
+                                }
                             }
                         },
                         title: {
-                            display: false, // Title is in H3 above canvas
+                            display: false,
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
                                 }
+                            },
+                            bodyFont: {
+                                size: 10 // Smaller tooltip font
                             }
                         }
                     }
@@ -756,23 +1032,22 @@
          */
         function updateProgressionChart(swimmerId) {
             if (progressionChartInstance) {
-                progressionChartInstance.destroy(); // Destroy existing chart
+                progressionChartInstance.destroy();
             }
 
-            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id == swimmerId).map(d => d.eventSwum))];
+            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
             const ctx = document.getElementById('progressionChart').getContext('2d');
 
             if (swimmerEvents.length === 0) {
-                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Clear canvas
+                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                  return;
             }
 
-            // For simplicity, we'll pick the first event for now or you can add another dropdown to select event
             const selectedEventForProgression = swimmerEvents[0];
             const chartData = getProgressionChartData(swimmerId, selectedEventForProgression);
 
             if (!chartData) {
-                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Clear canvas
+                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                  return;
             }
 
@@ -787,10 +1062,16 @@
                             title: {
                                 display: true,
                                 text: 'Meet Date',
-                                color: '#4a5568'
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller axis title font
+                                }
                             },
                             ticks: {
-                                color: '#4a5568'
+                                color: '#4a5568',
+                                font: {
+                                    size: 9 // Smaller tick labels
+                                }
                             },
                             grid: {
                                 color: '#e2e8f0'
@@ -800,18 +1081,24 @@
                             title: {
                                 display: true,
                                 text: 'Time (Seconds)',
-                                color: '#4a5568'
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller axis title font
+                                }
                             },
                             ticks: {
                                 color: '#4a5568',
                                 callback: function(value, index, values) {
-                                    return secondsToTime(value); // Convert seconds back to MM:SS.ms
+                                    return secondsToTime(value);
+                                },
+                                font: {
+                                    size: 9 // Smaller tick labels
                                 }
                             },
                             grid: {
                                 color: '#e2e8f0'
                             },
-                            reverse: true, // Lower time is better, so reverse Y-axis
+                            reverse: true,
                             min: 0
                         }
                     },
@@ -820,17 +1107,23 @@
                             display: true,
                             position: 'top',
                             labels: {
-                                color: '#4a5568'
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller legend font
+                                }
                             }
                         },
                         title: {
-                            display: false, // Title is in H3 above canvas
+                            display: false,
                         },
                          tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
                                 }
+                            },
+                            bodyFont: {
+                                size: 10 // Smaller tooltip font
                             }
                         }
                     }
@@ -847,9 +1140,8 @@
             const startDateStr = filterStartDateInput.value;
             const endDateStr = filterEndDateInput.value;
 
-            // Parse dates, setting to null if empty for optional filtering
-            const startDate = startDateStr ? new Date(startDateStr + 'T00:00:00') : null; // Add time to ensure date comparison works correctly
-            const endDate = endDateStr ? new Date(endDateStr + 'T23:59:59') : null;     // Add time to ensure date comparison works correctly
+            const startDate = startDateStr ? new Date(startDateStr + 'T00:00:00') : null;
+            const endDate = endDateStr ? new Date(endDateStr + 'T23:59:59') : null;
 
             filteredAthleteData = allAthleteData.filter(athlete => {
                 const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
@@ -859,7 +1151,7 @@
 
                 let matchesDate = true;
                 if (startDate || endDate) {
-                    const meetDate = new Date(athlete.meetDate + 'T12:00:00'); // Ensure consistent time for comparison
+                    const meetDate = new Date(athlete.meetDate + 'T12:00:00');
                     matchesDate = (!startDate || meetDate >= startDate) &&
                                   (!endDate || meetDate <= endDate);
                 }
@@ -874,9 +1166,8 @@
             filterNameInput.value = '';
             filterCategoryInput.value = '';
             filterEventInput.value = '';
-            filterStartDateInput.value = ''; // Clear date inputs
-            filterEndDateInput.value = '';   // Clear date inputs
-            // No need to reload data from JSON here, just re-apply filters on current allAthleteData
+            filterStartDateInput.value = '';
+            filterEndDateInput.value = '';
             filteredAthleteData = [...allAthleteData];
             renderTable(filteredAthleteData);
         }
@@ -894,27 +1185,21 @@
                 updateSpecialtyChart(selectedSwimmerId);
                 updateProgressionChart(selectedSwimmerId);
             } else {
-                // Clear charts if no swimmer selected
                 if (specialtyChartInstance) specialtyChartInstance.destroy();
                 if (progressionChartInstance) progressionChartInstance.destroy();
             }
         });
 
-        // Event listener for JSON file selection
         jsonFileSelector.addEventListener('change', (event) => {
-            // Reset text/category/event filters completely when changing the data source (file)
             filterNameInput.value = '';
             filterCategoryInput.value = '';
             filterEventInput.value = '';
-            // Don't clear date inputs here if user wants to keep a date range selected
-            // You might want to adjust this behavior based on user preference
             fetchAndRenderData(event.target.value);
         });
 
         // Initial render on page load: populate selector, then load default data
         document.addEventListener('DOMContentLoaded', () => {
             populateJsonFileSelector();
-            // Set the default selected value to "2025resultsweek01.json"
             jsonFileSelector.value = "2025resultsweek01.json";
             const defaultFile = jsonFileSelector.value;
             fetchAndRenderData(defaultFile);
