@@ -66,14 +66,22 @@
             body {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+                font-size: 0.75rem; /* Smaller base font for print */
+                margin: 0.5cm; /* Reduce overall margins */
             }
             .no-print {
                 display: none !important;
             }
             /* Ensure table borders are visible for print */
-            table, th, td {
+            table {
+                width: 100%;
                 border-collapse: collapse;
-                border: 1px solid #ddd; /* Light gray border */
+                font-size: 0.8em; /* Smaller table font for print */
+            }
+            th, td {
+                border: 1px solid #ddd; /* Light gray border for all cells */
+                padding: 3px 5px; /* Reduced padding for print */
+                text-align: left;
             }
             /* Override background for printing */
             .bg-gray-100 {
@@ -87,15 +95,24 @@
                 display: none !important;
             }
             /* Adjust padding for print to avoid cutting off text */
-            table th, table td {
-                padding: 4px 6px;
-                font-size: 0.8em;
-            }
             .athlete-header-row {
                 background-color: #e0e7ff !important;
                 color: #1f2937 !important;
                 border-top: 1px solid #6366f1 !important;
                 border-bottom: 1px solid #6366f1 !important;
+                font-size: 0.9em; /* Slightly smaller for print */
+            }
+            .event-subheader-row th {
+                padding-left: 10px; /* Further reduce indent for print */
+                font-size: 0.75em; /* Smaller font for print sub-headers */
+            }
+            .event-data-row td {
+                padding-left: 15px; /* Further reduce indent for print */
+                font-size: 0.75em; /* Smaller font for print data rows */
+            }
+            #reportHeaderInfo {
+                font-size: 0.9em; /* Smaller header info for print */
+                margin-bottom: 5px; /* Reduce margin */
             }
         }
     </style>
@@ -197,7 +214,7 @@
                     <tr>
                         <th class="hidden">Athlete Details</th>
                         <th class="hidden">Meet Name</th>
-                        <th class="hidden">Meet Date</th> <!-- New Meet Date Header -->
+                        <th class="hidden">Meet Date</th> <!-- Added Meet Date Header -->
                         <th class="hidden">Event</th>
                         <th class="hidden">Seed Time</th>
                         <th class="hidden">Final Time</th>
@@ -536,11 +553,12 @@
             // Group data by athlete
             const athletesGrouped = data.reduce((acc, current) => {
                 const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
-                const uniqueAthleteMeetKey = `${current.lastName}-${current.firstName}-${current.age}-${current.meetDate}-${current.meetName}`; // More robust grouping for table
+                // Now also group by meet date and name, as an athlete might participate in multiple meets per week/data load
+                const uniqueAthleteMeetKey = `${current.lastName}-${current.firstName}-${current.age}-${current.meetDate}-${current.meetName}`;
                 
                 if (!acc[uniqueAthleteMeetKey]) {
                     acc[uniqueAthleteMeetKey] = {
-                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Base ID for charts to track performance across dates
+                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Consistent ID for charts (remains just athlete-specific)
                         displayKey: athleteDisplayKey, // For table header
                         details: {
                             lastName: current.lastName,
