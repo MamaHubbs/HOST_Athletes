@@ -49,7 +49,7 @@
             padding: 3px 6px;
             font-size: 0.7em;
             border-radius: 4px;
-            border: 1px solid #ccc; /* Added border as it was removed with Tailwind */
+            border: 1px solid #ccc;
         }
 
         button {
@@ -131,6 +131,74 @@
             white-space: nowrap;
         }
 
+        /* Dashboard Specific Styles */
+        .chart-section {
+            background-color: #e5f1ff; /* Light blue background for the dashboard section */
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #0156B3; /* Border with theme blue */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-section h2 {
+            color: #0156B3; /* Heading color for dashboard section */
+            text-align: center;
+            font-size: 1.5em; /* Adjust relative to body font size */
+            margin-bottom: 15px;
+        }
+        .chart-section h3 {
+            color: #333; /* Sub-heading color */
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .chart-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .chart-controls .dropdown-box {
+            flex-grow: 1;
+            min-width: 180px;
+            text-align: left;
+        }
+        .chart-display {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            .chart-display {
+                grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
+            }
+        }
+        .chart-canvas-container {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #b3d9ff; /* Lighter blue border for chart containers */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 384px; /* Fixed height for consistency */
+        }
+        .chart-canvas-container canvas {
+            max-width: 100%;
+            height: 100%;
+        }
+
+        .no-print-button {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .no-print-button button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         /* Print-specific styles from original, adjusted for new base styles */
         @media print {
             body {
@@ -161,6 +229,9 @@
                 font-size: 0.9em !important; /* Smaller header info for print */
                 margin-bottom: 5px !important; /* Reduce margin */
             }
+            .chart-section {
+                display: none !important; /* Hide charts on print */
+            }
         }
     </style>
 </head>
@@ -175,8 +246,8 @@
 
         <!-- Filter Controls - No Print -->
         <div class="no-print dropdown-container">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
-            <div class="flex-container"> <!-- Use a flexbox or similar for inline layout -->
+            <h2 class="text-xl font-semibold text-gray-800 mb-4" style="color: #0156B3;">Report Filters</h2>
+            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
                 <div class="dropdown-box">
                     <label for="jsonFileSelector">Load Results File:</label>
                     <select id="jsonFileSelector">
@@ -209,9 +280,9 @@
 
         <!-- Dashboard Section -->
         <div class="chart-section">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Swimmer Performance Dashboard</h2>
+            <h2 style="color: #0156B3;">Swimmer Performance Dashboard</h2>
 
-            <div class="chart-controls"> <!-- Container for select elements -->
+            <div class="chart-controls">
                 <div class="dropdown-box">
                     <label for="selectSwimmer">Select Swimmer:</label>
                     <select id="selectSwimmer">
@@ -228,7 +299,7 @@
                 </div>
             </div>
 
-            <div class="chart-display"> <!-- Container for canvases -->
+            <div class="chart-display">
                 <!-- Specialty Chart -->
                 <div class="chart-canvas-container">
                     <h3>Swimmer Specialty (Radar Chart)</h3>
@@ -258,7 +329,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th class="hidden-header">Athlete Details</th> <!-- Placeholder for proper column count alignment -->
+                        <th class="hidden-header">Athlete Details</th>
                         <th>Meet Date</th>
                         <th>Meet Name</th>
                         <th>Event</th>
@@ -313,7 +384,8 @@
 
         const weeklyFileNames = [
             "2025resultsweek01.json",
-            "2025resultsweek02.json"
+            "2025resultsweek02.json",
+            "2025resultsweek03.json"
         ];
 
         let allAthleteData = [];
@@ -980,7 +1052,7 @@
             const selectedSwimmerId = event.target.value;
             if (selectedSwimmerId) {
                 updateSpecialtyChart(selectedSwimmerId);
-                populateEventSelectForProgression(selectedSwimmerId);
+                populateEventSelectForProgression(selectedSwmerId);
                 if (selectEventForProgression.options.length > 1) {
                     selectEventForProgression.value = selectEventForProgression.options[1].value;
                     updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
