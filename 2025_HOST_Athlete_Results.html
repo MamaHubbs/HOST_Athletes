@@ -113,15 +113,19 @@
         <div class="no-print mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
             <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
-                <div class="flex-1 min-w-[150px]">
-                    <label for="filterName" class="block text-sm font-medium text-gray-700 mb-1">Filter by Name:</label>
-                    <input type="text" id="filterName" placeholder="Enter full name or part" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
                 <div class="flex-1 min-w-[200px]">
                     <label for="jsonFileSelector" class="block text-sm font-medium text-gray-700 mb-1">Load Results File:</label>
                     <select id="jsonFileSelector" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                         <!-- Options populated by JavaScript with date ranges -->
                     </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filterName" class="block text-sm font-medium text-gray-700 mb-1">Filter by Athlete Name:</label>
+                    <input type="text" id="filterName" placeholder="Enter full name or part" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filterStroke" class="block text-sm font-medium text-gray-700 mb-1">Filter by Stroke:</label>
+                    <input type="text" id="filterStroke" placeholder="e.g., Free, Back" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                     Apply Filters
@@ -231,7 +235,7 @@
             return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
         }
 
-        // NEW Helper to format date as MM/DD/YYYY (e.g., "06/11/2025")
+        // Helper to format date as MM/DD/YYYY (e.g., "06/11/2025")
         function formatMMDDYYYY(dateString) {
             const date = new Date(dateString);
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -243,9 +247,8 @@
         // --- Configuration for JSON file paths and weekly file names ---
         const weeklyFileNames = [
             "2025resultsweek01.json",
-            "2025resultsweek02.json"
+            "2025resultsweek02.json",
         ];
-
 
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
@@ -253,7 +256,7 @@
 
         const reportTableBody = document.getElementById('reportTableBody');
         const filterNameInput = document.getElementById('filterName');
-        // Removed filterCategoryInput, filterEventInput, filterStartDateInput, filterEndDateInput
+        const filterStrokeInput = document.getElementById('filterStroke'); // New stroke filter input
         const applyFiltersButton = document.getElementById('applyFilters');
         const resetFiltersButton = document.getElementById('resetFilters');
         const printReportButton = document.getElementById('printReport');
@@ -316,7 +319,7 @@
             jsonFileSelector.innerHTML = ''; // Clear existing options
 
             const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
-                // Construct full URL using new URL() for robustness.
+                // Use a proper base for URL construction for robustness
                 const filePath = new URL(fileName, window.location.href).toString();
                 let rawFileData = null;
 
@@ -343,34 +346,27 @@
 
                 // Use top-level 'meet date' for dropdown labels if available, otherwise fallback to first record's meet_date
                 let displayDate = 'N/A';
-                let displayMeetName = 'Unknown Meet'; // Placeholder for meet name, will not be displayed
-
-                // Prioritize top-level "meet date" and "title" if they exist
+                
+                // Prioritize top-level "meet date"
                 if (rawFileData && rawFileData["meet date"]) {
                     displayDate = rawFileData["meet date"];
-                    displayMeetName = String(rawFileData.title || 'Unknown Meet').replace('2025 ', '');
                 } else if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
                     // Fallback to data within the first value row if top-level fields are missing
                     const fields = rawFileData.fields;
                     const firstRow = rawFileData.values[0];
                     const meetDateIndex = fields.indexOf('meet_date');
-                    const meetNameIndex = fields.indexOf('meet_name');
                     
                     if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
                         displayDate = firstRow[meetDateIndex];
-                    }
-                    if (meetNameIndex !== -1 && firstRow[meetNameIndex]) {
-                        displayMeetName = String(firstRow[meetNameIndex]).replace('2025 ', '');
                     }
                 }
 
                 if (displayDate !== 'N/A') {
                     const option = document.createElement('option');
                     option.value = fileName;
-                    // Format: Week #1 (06/11/2025)
-                    // Ensuring displayDate is formatted to MM/DD/YYYY using the helper
+                    // Format: Week #1 (06/11/2025) - only date
                     const formattedDate = formatMMDDYYYY(displayDate);
-                    option.textContent = `Week #${index + 1} (${formattedDate})`; // Removed meet name from dropdown
+                    option.textContent = `Week #${index + 1} (${formattedDate})`;
                     return option;
                 }
                 return null; // Return null if no valid date found
@@ -961,14 +957,14 @@
         // Filters
         function applyFilters() {
             const nameFilter = filterNameInput.value.toLowerCase();
-            // Removed categoryFilter, eventFilter, startDateStr, endDateStr, startDate, endDate
+            const strokeFilter = filterStrokeInput.value.toLowerCase(); // New stroke filter value
             
             filteredAthleteData = allAthleteData.filter(athlete => {
                 const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
                 const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
-                // Removed matchesCategory, matchesEvent, matchesDate
+                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter); // Filter by stroke
                 
-                return matchesName; // Only filter by name
+                return matchesName && matchesStroke; // Apply both name and stroke filters
             });
 
             renderTable(filteredAthleteData);
@@ -976,7 +972,7 @@
 
         function resetFilters() {
             filterNameInput.value = '';
-            // Removed filterCategoryInput, filterEventInput, filterStartDateInput, filterEndDateInput
+            filterStrokeInput.value = ''; // Clear stroke input on reset
             filteredAthleteData = [...allAthleteData];
             renderTable(filteredAthleteData);
         }
@@ -1020,7 +1016,7 @@
 
         jsonFileSelector.addEventListener('change', (event) => {
             filterNameInput.value = '';
-            // Removed filterCategoryInput, filterEventInput
+            filterStrokeInput.value = ''; // Clear stroke filter when changing file
             fetchAndRenderData(event.target.value);
         });
 
