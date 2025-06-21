@@ -1,0 +1,55 @@
+--RSL Weekly Ready to Merge
+
+WITH team_name_map AS (
+  SELECT * FROM (VALUES
+    (3695, 'Aquia Harbour'),
+    (3762, 'Austin Ridge'),
+    (3797, 'Caroline'),
+    (3793, 'Caroline'),
+    (3790, 'Chancellor'),
+    (3777, 'College Heights'),
+    (4475, 'Curtis Park'),
+    (4483, 'Curtis Park'),
+    (7573, 'Curtis Park'),
+    (4547, 'Dahlgren'),
+    (8811, 'Eden Estates'),
+    (8809, 'Eden Estates'),
+    (4532, 'Embrey Mills'),
+    (3747, 'Fawn Lake'),
+    (3522, 'Ferry Farm'),
+    (4465, 'Fox Point'),
+    (3744, 'Fredericksburg CC'),
+    (801,  'Grafton'),
+    (4191, 'Hampton Oaks'),
+    (3626, 'Hopyard'),
+    (2208, 'Idlewild'),
+    (4464, 'Lake Wilderness'),
+    (4542, 'Lake of the Woods'),
+    (4212, 'Lee''s Hill'),
+    (4463, 'Leeland Station'),
+    (3257, 'Massad YMCA'),
+    (432,  'Salem Fields'),
+    (3687, 'Spotswood'),
+    (4626, 'Spotsy Y'),
+    (3659, 'Woodlands')
+  ) AS t(org_id, display_name)
+)
+
+SELECT
+  TO_CHAR(ce.begin_at_date, 'Mon DD, YYYY') AS "Date",
+  ce.name AS "Meet Name",
+  COALESCE(tnm.display_name, 'Team ' || srs.team_id) AS "Team",
+  CASE
+    WHEN ce.is_ready_for_merge = TRUE THEN 'Yes'
+    ELSE 'No'
+  END AS "Ready to Merge" -- Removed the trailing comma here
+FROM calendar_events ce
+JOIN swim_results_team_stats srs ON ce.id = srs.swim_meet_id
+JOIN organizations o ON srs.team_id = o.id
+LEFT JOIN team_name_map tnm ON srs.team_id = tnm.org_id
+WHERE
+  o.governing_organization_id = 857
+  AND ce.begin_at_date BETWEEN DATE_TRUNC('week', CURRENT_DATE) AND CURRENT_DATE
+  --AND ce.begin_at_date BETWEEN DATE '2025-06-08' AND DATE '2025-06-13' -- Corrected typo if you uncomment
+ORDER BY "Date", "Meet Name", "Team"
+LIMIT 5000;
