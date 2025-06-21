@@ -112,42 +112,21 @@
         <!-- Filter Controls - No Print -->
         <div class="no-print mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <div>
+            <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                <div class="flex-1 min-w-[150px]">
                     <label for="filterName" class="block text-sm font-medium text-gray-700 mb-1">Filter by Name:</label>
                     <input type="text" id="filterName" placeholder="Enter full name or part" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                 </div>
-                <div>
-                    <label for="filterCategory" class="block text-sm font-medium text-gray-700 mb-1">Filter by Category:</label>
-                    <input type="text" id="filterCategory" placeholder="e.g., Female, Male" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="filterEvent" class="block text-sm font-medium text-gray-700 mb-1">Filter by Event:</label>
-                    <input type="text" id="filterEvent" placeholder="e.g., Freestyle, Backstroke" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
-            </div>
-            <!-- New: JSON File Selector and Date Range Filters -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
+                <div class="flex-1 min-w-[200px]">
                     <label for="jsonFileSelector" class="block text-sm font-medium text-gray-700 mb-1">Load Results File:</label>
                     <select id="jsonFileSelector" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                         <!-- Options populated by JavaScript with date ranges -->
                     </select>
                 </div>
-                <div>
-                    <label for="filterStartDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date:</label>
-                    <input type="date" id="filterStartDate" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="filterEndDate" class="block text-sm font-medium text-gray-700 mb-1">End Date:</label>
-                    <input type="date" id="filterEndDate" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                </div>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-4">
-                <button id="applyFilters" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                     Apply Filters
                 </button>
-                <button id="resetFilters" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                <button id="resetFilters" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                     Reset Filters
                 </button>
             </div>
@@ -268,17 +247,13 @@
         ];
 
 
-
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
         let currentLoadedMeetInfo = { title: '', dateRange: '' }; // Stores current meet title and date range
 
         const reportTableBody = document.getElementById('reportTableBody');
         const filterNameInput = document.getElementById('filterName');
-        const filterCategoryInput = document.getElementById('filterCategory');
-        const filterEventInput = document.getElementById('filterEvent');
-        const filterStartDateInput = document.getElementById('filterStartDate');
-        const filterEndDateInput = document.getElementById('filterEndDate');
+        // Removed filterCategoryInput, filterEventInput, filterStartDateInput, filterEndDateInput
         const applyFiltersButton = document.getElementById('applyFilters');
         const resetFiltersButton = document.getElementById('resetFilters');
         const printReportButton = document.getElementById('printReport');
@@ -341,7 +316,7 @@
             jsonFileSelector.innerHTML = ''; // Clear existing options
 
             const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
-                // Construct full URL using new URL() for robustness.
+                // Use a proper base for URL construction for robustness
                 const filePath = new URL(fileName, window.location.href).toString();
                 let rawFileData = null;
 
@@ -370,10 +345,12 @@
                 let displayDate = 'N/A';
                 let displayMeetName = 'Unknown Meet';
 
-                if (rawFileData && rawFileData["meet date"]) { // Prefer top-level "meet date"
+                // Prioritize top-level "meet date" and "title" if they exist
+                if (rawFileData && rawFileData["meet date"]) {
                     displayDate = rawFileData["meet date"];
                     displayMeetName = String(rawFileData.title || 'Unknown Meet').replace('2025 ', '');
                 } else if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
+                    // Fallback to data within the first value row if top-level fields are missing
                     const fields = rawFileData.fields;
                     const firstRow = rawFileData.values[0];
                     const meetDateIndex = fields.indexOf('meet_date');
@@ -391,7 +368,9 @@
                     const option = document.createElement('option');
                     option.value = fileName;
                     // Format: Week #1 (Meet Name - 06/11/2025)
-                    option.textContent = `Week #${index + 1} (${displayMeetName} - ${formatMMDDYYYY(displayDate)})`;
+                    // Ensure displayDate is formatted to MM/DD/YYYY if it's not already
+                    const formattedDate = formatMMDDYYYY(displayDate);
+                    option.textContent = `Week #${index + 1} (${displayMeetName} - ${formattedDate})`;
                     return option;
                 }
                 return null; // Return null if no valid date found
@@ -423,7 +402,7 @@
                 // For "All Results", rawDateOrRange will already be a formatted range
                 displayDate = rawDateOrRange;
             } else {
-                // For single week, rawDateOrRange could be "YYYY-MM-DD" or "Mon DD, YYYY"
+                // For single week, rawDateOrRange could be "YYYY-MM-DD" or "Mon DD,YYYY"
                 // Try parsing it to ensure MM/DD/YYYY format
                 const parsedDate = new Date(rawDateOrRange);
                 if (!isNaN(parsedDate.getTime())) { // Check if date is valid
@@ -461,7 +440,7 @@
             }
 
             if (!isAllResultsSelected) {
-                const filePath = new URL(fileName, window.location.href).toString();
+                const filePath = new URL(fileName, window.location.href).toString(); // Robust URL construction
                 try {
                     const response = await fetch(filePath);
                     if (!response.ok) {
@@ -482,15 +461,13 @@
                     }
                 }
                 
-                // Transform data using the fields/values from the fetched JSON
                 allAthleteData = transformRawData(rawFileData.values, rawFileData.fields);
-                // Get top-level title and meet date for report header
                 currentMeetTitleForHeader = rawFileData.title || 'Selected Week';
                 currentMeetDateForHeader = rawFileData["meet date"] || ''; // Use top-level "meet date"
             } else {
                 // Fetch all files if "all-results" is selected
                 const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
-                    const filePath = new URL(name, window.location.href).toString();
+                    const filePath = new URL(name, window.location.href).toString(); // Robust URL construction
                     let rawWeekData = null;
                     try {
                         const response = await fetch(filePath);
@@ -507,7 +484,6 @@
                         rawWeekData = simulatedJsonData[name];
                         if (!rawWeekData) return [];
                     }
-                    // Transform data for each week
                     if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
                          return transformRawData(rawWeekData.values, rawWeekData.fields);
                     }
@@ -985,28 +961,14 @@
         // Filters
         function applyFilters() {
             const nameFilter = filterNameInput.value.toLowerCase();
-            const categoryFilter = filterCategoryInput.value.toLowerCase();
-            const eventFilter = filterEventInput.value.toLowerCase();
-            const startDateStr = filterStartDateInput.value;
-            const endDateStr = filterEndDateInput.value;
-
-            const startDate = startDateStr ? new Date(startDateStr + 'T00:00:00') : null;
-            const endDate = endDateStr ? new Date(endDateStr + 'T23:59:59') : null;
-
+            // Removed categoryFilter, eventFilter, startDateStr, endDateStr, startDate, endDate
+            
             filteredAthleteData = allAthleteData.filter(athlete => {
                 const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
                 const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
-                const matchesCategory = categoryFilter === '' || athlete.category.toLowerCase().includes(categoryFilter);
-                const matchesEvent = eventFilter === '' || athlete.eventSwum.toLowerCase().includes(eventFilter);
-
-                let matchesDate = true;
-                if (startDate || endDate) {
-                    const meetDate = new Date(athlete.meetDate + 'T12:00:00');
-                    matchesDate = (!startDate || meetDate >= startDate) &&
-                                  (!endDate || meetDate <= endDate);
-                }
-
-                return matchesName && matchesCategory && matchesEvent && matchesDate;
+                // Removed matchesCategory, matchesEvent, matchesDate
+                
+                return matchesName; // Only filter by name
             });
 
             renderTable(filteredAthleteData);
@@ -1014,10 +976,7 @@
 
         function resetFilters() {
             filterNameInput.value = '';
-            filterCategoryInput.value = '';
-            filterEventInput.value = '';
-            filterStartDateInput.value = '';
-            filterEndDateInput.value = '';
+            // Removed filterCategoryInput, filterEventInput, filterStartDateInput, filterEndDateInput
             filteredAthleteData = [...allAthleteData];
             renderTable(filteredAthleteData);
         }
@@ -1033,10 +992,9 @@
             const selectedSwimmerId = event.target.value;
             if (selectedSwimmerId) {
                 updateSpecialtyChart(selectedSwimmerId);
-                populateEventSelectForProgression(selectedSwimmerId); // Populate event dropdown based on selected swimmer
-                // Attempt to select the first event and update progression chart
+                populateEventSelectForProgression(selectedSwimmerId);
                 if (selectEventForProgression.options.length > 1) {
-                    selectEventForProgression.value = selectEventForProgression.options[1].value; // Select the first actual event
+                    selectEventForProgression.value = selectEventForProgression.options[1].value;
                     updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
                 } else {
                     if (progressionChartInstance) progressionChartInstance.destroy();
@@ -1044,15 +1002,14 @@
             } else {
                 if (specialtyChartInstance) specialtyChartInstance.destroy();
                 if (progressionChartInstance) progressionChartInstance.destroy();
-                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>'; // Clear events
-                selectEventForProgression.disabled = true; // Disable event dropdown
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                selectEventForProgression.disabled = true;
             }
         });
 
-        // Event listener for the new event selection dropdown
         selectEventForProgression.addEventListener('change', (event) => {
             const selectedEvent = event.target.value;
-            const selectedSwimmerId = selectSwimmer.value; // Get the currently selected swimmer
+            const selectedSwimmerId = selectSwimmer.value;
             if (selectedSwimmerId && selectedEvent) {
                 updateProgressionChart(selectedSwimmerId, selectedEvent);
             } else {
@@ -1063,8 +1020,7 @@
 
         jsonFileSelector.addEventListener('change', (event) => {
             filterNameInput.value = '';
-            filterCategoryInput.value = '';
-            filterEventInput.value = '';
+            // Removed filterCategoryInput, filterEventInput
             fetchAndRenderData(event.target.value);
         });
 
