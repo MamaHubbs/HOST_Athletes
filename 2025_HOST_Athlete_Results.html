@@ -213,8 +213,8 @@
                     <!-- This header is just for screen readers/initial structure, actual headers are per athlete -->
                     <tr>
                         <th class="hidden">Athlete Details</th>
+                        <th class="hidden">Meet Date</th> <!-- Moved Meet Date Header first -->
                         <th class="hidden">Meet Name</th>
-                        <th class="hidden">Meet Date</th> <!-- Added Meet Date Header -->
                         <th class="hidden">Event</th>
                         <th class="hidden">Seed Time</th>
                         <th class="hidden">Final Time</th>
@@ -553,12 +553,12 @@
             // Group data by athlete
             const athletesGrouped = data.reduce((acc, current) => {
                 const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
-                // Now also group by meet date and name, as an athlete might participate in multiple meets per week/data load
+                // Group by athlete, and now also by meet for distinct rows if an athlete swims in multiple meets
                 const uniqueAthleteMeetKey = `${current.lastName}-${current.firstName}-${current.age}-${current.meetDate}-${current.meetName}`;
                 
                 if (!acc[uniqueAthleteMeetKey]) {
                     acc[uniqueAthleteMeetKey] = {
-                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Consistent ID for charts (remains just athlete-specific)
+                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Consistent ID for charts (remains athlete-specific)
                         displayKey: athleteDisplayKey, // For table header
                         details: {
                             lastName: current.lastName,
@@ -580,6 +580,7 @@
 
             if (athleteKeys.length === 0) {
                 const noResultsRow = document.createElement('tr');
+                // Adjust colspan for the new 'Meet Date' column (was 8, now 9)
                 noResultsRow.innerHTML = `
                     <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         No results found matching your filters.
@@ -604,8 +605,8 @@
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
                 eventSubHeaderRow.innerHTML = `
+                    <th>Meet Date</th> <!-- Moved Meet Date Column Header first -->
                     <th>Meet Name</th>
-                    <th>Meet Date</th> <!-- Added Meet Date Column Header -->
                     <th>Event</th>
                     <th>Seed</th>
                     <th>Final</th>
@@ -618,8 +619,13 @@
                 eventSubHeaderRow.prepend(emptyTh);
                 reportTableBody.appendChild(eventSubHeaderRow);
 
-                // Sort events by Event Name (alphabetically)
+                // Sort events by Meet Date, then Event Name (alphabetically)
                 athlete.events.sort((a, b) => {
+                    const dateA = new Date(a.meetDate);
+                    const dateB = new Date(b.meetDate);
+                    if (dateA.getTime() !== dateB.getTime()) {
+                        return dateA - dateB;
+                    }
                     return a.eventSwum.localeCompare(b.eventSwum);
                 });
 
@@ -641,8 +647,8 @@
                     const eventRow = document.createElement('tr');
                     eventRow.className = 'event-data-row hover:bg-gray-50 transition duration-150 ease-in-out';
                     eventRow.innerHTML = `
-                        <td>${eventData.meetName}</td>
                         <td>${formatMMDDYYYY(eventData.meetDate)}</td> <!-- Display formatted meet date -->
+                        <td>${eventData.meetName}</td>
                         <td>${eventData.eventSwum}</td>
                         <td>${eventData.seedTime}</td>
                         <td>${eventData.resultTime}</td>
