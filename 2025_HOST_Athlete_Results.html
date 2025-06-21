@@ -492,11 +492,10 @@
                 allResultsOption.textContent = "All Results (All Weeks)";
                 jsonFileSelector.appendChild(allResultsOption);
 
-                // Set default selected to the last week
                 if (weeklyFileNames.length > 0) {
                     jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
                 } else {
-                    jsonFileSelector.value = "all-results"; // Fallback
+                    jsonFileSelector.value = "all-results";
                 }
             });
         }
@@ -642,7 +641,6 @@
 
             const athletesGrouped = data.reduce((acc, current) => {
                 const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
-                // Now grouping only by the athlete's unique ID for their main header
                 const uniqueAthleteId = `${current.lastName}-${current.firstName}-${current.age}`;
                 
                 if (!acc[uniqueAthleteId]) {
@@ -680,13 +678,15 @@
 
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
+                // Inline style added here to apply the blue background and bold text directly
                 athleteHeaderRow.innerHTML = `
-                    <td colspan="9" style="background-color: #e5f1ff; color: #1f2937; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athlete.displayKey}</td>
+                    <td colspan="9" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athlete.displayKey}</td>
                 `;
                 reportTableBody.appendChild(athleteHeaderRow);
 
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
+                // Removed inline background-color here to let parent CSS handle it (or keep transparent)
                 eventSubHeaderRow.innerHTML = `
                     <th style="width: 1%;"></th> <!-- Empty column for alignment -->
                     <th>Meet Date</th>
