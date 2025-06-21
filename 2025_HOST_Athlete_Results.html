@@ -328,8 +328,8 @@
         <div class="table-container">
             <table>
                 <thead>
-                    <tr>
-                        <th class="hidden-header">Athlete Details</th>
+                    <tr class="sr-only"> <!-- Hidden for screen readers, visual headers added per athlete -->
+                        <th>Athlete Details</th>
                         <th>Meet Date</th>
                         <th>Meet Name</th>
                         <th>Event</th>
@@ -492,7 +492,12 @@
                 allResultsOption.textContent = "All Results (All Weeks)";
                 jsonFileSelector.appendChild(allResultsOption);
 
-                jsonFileSelector.value = "2025resultsweek01.json";
+                // Set default selected to the last week
+                if (weeklyFileNames.length > 0) {
+                    jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
+                } else {
+                    jsonFileSelector.value = "all-results"; // Fallback
+                }
             });
         }
 
@@ -637,6 +642,7 @@
 
             const athletesGrouped = data.reduce((acc, current) => {
                 const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
+                // Now grouping only by the athlete's unique ID for their main header
                 const uniqueAthleteId = `${current.lastName}-${current.firstName}-${current.age}`;
                 
                 if (!acc[uniqueAthleteId]) {
@@ -675,13 +681,14 @@
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
                 athleteHeaderRow.innerHTML = `
-                    <td colspan="9" class="px-6 py-3">${athlete.displayKey}</td>
+                    <td colspan="9" style="background-color: #e5f1ff; color: #1f2937; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athlete.displayKey}</td>
                 `;
                 reportTableBody.appendChild(athleteHeaderRow);
 
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
                 eventSubHeaderRow.innerHTML = `
+                    <th style="width: 1%;"></th> <!-- Empty column for alignment -->
                     <th>Meet Date</th>
                     <th>Meet Name</th>
                     <th>Event</th>
@@ -691,9 +698,6 @@
                     <th>Points</th>
                     <th>% Improvement</th>
                 `;
-                const emptyTh = document.createElement('th');
-                emptyTh.style.width = '1%';
-                eventSubHeaderRow.prepend(emptyTh);
                 reportTableBody.appendChild(eventSubHeaderRow);
 
                 athlete.events.sort((a, b) => {
@@ -720,8 +724,9 @@
                     }
 
                     const eventRow = document.createElement('tr');
-                    eventRow.className = 'event-data-row hover:bg-gray-50 transition duration-150 ease-in-out';
+                    eventRow.className = 'event-data-row hover:bg-gray-50';
                     eventRow.innerHTML = `
+                        <td style="width: 1%;"></td> <!-- Empty column for alignment -->
                         <td>${formatMMDDYYYY(eventData.meetDate)}</td>
                         <td>${eventData.meetName}</td>
                         <td>${eventData.eventSwum}</td>
@@ -731,9 +736,6 @@
                         <td>${eventData.points}</td>
                         <td>${improvement}</td>
                     `;
-                    const emptyTd = document.createElement('td');
-                    emptyTd.style.width = '1%';
-                    eventRow.prepend(emptyTd);
                     reportTableBody.appendChild(eventRow);
                 });
             });
@@ -757,18 +759,18 @@
                     });
                     uniqueSwimmers.push({
                         id: key,
-                        firstName: athlete.firstName, // Store for full name construction
-                        lastName: athlete.lastName    // Store for full name construction
+                        firstName: athlete.firstName,
+                        lastName: athlete.lastName
                     });
                 }
             });
 
-            uniqueSwimmers.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)); // Sort by last name, then first name
+            uniqueSwimmers.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
 
             uniqueSwimmers.forEach(swimmer => {
                 const option = document.createElement('option');
                 option.value = swimmer.id;
-                option.textContent = `${swimmer.lastName}, ${swimmer.firstName}`; // Display as "Last Name, First Name"
+                option.textContent = `${swimmer.lastName}, ${swimmer.firstName}`;
                 selectSwimmer.appendChild(option);
             });
         }
@@ -1089,7 +1091,12 @@
         // Initial render on page load: populate selector, then load default data
         document.addEventListener('DOMContentLoaded', () => {
             populateJsonFileSelector();
-            jsonFileSelector.value = "2025resultsweek01.json";
+            // Default to the most recent week
+            if (weeklyFileNames.length > 0) {
+                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
+            } else {
+                jsonFileSelector.value = "all-results";
+            }
             const defaultFile = jsonFileSelector.value;
             fetchAndRenderData(defaultFile);
         });
