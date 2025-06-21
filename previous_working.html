@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athlete Meet Summary Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Set default font to Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem; /* Slightly smaller base font */
+        }
+
+        /* Basic table styling for better readability */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.85rem; /* Smaller table font */
+        }
+
+        th, td {
+            padding: 8px 12px; /* Reduced padding for smaller font */
+            text-align: left;
+            /* Applying border only to bottom for data rows, full border for headers */
+            border-bottom: 1px solid #e2e8f0; /* Tailwind's gray-200 */
+        }
+
+        /* Specific styling for the new athlete header rows */
+        .athlete-header-row {
+            background-color: #e0e7ff; /* Light blue-200 */
+            font-weight: bold;
+            font-size: 1em; /* Relative to table font size (0.85rem) */
+            color: #1f2937; /* Gray-800 */
+            border-top: 2px solid #6366f1; /* Indigo-500 */
+            border-bottom: 2px solid #6366f1; /* Indigo-500 */
+            text-align: left !important;
+        }
+
+        /* Specific styling for the event sub-header rows */
+        .event-subheader-row th {
+            background-color: #f8fafc; /* Tailwind's gray-50 */
+            font-weight: 600;
+            color: #4a5568; /* Tailwind's gray-700 */
+            padding-left: 20px; /* Reduced indent for sub-headers */
+            border-bottom: 1px solid #cbd5e0; /* Gray-300 */
+            font-size: 0.8em; /* Even smaller for sub-headers */
+        }
+
+        /* Styling for the data rows under events */
+        .event-data-row td {
+            padding-left: 30px; /* Reduced indent for event data */
+            font-size: 0.85em; /* Keep it readable */
+        }
+
+        tr:hover {
+            background-color: #f0f4f8; /* Lighter hover effect */
+        }
+
+        /* Custom styles for printing */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                font-size: 0.75rem; /* Smaller base font for print */
+                margin: 0.5cm; /* Reduce overall margins */
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* Ensure table borders are visible for print */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.8em; /* Smaller table font for print */
+            }
+            th, td {
+                border: 1px solid #ddd; /* Light gray border for all cells */
+                padding: 3px 5px; /* Reduced padding for print */
+                text-align: left;
+            }
+            /* Override background for printing */
+            .bg-gray-100 {
+                background-color: #ffffff !important;
+            }
+            .text-gray-800 {
+                color: #000000 !important;
+            }
+            /* Hide charts on print for cleaner table output, unless explicitly needed */
+            .chart-section {
+                display: none !important;
+            }
+            /* Adjust padding for print to avoid cutting off text */
+            .athlete-header-row {
+                background-color: #e0e7ff !important;
+                color: #1f2937 !important;
+                border-top: 1px solid #6366f1 !important;
+                border-bottom: 1px solid #6366f1 !important;
+                font-size: 0.9em; /* Slightly smaller for print */
+            }
+            .event-subheader-row th {
+                padding-left: 10px; /* Further reduce indent for print */
+                font-size: 0.75em; /* Smaller font for print sub-headers */
+            }
+            .event-data-row td {
+                padding-left: 15px; /* Further reduce indent for print */
+                font-size: 0.75em; /* Smaller font for print data rows */
+            }
+            #reportHeaderInfo {
+                font-size: 0.9em; /* Smaller header info for print */
+                margin-bottom: 5px; /* Reduce margin */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6 sm:p-10 min-h-screen flex flex-col items-center">
+    <div class="container mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg max-w-7xl w-full">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 text-center">Athlete Meet Summary Dashboard</h1>
+
+        <!-- Report Header Info (for screen and print) -->
+        <div id="reportHeaderInfo" class="text-lg text-gray-700 text-center mb-4 font-semibold">
+            <!-- Content will be dynamically updated by JavaScript -->
+        </div>
+
+        <!-- Filter Controls - No Print -->
+        <div class="no-print mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
+            <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                <div class="flex-1 min-w-[200px]">
+                    <label for="jsonFileSelector" class="block text-sm font-medium text-gray-700 mb-1">Load Results File:</label>
+                    <select id="jsonFileSelector" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <!-- Options populated by JavaScript with date ranges -->
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filterName" class="block text-sm font-medium text-gray-700 mb-1">Filter by Athlete Name:</label>
+                    <input type="text" id="filterName" placeholder="Enter full name or part" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filterStroke" class="block text-sm font-medium text-gray-700 mb-1">Filter by Stroke:</label>
+                    <select id="filterStroke" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">All Strokes</option>
+                        <option value="Freestyle">Freestyle</option>
+                        <option value="Backstroke">Backstroke</option>
+                        <option value="Butterfly">Butterfly</option>
+                        <option value="Breaststroke">Breaststroke</option>
+                        <option value="IM">IM</option>
+                    </select>
+                </div>
+                <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    Apply Filters
+                </button>
+                <button id="resetFilters" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    Reset Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="chart-section mt-8 mb-6 p-4 bg-purple-50 rounded-lg shadow-inner no-print">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 text-center">Swimmer Performance Dashboard</h2>
+
+            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="selectSwimmer" class="block text-lg font-medium text-gray-700 mb-2">Select Swimmer:</label>
+                    <select id="selectSwimmer" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
+                        <option value="">-- Select an Athlete --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div>
+                    <label for="selectEventForProgression" class="block text-lg font-medium text-gray-700 mb-2">Select Event (Progression Chart):</label>
+                    <select id="selectEventForProgression" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500" disabled>
+                        <option value="">-- Select an Event --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+                <!-- Specialty Chart -->
+                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center h-96">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Swimmer Specialty (Radar Chart)</h3>
+                    <canvas id="specialtyChart"></canvas>
+                </div>
+
+                <!-- Progression Chart -->
+                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center h-96">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Time Progression (Line Chart)</h3>
+                    <canvas id="progressionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print Button - No Print -->
+        <div class="no-print flex justify-center mb-6">
+            <button id="printReport" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1m0 0H7m0 0h10" />
+                </svg>
+                <span>Print Report</span>
+            </button>
+        </div>
+
+        <!-- Report Table -->
+        <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
+            <table class="min-w-full bg-white">
+                <thead>
+                    <!-- This header is just for screen readers/initial structure, actual headers are per athlete -->
+                    <tr>
+                        <th class="hidden">Athlete Details</th>
+                        <th class="hidden">Meet Date</th> <!-- Moved Meet Date Header first -->
+                        <th class="hidden">Meet Name</th>
+                        <th class="hidden">Event</th>
+                        <th class="hidden">Seed Time</th>
+                        <th class="hidden">Final Time</th>
+                        <th class="hidden">Place</th>
+                        <th class="hidden">Points</th>
+                        <th class="hidden">% Improvement</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Data will be populated here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Helper function to convert time string (MM:SS.ms or SS.ms) to seconds
+        function timeToSeconds(timeStr) {
+            if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity; // Added 'NT' for No Time
+            const parts = String(timeStr).split(':'); // Ensure timeStr is a string
+            if (parts.length === 2) {
+                const minutes = parseInt(parts[0]);
+                const seconds = parseFloat(parts[1]);
+                return minutes * 60 + seconds;
+            } else if (parts.length === 1) {
+                return parseFloat(parts[0]); // Handles cases like "28.15" if no minutes
+            }
+            return Infinity; // Invalid format
+        }
+
+        // Helper function to convert seconds to time string (MM:SS.ms)
+        function secondsToTime(totalSeconds) {
+            if (totalSeconds === Infinity || isNaN(totalSeconds)) return 'N/A';
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            // Pad seconds with leading zero if less than 10, and ensure two decimal places
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds.toFixed(2)}`;
+        }
+
+        // Helper to format date for display (e.g., "June 8")
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        }
+
+        // Helper to format date as MM/DD/YYYY (e.g., "06/11/2025")
+        function formatMMDDYYYY(dateString) {
+            const date = new Date(dateString);
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        // --- Configuration for JSON file paths and weekly file names ---
+        const weeklyFileNames = [
+            "2025resultsweek01.json",
+            "2025resultsweek02.json"
+        ];
+
+        let allAthleteData = []; // This will now be populated dynamically
+        let filteredAthleteData = [];
+        let currentLoadedMeetInfo = { title: '', dateRange: '' }; // Stores current meet title and date range
+
+        const reportTableBody = document.getElementById('reportTableBody');
+        const filterNameInput = document.getElementById('filterName');
+        const filterStrokeInput = document.getElementById('filterStroke'); // New stroke filter input
+        const applyFiltersButton = document.getElementById('applyFilters');
+        const resetFiltersButton = document.getElementById('resetFilters');
+        const printReportButton = document.getElementById('printReport');
+        const selectSwimmer = document.getElementById('selectSwimmer');
+        const jsonFileSelector = document.getElementById('jsonFileSelector');
+        const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
+        const selectEventForProgression = document.getElementById('selectEventForProgression'); // New event select
+
+        let specialtyChartInstance = null;
+        let progressionChartInstance = null;
+
+        /**
+         * Transforms raw data from the JSON "values" array into an array of objects
+         * with meaningful property names and adds an 'id', 'meetDate', and 'meetName'.
+         * @param {Array<Array>} rawValues - The "values" array from the JSON.
+         * @param {Array<string>} fieldNames - The "fields" array from the JSON.
+         * @returns {Array<Object>} Transformed athlete data.
+         */
+        function transformRawData(rawValues, fieldNames) {
+            const transformed = [];
+            // Mapping indices based on your 'fields' array
+            const lastNameIndex = fieldNames.indexOf('last_name');
+            const firstNameIndex = fieldNames.indexOf('first_name');
+            const genderIndex = fieldNames.indexOf('competition_category'); // Maps to 'M' or 'F'
+            const ageIndex = fieldNames.indexOf('age');
+            const meetDateIndex = fieldNames.indexOf('meet_date'); // Index for meet_date in the row
+            const meetNameIndex = fieldNames.indexOf('meet_name'); // Index for meet_name in the row
+            const eventSwumIndex = fieldNames.indexOf('event_swum');
+            const seedTimeIndex = fieldNames.indexOf('seed_time');
+            const resultTimeIndex = fieldNames.indexOf('result_time');
+            const placeIndex = fieldNames.indexOf('place');
+            const pointsIndex = fieldNames.indexOf('points');
+
+            rawValues.forEach((row, index) => {
+                // Generate a consistent ID for the athlete (lastName-firstName-age)
+                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
+                
+                transformed.push({
+                    id: athleteId, // Consistent ID for the athlete (used for charts across different dates)
+                    lastName: row[lastNameIndex],
+                    firstName: row[firstNameIndex],
+                    category: row[genderIndex], // This is 'gender' from your JSON, used as 'category' for display
+                    age: row[ageIndex],
+                    meetDate: row[meetDateIndex], // Use meet_date from the current row
+                    meetName: String(row[meetNameIndex]).replace('2025 ', ''), // Use meet_name from the current row and remove "2025 "
+                    eventSwum: row[eventSwumIndex],
+                    seedTime: String(row[seedTimeIndex]), // Ensure it's a string for timeToSeconds
+                    resultTime: String(row[resultTimeIndex]), // Ensure it's a string for timeToSeconds
+                    place: row[placeIndex],
+                    points: row[pointsIndex]
+                });
+            });
+            return transformed;
+        }
+
+        /**
+         * Populates the JSON file selector with options including meet dates.
+         */
+        function populateJsonFileSelector() {
+            jsonFileSelector.innerHTML = ''; // Clear existing options
+
+            const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
+                const filePath = new URL(fileName, window.location.href).toString();
+                let rawFileData = null;
+
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        console.warn(`Could not fetch ${filePath} for dropdown options.`);
+                        return null; 
+                    } else {
+                        rawFileData = await response.json();
+                    }
+                } catch (error) {
+                    console.error(`Error fetching ${filePath} for dropdown options:`, error);
+                    return null;
+                }
+
+                let displayDate = 'N/A';
+                
+                // Prioritize top-level "meet date"
+                if (rawFileData && rawFileData["meet date"]) {
+                    displayDate = rawFileData["meet date"];
+                } else if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
+                    const fields = rawFileData.fields;
+                    const firstRow = rawFileData.values[0];
+                    const meetDateIndex = fields.indexOf('meet_date');
+                    
+                    if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
+                        displayDate = firstRow[meetDateIndex];
+                    }
+                }
+
+                if (displayDate !== 'N/A') {
+                    const option = document.createElement('option');
+                    option.value = fileName;
+                    const formattedDate = formatMMDDYYYY(displayDate);
+                    option.textContent = `Week #${index + 1} (${formattedDate})`;
+                    return option;
+                }
+                return null; // Return null if no valid date found
+            });
+
+            Promise.all(optionsPromises).then(options => {
+                options.filter(Boolean).forEach(option => jsonFileSelector.appendChild(option));
+
+                const allResultsOption = document.createElement('option');
+                allResultsOption.value = "all-results";
+                allResultsOption.textContent = "All Results (All Weeks)";
+                jsonFileSelector.appendChild(allResultsOption);
+
+                jsonFileSelector.value = "2025resultsweek01.json";
+            });
+        }
+
+        /**
+         * Updates the header display with current meet information.
+         * @param {string} title - The title of the current meet/report (top-level title).
+         * @param {string} rawDateOrRange - The raw date string (e.g., "YYYY-MM-DD" or "Jun 11, 2025") or date range for "All Results".
+         * @param {boolean} isAllResults - True if "All Results" is selected.
+         */
+        function updateReportHeaderDisplay(title, rawDateOrRange, isAllResults) {
+            const cleanedTitle = String(title || '').replace('2025 ', ''); // Ensure title is a string before replace
+            let displayDate = "";
+
+            if (isAllResults) {
+                displayDate = rawDateOrRange;
+            } else {
+                const parsedDate = new Date(rawDateOrRange);
+                if (!isNaN(parsedDate.getTime())) {
+                    displayDate = formatMMDDYYYY(parsedDate.toISOString().split('T')[0]);
+                } else {
+                    displayDate = rawDateOrRange;
+                }
+            }
+            
+            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
+        }
+
+        /**
+         * Fetches data from JSON file(s) and updates the report.
+         * @param {string} fileName - The name of the JSON file to load, or "all-results".
+         */
+        async function fetchAndRenderData(fileName) {
+            let rawFileData = null;
+            let currentMeetTitleForHeader = '';
+            let currentMeetDateForHeader = '';
+            let isAllResultsSelected = (fileName === "all-results");
+
+            if (!fileName) {
+                console.error("Attempted to fetch with an empty filename.");
+                allAthleteData = [];
+                filteredAthleteData = [];
+                renderTable(filteredAthleteData);
+                populateSwimmerSelect();
+                updateReportHeaderDisplay("No Data Loaded", "", false);
+                if (specialtyChartInstance) specialtyChartInstance.destroy();
+                if (progressionChartInstance) progressionChartInstance.destroy();
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                selectEventForProgression.disabled = true;
+                return;
+            }
+
+            if (!isAllResultsSelected) {
+                const filePath = new URL(fileName, window.location.href).toString();
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status} for ${filePath}`);
+                    }
+                    rawFileData = await response.json();
+                } catch (error) {
+                    console.error(`Error fetching ${filePath}:`, error);
+                    alert(`Failed to load data for ${fileName}. Please ensure the file exists and is accessible. Error: ${error.message}`);
+                    allAthleteData = []; // Clear data if fetch fails
+                    filteredAthleteData = [];
+                    renderTable(filteredFileData); // Use filteredData here
+                    populateSwimmerSelect();
+                    updateReportHeaderDisplay("Error Loading Data", "", false);
+                    if (specialtyChartInstance) specialtyChartInstance.destroy();
+                    if (progressionChartInstance) progressionChartInstance.destroy();
+                    selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                    selectEventForProgression.disabled = true;
+                    return;
+                }
+                
+                allAthleteData = transformRawData(rawFileData.values, rawFileData.fields);
+                currentMeetTitleForHeader = rawFileData.title || 'Selected Week';
+                currentMeetDateForHeader = rawFileData["meet date"] || '';
+            } else {
+                const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
+                    const filePath = new URL(name, window.location.href).toString();
+                    let rawWeekData = null;
+                    try {
+                        const response = await fetch(filePath);
+                        if (!response.ok) {
+                            console.warn(`Could not fetch ${filePath}. Skipping this week.`);
+                            return []; // Return empty array for this week if fetch fails
+                        }
+                        rawWeekData = await response.json();
+                        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
+                            return transformRawData(rawWeekData.values, rawWeekData.fields);
+                        }
+                        return [];
+                    } catch (error) {
+                        console.error(`Error fetching ${filePath}:`, error);
+                        console.warn(`Skipping ${name} due to network error.`);
+                        return []; // Return empty array on network error
+                    }
+                });
+
+                const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
+                allAthleteData = allWeeksTransformedData.flat();
+
+                if (allAthleteData.length > 0) {
+                    const allDates = allAthleteData.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+                    const overallMinDate = allDates[0];
+                    const overallMaxDate = allDates[allDates.length - 1];
+                    currentMeetTitleForHeader = "All Meets Combined";
+                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
+                } else {
+                    currentMeetTitleForHeader = "No Data Loaded";
+                    currentMeetDateForHeader = "";
+                }
+            }
+
+
+            if (allAthleteData && allAthleteData.length > 0) {
+                applyFilters();
+                populateSwimmerSelect();
+                updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, isAllResultsSelected);
+
+                if (selectSwimmer.value) {
+                    updateSpecialtyChart(selectSwimmer.value);
+                    populateEventSelectForProgression(selectSwimmer.value);
+                    if (selectEventForProgression.options.length > 1) {
+                         selectEventForProgression.value = selectEventForProgression.options[1].value;
+                         updateProgressionChart(selectSwimmer.value, selectEventForProgression.value);
+                    } else {
+                         if (progressionChartInstance) progressionChartInstance.destroy();
+                    }
+                    selectEventForProgression.disabled = false;
+                } else {
+                    if (specialtyChartInstance) specialtyChartInstance.destroy();
+                    if (progressionChartInstance) progressionChartInstance.destroy();
+                    selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                    selectEventForProgression.disabled = true;
+                }
+            } else {
+                console.warn(`No data loaded for ${fileName} after transformation.`);
+                filteredAthleteData = [];
+                renderTable(filteredAthleteData);
+                populateSwimmerSelect();
+                updateReportHeaderDisplay("No Data Loaded", "", false);
+                if (specialtyChartInstance) specialtyChartInstance.destroy();
+                if (progressionChartInstance) progressionChartInstance.destroy();
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                selectEventForProgression.disabled = true;
+            }
+        }
+
+        /**
+         * Renders the athlete data into the table, grouped by athlete.
+         * @param {Array<Object>} data - The array of athlete data to render.
+         */
+        function renderTable(data) {
+            reportTableBody.innerHTML = ''; // Clear existing rows
+
+            // Group data by athlete
+            const athletesGrouped = data.reduce((acc, current) => {
+                const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
+                // Now grouping only by the athlete's unique ID for their main header
+                const uniqueAthleteId = `${current.lastName}-${current.firstName}-${current.age}`;
+                
+                if (!acc[uniqueAthleteId]) {
+                    acc[uniqueAthleteId] = {
+                        id: uniqueAthleteId, // This is the ID for charts and overall athlete grouping
+                        displayKey: athleteDisplayKey, // For table header
+                        details: {
+                            lastName: current.lastName,
+                            firstName: current.firstName,
+                            age: current.age,
+                            category: current.category
+                        },
+                        events: [] // All events for this athlete, across all meets
+                    };
+                }
+                acc[uniqueAthleteId].events.push(current);
+                return acc;
+            }, {});
+
+            // Sort the grouped athletes for consistent display
+            const athleteKeys = Object.keys(athletesGrouped).sort();
+
+            if (athleteKeys.length === 0) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.innerHTML = `
+                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                        No results found matching your filters.
+                    </td>
+                `;
+                reportTableBody.appendChild(noResultsRow);
+                return;
+            }
+
+            athleteKeys.forEach(athleteKey => {
+                const athlete = athletesGrouped[athleteKey];
+
+                // Athlete Header Row
+                const athleteHeaderRow = document.createElement('tr');
+                athleteHeaderRow.className = 'athlete-header-row';
+                athleteHeaderRow.innerHTML = `
+                    <td colspan="9" class="px-6 py-3">${athlete.displayKey}</td>
+                `;
+                reportTableBody.appendChild(athleteHeaderRow);
+
+                // Event Sub-Header Row
+                const eventSubHeaderRow = document.createElement('tr');
+                eventSubHeaderRow.className = 'event-subheader-row';
+                eventSubHeaderRow.innerHTML = `
+                    <th>Meet Date</th> <!-- Moved Meet Date Column Header first -->
+                    <th>Meet Name</th>
+                    <th>Event</th>
+                    <th>Seed</th>
+                    <th>Final</th>
+                    <th>Place</th>
+                    <th>Points</th>
+                    <th>% Improvement</th>
+                `;
+                const emptyTh = document.createElement('th');
+                emptyTh.style.width = '1%';
+                eventSubHeaderRow.prepend(emptyTh);
+                reportTableBody.appendChild(eventSubHeaderRow);
+
+                // Sort events by Meet Date, then Event Name (alphabetically)
+                athlete.events.sort((a, b) => {
+                    const dateA = new Date(a.meetDate);
+                    const dateB = new Date(b.meetDate);
+                    if (dateA.getTime() !== dateB.getTime()) {
+                        return dateA - dateB;
+                    }
+                    return a.eventSwum.localeCompare(b.eventSwum);
+                });
+
+                // Event Data Rows
+                athlete.events.forEach(eventData => {
+                    const seedSeconds = timeToSeconds(eventData.seedTime);
+                    const resultSeconds = timeToSeconds(eventData.resultTime);
+
+                    let improvement = 'N/A';
+                    if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
+                        improvement = (((seedSeconds - resultSeconds) / seedSeconds) * 100).toFixed(2);
+                        if (parseFloat(improvement) > 0) {
+                             improvement = `+${improvement}%`;
+                        } else {
+                             improvement = `${improvement}%`;
+                        }
+                    }
+
+                    const eventRow = document.createElement('tr');
+                    eventRow.className = 'event-data-row hover:bg-gray-50 transition duration-150 ease-in-out';
+                    eventRow.innerHTML = `
+                        <td>${formatMMDDYYYY(eventData.meetDate)}</td> <!-- Display formatted meet date -->
+                        <td>${eventData.meetName}</td>
+                        <td>${eventData.eventSwum}</td>
+                        <td>${eventData.seedTime}</td>
+                        <td>${eventData.resultTime}</td>
+                        <td>${eventData.place}</td>
+                        <td>${eventData.points}</td>
+                        <td>${improvement}</td>
+                    `;
+                    const emptyTd = document.createElement('td');
+                    emptyTd.style.width = '1%';
+                    eventRow.prepend(emptyTd);
+                    reportTableBody.appendChild(eventRow);
+                });
+            });
+        }
+
+        /**
+         * Initializes the swimmer selection dropdown.
+         */
+        function populateSwimmerSelect() {
+            while (selectSwimmer.children.length > 1) {
+                selectSwimmer.removeChild(selectSwimmer.lastChild);
+            }
+
+            const uniqueSwimmers = [];
+            const swimmerMap = new Map();
+
+            allAthleteData.forEach(athlete => {
+                const key = `${athlete.lastName}-${athlete.firstName}-${athlete.age}`; // Consistent ID for charts
+                if (!swimmerMap.has(key)) {
+                    swimmerMap.set(key, {
+                        id: key, // Use this consistent key as the ID for chart selection
+                        firstName: athlete.firstName,
+                        lastName: athlete.lastName
+                    });
+                    uniqueSwimmers.push({
+                        id: key,
+                        fullName: `${athlete.firstName} ${athlete.lastName}`
+                    });
+                }
+            });
+
+            uniqueSwimmers.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+            uniqueSwimmers.forEach(swimmer => {
+                const option = document.createElement('option');
+                option.value = swimmer.id;
+                option.textContent = swimmer.fullName;
+                selectSwimmer.appendChild(option);
+            });
+        }
+
+        /**
+         * Populates the event selection dropdown for the progression chart based on the selected swimmer.
+         * @param {string} swimmerId - The ID of the selected swimmer.
+         */
+        function populateEventSelectForProgression(swimmerId) {
+            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>'; // Clear and add default
+            selectEventForProgression.disabled = true; // Disable until a swimmer is selected
+
+            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
+            
+            if (swimmerEvents.length > 0) {
+                swimmerEvents.sort().forEach(event => { // Sort events alphabetically
+                    const option = document.createElement('option');
+                    option.value = event;
+                    option.textContent = event;
+                    selectEventForProgression.appendChild(option);
+                });
+                selectEventForProgression.disabled = false;
+            }
+        }
+
+        /**
+         * Generates data for the Specialty (Radar) Chart for a given swimmer.
+         */
+        function getSpecialtyChartData(swimmerId) {
+            const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+            if (swimmerData.length === 0) return null;
+
+            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+            const specialtyScores = {};
+            strokes.forEach(stroke => {
+                const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
+                if (relevantEvents.length > 0) {
+                    const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
+                    const avgTime = sumTimes / relevantEvents.length;
+
+                    const max_expected_avg_time = 120;
+                    let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
+                    score = Math.max(0, Math.min(100, score));
+                    specialtyScores[stroke] = score;
+                } else {
+                    specialtyScores[stroke] = 0;
+                }
+            });
+
+            return {
+                labels: strokes,
+                datasets: [{
+                    label: `${swimmerData[0].lastName}, ${swimmerData[0].firstName}'s Specialty`, // Updated format
+                    data: strokes.map(stroke => specialtyScores[stroke]),
+                    backgroundColor: 'rgba(153, 102, 255, 0.4)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    pointBackgroundColor: 'rgba(153, 102, 255, 1)'
+                }]
+            };
+        }
+
+        /**
+         * Generates data for the Progression (Line) Chart for a given swimmer and event.
+         */
+        function getProgressionChartData(swimmerId, eventSwum) {
+            const swimmerEventData = allAthleteData
+                .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
+                .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
+
+            if (swimmerEventData.length === 0) return null;
+
+            return {
+                labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`), // Use MM/DD/YYYY and include meet name
+                datasets: [{
+                    label: `${eventSwum} Time Progression`,
+                    data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
+                    fill: false,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    pointBackgroundColor: 'rgb(75, 192, 192)'
+                }]
+            };
+        }
+
+        /**
+         * Initializes or updates the Specialty (Radar) Chart.
+         */
+        function updateSpecialtyChart(swimmerId) {
+            if (specialtyChartInstance) {
+                specialtyChartInstance.destroy();
+            }
+            const chartData = getSpecialtyChartData(swimmerId);
+            const ctx = document.getElementById('specialtyChart').getContext('2d');
+
+            if (!chartData) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                return;
+            }
+
+            specialtyChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: '#e2e8f0'
+                            },
+                            grid: {
+                                color: '#cbd5e0'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 10, // Smaller font for radar labels
+                                    weight: 'bold'
+                                },
+                                color: '#4a5568'
+                            },
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                backdropColor: 'rgba(255, 255, 255, 0.75)',
+                                color: '#4a5568',
+                                font: {
+                                    size: 9 // Smaller tick labels
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller legend font
+                                }
+                            }
+                        },
+                        title: {
+                            display: false,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
+                                }
+                            },
+                            bodyFont: {
+                                size: 10 // Smaller tooltip font
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Initializes or updates the Progression (Line) Chart.
+         * @param {string} swimmerId - The ID of the selected swimmer.
+         * @param {string} selectedEvent - The event to display progression for.
+         */
+        function updateProgressionChart(swimmerId, selectedEvent) {
+            if (progressionChartInstance) {
+                progressionChartInstance.destroy();
+            }
+
+            // Ensure an event is selected
+            if (!selectedEvent) {
+                const ctx = document.getElementById('progressionChart').getContext('2d');
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Clear canvas if no event
+                return;
+            }
+
+            const chartData = getProgressionChartData(swimmerId, selectedEvent);
+            const ctx = document.getElementById('progressionChart').getContext('2d');
+
+            if (!chartData) {
+                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                 return;
+            }
+
+            progressionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Meet Date (Meet Name)',
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller axis title font
+                                }
+                            },
+                            ticks: {
+                                color: '#4a5568',
+                                font: {
+                                    size: 9 // Smaller tick labels
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Time (Seconds)',
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller axis title font
+                                }
+                            },
+                            ticks: {
+                                color: '#4a5568',
+                                callback: function(value, index, values) {
+                                    return secondsToTime(value);
+                                },
+                                font: {
+                                    size: 9 // Smaller tick labels
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            reverse: true,
+                            min: 0
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#4a5568',
+                                font: {
+                                    size: 10 // Smaller legend font
+                                }
+                            }
+                        },
+                        title: {
+                            display: false,
+                        },
+                         tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
+                                }
+                            },
+                            bodyFont: {
+                                size: 10 // Smaller tooltip font
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // Filters
+        function applyFilters() {
+            const nameFilter = filterNameInput.value.toLowerCase();
+            const strokeFilter = filterStrokeInput.value.toLowerCase(); // New stroke filter value
+            
+            filteredAthleteData = allAthleteData.filter(athlete => {
+                const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
+                const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
+                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter); // Filter by stroke
+                
+                return matchesName && matchesStroke; // Apply both name and stroke filters
+            });
+
+            renderTable(filteredAthleteData);
+        }
+
+        function resetFilters() {
+            filterNameInput.value = '';
+            filterStrokeInput.value = ''; // Clear stroke input on reset
+            filteredAthleteData = [...allAthleteData];
+            renderTable(filteredAthleteData);
+        }
+
+        // Event Listeners
+        applyFiltersButton.addEventListener('click', applyFilters);
+        resetFiltersButton.addEventListener('click', resetFilters);
+        printReportButton.addEventListener('click', () => {
+            window.print();
+        });
+
+        selectSwimmer.addEventListener('change', (event) => {
+            const selectedSwimmerId = event.target.value;
+            if (selectedSwimmerId) {
+                updateSpecialtyChart(selectedSwimmerId);
+                populateEventSelectForProgression(selectedSwimmerId);
+                if (selectEventForProgression.options.length > 1) {
+                    selectEventForProgression.value = selectEventForProgression.options[1].value;
+                    updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
+                } else {
+                    if (progressionChartInstance) progressionChartInstance.destroy();
+                }
+            } else {
+                if (specialtyChartInstance) specialtyChartInstance.destroy();
+                if (progressionChartInstance) progressionChartInstance.destroy();
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                selectEventForProgression.disabled = true;
+            }
+        });
+
+        selectEventForProgression.addEventListener('change', (event) => {
+            const selectedEvent = event.target.value;
+            const selectedSwimmerId = selectSwimmer.value;
+            if (selectedSwimmerId && selectedEvent) {
+                updateProgressionChart(selectedSwimmerId, selectedEvent);
+            } else {
+                if (progressionChartInstance) progressionChartInstance.destroy();
+            }
+        });
+
+
+        jsonFileSelector.addEventListener('change', (event) => {
+            filterNameInput.value = '';
+            filterStrokeInput.value = ''; // Clear stroke filter when changing file
+            fetchAndRenderData(event.target.value);
+        });
+
+        // Initial render on page load: populate selector, then load default data
+        document.addEventListener('DOMContentLoaded', () => {
+            populateJsonFileSelector();
+            jsonFileSelector.value = "2025resultsweek01.json";
+            const defaultFile = jsonFileSelector.value;
+            fetchAndRenderData(defaultFile);
+        });
+    </script>
+</body>
+</html>
