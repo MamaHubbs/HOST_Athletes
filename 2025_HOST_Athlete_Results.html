@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,6 +12,7 @@
         /* Set default font to Inter */
         body {
             font-family: 'Inter', sans-serif;
+            font-size: 0.9rem; /* Slightly smaller base font */
         }
 
         /* Basic table styling for better readability */
@@ -19,10 +20,11 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            font-size: 0.85rem; /* Smaller table font */
         }
 
         th, td {
-            padding: 12px 15px;
+            padding: 8px 12px; /* Reduced padding for smaller font */
             text-align: left;
             /* Applying border only to bottom for data rows, full border for headers */
             border-bottom: 1px solid #e2e8f0; /* Tailwind's gray-200 */
@@ -32,7 +34,7 @@
         .athlete-header-row {
             background-color: #e0e7ff; /* Light blue-200 */
             font-weight: bold;
-            font-size: 1.1em;
+            font-size: 1em; /* Relative to table font size (0.85rem) */
             color: #1f2937; /* Gray-800 */
             border-top: 2px solid #6366f1; /* Indigo-500 */
             border-bottom: 2px solid #6366f1; /* Indigo-500 */
@@ -44,13 +46,15 @@
             background-color: #f8fafc; /* Tailwind's gray-50 */
             font-weight: 600;
             color: #4a5568; /* Tailwind's gray-700 */
-            padding-left: 30px; /* Indent the sub-headers */
+            padding-left: 20px; /* Reduced indent for sub-headers */
             border-bottom: 1px solid #cbd5e0; /* Gray-300 */
+            font-size: 0.8em; /* Even smaller for sub-headers */
         }
 
         /* Styling for the data rows under events */
         .event-data-row td {
-            padding-left: 40px; /* Indent the event data */
+            padding-left: 30px; /* Reduced indent for event data */
+            font-size: 0.85em; /* Keep it readable */
         }
 
         tr:hover {
