@@ -16,13 +16,23 @@
             color: #333;
         }
 
+        /* Centering and max-width for the entire dashboard */
+        .container {
+            max-width: 900px; /* Max width of the entire dashboard */
+            margin: 20px auto; /* Center the container horizontally */
+            background-color: #ffffff; /* Explicitly set background for the container */
+            padding: 20px; /* Add some padding inside the container */
+            border-radius: 8px; /* Rounded corners for the main container */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Subtle shadow for the container */
+        }
+
         h1 {
             text-align: center;
             color: #0156B3;
-            font-size: 2.5em; /* Made larger */
-            font-weight: bold; /* Made bolder */
-            margin-bottom: 20px; /* Increased margin for more space */
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* Added subtle shadow for prettiness */
+            font-size: 2em;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-shadow: none;
         }
 
         .dropdown-container {
@@ -34,6 +44,7 @@
             z-index: 10;
             border-bottom: 1px solid #ccc;
             font-size: 0.7em;
+            border-radius: 8px; /* Added for consistency */
         }
 
         .dropdown-box {
@@ -165,6 +176,20 @@
             min-width: 180px;
             text-align: left;
         }
+        /* Centering for the dropdowns above graphs */
+        .chart-controls { /* Removed centered-dropdowns class, using inline styles for direct control */
+            justify-content: center; /* Center items horizontally */
+            text-align: center; /* Ensure labels are centered if they wrap */
+            flex-direction: row; /* Keep them in a row */
+        }
+        .chart-controls .dropdown-box { /* Adjusted for centering and non-growing behavior */
+            flex-grow: 0;
+            min-width: unset;
+            width: auto;
+            text-align: center;
+        }
+
+
         .chart-display {
             display: grid;
             grid-template-columns: 1fr;
@@ -191,76 +216,76 @@
             height: 100%;
         }
 
-        /* Print Button and Report Header Info Container (Moved and Restyled) */
+        /* Print Button and Report Header Info Container */
         .print-header-container {
             text-align: center;
             margin-top: 20px;
-            margin-bottom: 20px; /* Space below this section */
+            margin-bottom: 20px;
         }
 
         .print-header-container #printReport {
-            display: inline-flex; /* Use flex to align icon and text */
+            display: inline-flex;
             align-items: center;
-            justify-content: center; /* Center content */
+            justify-content: center;
             gap: 8px;
-            padding: 6px 40px; /* Increased horizontal padding for longer button, reduced vertical */
-            height: 35px; /* Shorter height */
-            font-size: 1em; /* Adjusted font size for new button size */
+            padding: 6px 15px; /* Reverted to more standard button padding */
+            font-size: 0.9em; /* Adjusted font size */
             border-radius: 6px;
             background-color: #4CAF50; /* Green color for print button */
             color: white;
             border: none;
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* More prominent shadow */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Reverted shadow */
             transition: background-color 0.3s ease, transform 0.2s ease;
-            width: 100%; /* Make button take full width of its container */
-            max-width: 300px; /* Limit max width for better appearance */
-            margin: 0 auto; /* Center the button itself */
+            width: auto; /* Reverted width */
+            max-width: none; /* Reverted max-width */
+            margin: 0 auto; /* Still centered if inline-flex */
         }
         .print-header-container #printReport:hover {
             background-color: #45a049;
-            transform: translateY(-1px); /* Slight lift effect */
+            transform: translateY(-1px);
         }
 
         #reportHeaderInfo {
-            font-weight: bold; /* Make report header info bold */
-            margin-top: 10px; /* Space between print button and header info */
-            color: #0156B3; /* Blue color for header info */
-            text-align: center; /* Ensure it's centered */
+            font-weight: bold;
+            margin-top: 10px;
+            color: #0156B3;
+            text-align: center;
         }
 
         /* Print-specific styles from original, adjusted for new base styles */
         @media print {
             body {
-                font-size: 0.75rem !important; /* Smaller base font for print */
-                margin: 0.5cm !important; /* Reduce overall margins */
+                font-size: 0.75rem !important;
+                margin: 0.5cm !important;
             }
             .no-print {
                 display: none !important;
             }
             table {
-                font-size: 0.8em !important; /* Smaller table font for print */
+                font-size: 0.8em !important;
             }
             th, td {
-                padding: 3px 5px !important; /* Reduced padding for print */
+                padding: 3px 5px !important;
             }
             .athlete-header-row {
-                font-size: 0.9em !important; /* Slightly smaller for print */
+                font-size: 0.9em !important;
             }
             .event-subheader-row th {
-                padding-left: 10px !important; /* Further reduce indent for print */
-                font-size: 0.75em !important; /* Smaller font for print sub-headers */
+                padding-left: 10px !important;
+                font-size: 0.75em !important;
+                background-color: transparent !important;
             }
             .event-data-row td {
-                padding-left: 15px !important; /* Further reduce indent for print */
-                font-size: 0.75em !important; /* Smaller font for print data rows */
+                padding-left: 15px !important;
+                font-size: 0.75em !important;
             }
             #reportHeaderInfo {
-                font-size: 0.9em !important; /* Smaller header info for print */
-                margin-bottom: 5px !important; /* Reduce margin */
+                font-size: 0.9em !important;
+                margin-bottom: 5px !important;
             }
             .chart-section {
-                display: none !important; /* Hide charts on print */
+                display: none !important;
             }
             .print-header-container {
                 text-align: center !important;
@@ -268,20 +293,18 @@
                 margin-bottom: 0 !important;
             }
             .print-header-container #printReport {
-                display: none !important; /* Hide the print button itself on print output */
+                display: none !important;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Athlete Meet Summary Dashboard</h1>
-
         <!-- Dashboard Section (Moved to top) -->
         <div class="chart-section">
             <h2 style="color: #0156B3;">Swimmer Performance Dashboard</h2>
 
-            <div class="chart-controls">
+            <div class="chart-controls" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
                 <div class="dropdown-box">
                     <label for="selectSwimmer">Select Swimmer:</label>
                     <select id="selectSwimmer">
@@ -315,7 +338,7 @@
 
         <!-- Filter Controls - No Print (Moved below Dashboard) -->
         <div class="no-print dropdown-container">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4" style="color: #0156B3;">Report Filters</h2>
+            <h2 style="color: #0156B3;">Athlete Meet Summary Report Filters</h2>
             <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
                 <div class="dropdown-box">
                     <label for="jsonFileSelector">Load Results File:</label>
@@ -494,7 +517,8 @@
                     } else {
                         rawFileData = await response.json();
                     }
-                } catch (error) {
+                }
+                catch (error) {
                     console.error(`Error fetching ${filePath} for dropdown options:`, error);
                     return null;
                 }
