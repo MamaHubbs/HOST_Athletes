@@ -757,17 +757,18 @@
                     });
                     uniqueSwimmers.push({
                         id: key,
-                        fullName: `${athlete.firstName} ${athlete.lastName}`
+                        firstName: athlete.firstName, // Store for full name construction
+                        lastName: athlete.lastName    // Store for full name construction
                     });
                 }
             });
 
-            uniqueSwimmers.sort((a, b) => a.fullName.localeCompare(b.fullName));
+            uniqueSwimmers.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)); // Sort by last name, then first name
 
             uniqueSwimmers.forEach(swimmer => {
                 const option = document.createElement('option');
                 option.value = swimmer.id;
-                option.textContent = swimmer.fullName;
+                option.textContent = `${swimmer.lastName}, ${swimmer.firstName}`; // Display as "Last Name, First Name"
                 selectSwimmer.appendChild(option);
             });
         }
