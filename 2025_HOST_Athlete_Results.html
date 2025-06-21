@@ -189,7 +189,8 @@
                     <!-- This header is just for screen readers/initial structure, actual headers are per athlete -->
                     <tr>
                         <th class="hidden">Athlete Details</th>
-                        <th class="hidden">Meet Name</th> <!-- Added Meet Name Header -->
+                        <th class="hidden">Meet Name</th>
+                        <th class="hidden">Meet Date</th> <!-- New Meet Date Header -->
                         <th class="hidden">Event</th>
                         <th class="hidden">Seed Time</th>
                         <th class="hidden">Final Time</th>
@@ -249,6 +250,8 @@
             "2025resultsweek01.json",
             "2025resultsweek02.json"
         ];
+
+    
 
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
@@ -551,29 +554,30 @@
                 
                 if (!acc[uniqueAthleteMeetKey]) {
                     acc[uniqueAthleteMeetKey] = {
-                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Base ID for charts to track performance across dates
+                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Consistent ID for charts (remains just athlete-specific)
                         displayKey: athleteDisplayKey, // For table header
                         details: {
                             lastName: current.lastName,
                             firstName: current.firstName,
                             age: current.age,
-                            category: current.category // This is 'gender' from SQL
+                            category: current.category
                         },
                         events: [],
-                        meetName: current.meetName // Storing meet name for grouping/display
+                        meetName: current.meetName, // Store meet name for display in table row
+                        meetDate: current.meetDate // Store meet date for display in table row
                     };
                 }
                 acc[uniqueAthleteMeetKey].events.push(current);
                 return acc;
             }, {});
 
-            const athleteKeys = Object.keys(athletesGrouped).sort(); // Sort grouped athletes alphabetically by display key
+            // Sort the grouped athletes for consistent display
+            const athleteKeys = Object.keys(athletesGrouped).sort();
 
             if (athleteKeys.length === 0) {
                 const noResultsRow = document.createElement('tr');
-                // Colspan adjusted for the new 'Meet Name' column
                 noResultsRow.innerHTML = `
-                    <td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         No results found matching your filters.
                     </td>
                 `;
@@ -587,9 +591,8 @@
                 // Athlete Header Row
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
-                // Colspan adjusted for the new 'Meet Name' column
                 athleteHeaderRow.innerHTML = `
-                    <td colspan="8" class="px-6 py-3">${athlete.displayKey}</td>
+                    <td colspan="9" class="px-6 py-3">${athlete.displayKey}</td>
                 `;
                 reportTableBody.appendChild(athleteHeaderRow);
 
@@ -597,7 +600,8 @@
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
                 eventSubHeaderRow.innerHTML = `
-                    <th>Meet Name</th> <!-- New column header -->
+                    <th>Meet Name</th>
+                    <th>Meet Date</th> <!-- Added Meet Date Column Header -->
                     <th>Event</th>
                     <th>Seed</th>
                     <th>Final</th>
@@ -610,13 +614,8 @@
                 eventSubHeaderRow.prepend(emptyTh);
                 reportTableBody.appendChild(eventSubHeaderRow);
 
-                // Sort events by meetDate and then eventSwum
+                // Sort events by Event Name (alphabetically)
                 athlete.events.sort((a, b) => {
-                    const dateA = new Date(a.meetDate);
-                    const dateB = new Date(b.meetDate);
-                    if (dateA.getTime() !== dateB.getTime()) {
-                        return dateA - dateB;
-                    }
                     return a.eventSwum.localeCompare(b.eventSwum);
                 });
 
@@ -638,7 +637,8 @@
                     const eventRow = document.createElement('tr');
                     eventRow.className = 'event-data-row hover:bg-gray-50 transition duration-150 ease-in-out';
                     eventRow.innerHTML = `
-                        <td>${eventData.meetName}</td> <!-- New column for meet name -->
+                        <td>${eventData.meetName}</td>
+                        <td>${formatMMDDYYYY(eventData.meetDate)}</td> <!-- Display formatted meet date -->
                         <td>${eventData.eventSwum}</td>
                         <td>${eventData.seedTime}</td>
                         <td>${eventData.resultTime}</td>
@@ -647,7 +647,7 @@
                         <td>${improvement}</td>
                     `;
                     const emptyTd = document.createElement('td');
-                    emptyTd.style.width = '1%'; // Keep the first column for visual alignment
+                    emptyTd.style.width = '1%';
                     eventRow.prepend(emptyTd);
                     reportTableBody.appendChild(eventRow);
                 });
