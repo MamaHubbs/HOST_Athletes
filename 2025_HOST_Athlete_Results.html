@@ -19,8 +19,10 @@
         h1 {
             text-align: center;
             color: #0156B3;
-            font-size: 2em;
-            margin-bottom: 10px;
+            font-size: 2.5em; /* Made larger */
+            font-weight: bold; /* Made bolder */
+            margin-bottom: 20px; /* Increased margin for more space */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* Added subtle shadow for prettiness */
         }
 
         .dropdown-container {
@@ -189,14 +191,32 @@
             height: 100%;
         }
 
-        .no-print-button {
+        /* Print Button and Report Header Info Container */
+        .print-header-container {
             text-align: center;
             margin-top: 20px;
+            margin-bottom: 20px; /* Space below this section */
         }
-        .no-print-button button {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+
+        .print-header-container #printReport {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            border-radius: 6px;
+            background-color: #4CAF50; /* Green color for print button */
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.3s ease;
+        }
+        .print-header-container #printReport:hover {
+            background-color: #45a049;
+        }
+
+        #reportHeaderInfo {
+            font-weight: bold; /* Make report header info bold */
+            margin-top: 10px; /* Space between print button and header info */
+            color: #0156B3; /* Blue color for header info */
         }
 
         /* Print-specific styles from original, adjusted for new base styles */
@@ -232,17 +252,20 @@
             .chart-section {
                 display: none !important; /* Hide charts on print */
             }
+            .print-header-container {
+                text-align: center !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            .print-header-container #printReport {
+                display: none !important; /* Hide the print button itself on print output */
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Athlete Meet Summary Dashboard</h1>
-
-        <!-- Report Header Info (for screen and print) -->
-        <div id="reportHeaderInfo">
-            <!-- Content will be dynamically updated by JavaScript -->
-        </div>
 
         <!-- Filter Controls - No Print -->
         <div class="no-print dropdown-container">
@@ -278,6 +301,22 @@
             </div>
         </div>
 
+        <!-- Print Button and Report Header Info Container (Moved and Restyled) -->
+        <div class="print-header-container no-print">
+            <button id="printReport">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-printer">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span>Print Report</span>
+            </button>
+            <div id="reportHeaderInfo">
+                <!-- Content will be dynamically updated by JavaScript -->
+            </div>
+        </div>
+
+
         <!-- Dashboard Section -->
         <div class="chart-section">
             <h2 style="color: #0156B3;">Swimmer Performance Dashboard</h2>
@@ -312,16 +351,6 @@
                     <canvas id="progressionChart"></canvas>
                 </div>
             </div>
-        </div>
-
-        <!-- Print Button - No Print -->
-        <div class="no-print-button">
-            <button id="printReport">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1m0 0H7m0 0h10" />
-                </svg>
-                <span>Print Report</span>
-            </button>
         </div>
 
         <!-- Report Table -->
@@ -678,7 +707,6 @@
 
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
-                // Inline style added here to apply the blue background and bold text directly
                 athleteHeaderRow.innerHTML = `
                     <td colspan="9" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athlete.displayKey}</td>
                 `;
@@ -686,7 +714,6 @@
 
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
-                // Removed inline background-color here to let parent CSS handle it (or keep transparent)
                 eventSubHeaderRow.innerHTML = `
                     <th style="width: 1%;"></th> <!-- Empty column for alignment -->
                     <th>Meet Date</th>
@@ -1091,7 +1118,6 @@
         // Initial render on page load: populate selector, then load default data
         document.addEventListener('DOMContentLoaded', () => {
             populateJsonFileSelector();
-            // Default to the most recent week
             if (weeklyFileNames.length > 0) {
                 jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
             } else {
