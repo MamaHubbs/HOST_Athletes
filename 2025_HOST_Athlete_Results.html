@@ -157,12 +157,21 @@
         <div class="chart-section mt-8 mb-6 p-4 bg-purple-50 rounded-lg shadow-inner no-print">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 text-center">Swimmer Performance Dashboard</h2>
 
-            <div class="mb-6">
-                <label for="selectSwimmer" class="block text-lg font-medium text-gray-700 mb-2">Select Swimmer for Charts:</label>
-                <select id="selectSwimmer" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
-                    <option value="">-- Select an Athlete --</option>
-                    <!-- Options will be populated by JavaScript -->
-                </select>
+            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="selectSwimmer" class="block text-lg font-medium text-gray-700 mb-2">Select Swimmer:</label>
+                    <select id="selectSwimmer" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
+                        <option value="">-- Select an Athlete --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div>
+                    <label for="selectEventForProgression" class="block text-lg font-medium text-gray-700 mb-2">Select Event (Progression Chart):</label>
+                    <select id="selectEventForProgression" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500" disabled>
+                        <option value="">-- Select an Event --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
@@ -255,8 +264,10 @@
         // --- Configuration for JSON file paths and weekly file names ---
         const weeklyFileNames = [
             "2025resultsweek01.json",
-            "2025resultsweek02.json"
+            "2025resultsweek02.json",
         ];
+
+ 
 
         let allAthleteData = []; // This will now be populated dynamically
         let filteredAthleteData = [];
@@ -274,6 +285,7 @@
         const selectSwimmer = document.getElementById('selectSwimmer');
         const jsonFileSelector = document.getElementById('jsonFileSelector');
         const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
+        const selectEventForProgression = document.getElementById('selectEventForProgression'); // New event select
 
         let specialtyChartInstance = null;
         let progressionChartInstance = null;
@@ -314,7 +326,7 @@
                     seedTime: String(row[seedTimeIndex]), // Ensure it's a string for timeToSeconds
                     resultTime: String(row[resultTimeIndex]), // Ensure it's a string for timeToSeconds
                     meetDate: meetDateString.split(' ')[0], // Use the date part (e.g., "YYYY-MM-DD") from 'started_at'
-                    meetName: meetTitle.replace('2025 ', ''), // New: Add meet name and remove "2025 "
+                    meetName: meetTitle.replace('2025 ', ''), // Add meet name and remove "2025 "
                     place: row[placeIndex],
                     points: row[pointsIndex]
                 });
@@ -323,7 +335,7 @@
         }
 
         /**
-         * Populates the JSON file selector with options including meet titles and date ranges.
+         * Populates the JSON file selector with options including meet dates.
          */
         function populateJsonFileSelector() {
             jsonFileSelector.innerHTML = ''; // Clear existing options
@@ -354,8 +366,7 @@
                 }
 
                 if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.started_at) {
-                    const meetTitleForDisplay = (rawFileData.title || 'Unknown Meet').replace('2025 ', '');
-                    const meetStartDate = rawFileData.started_at.split(' ')[0]; // YYYY-MM-DD
+                    const meetStartDate = rawFileData.started_at.split(' ')[0]; //YYYY-MM-DD
 
                     const option = document.createElement('option');
                     option.value = fileName;
@@ -381,11 +392,21 @@
         /**
          * Updates the header display with current meet information.
          * @param {string} title - The title of the current meet/report.
-         * @param {string} dateRange - The formatted date range for the current data.
+         * @param {string} dateString - The raw date string (e.g., "YYYY-MM-DD") for the current data.
+         * @param {boolean} isAllResults - True if "All Results" is selected.
          */
-        function updateReportHeaderDisplay(title, dateRange) {
+        function updateReportHeaderDisplay(title, dateString, isAllResults) {
             const cleanedTitle = title.replace('2025 ', '');
-            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${dateRange}`;
+            let displayDate = "";
+
+            if (isAllResults) {
+                // For "All Results", dateString will be a range, not a single date
+                displayDate = dateString;
+            } else {
+                displayDate = formatMMDDYYYY(dateString);
+            }
+            
+            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
         }
 
         /**
@@ -395,9 +416,10 @@
         async function fetchAndRenderData(fileName) {
             let dataToProcess = null; // Raw JSON object (with .values, .fields, etc.)
             let currentMeetTitle = '';
-            let currentMeetDateRange = '';
+            let currentMeetDateRaw = ''; // Will store the raw date from started_at or a range
+            let isAllResultsSelected = (fileName === "all-results");
 
-            if (fileName !== "all-results") {
+            if (!isAllResultsSelected) {
                 const filePath = new URL(fileName, window.location.href).toString();
                 try {
                     const response = await fetch(filePath);
@@ -419,12 +441,9 @@
                     }
                 }
                 
-                // Pass the original title to transformRawData, it will clean it for meetName
                 allAthleteData = transformRawData(dataToProcess.values, dataToProcess.fields, dataToProcess.started_at, dataToProcess.title || 'Unknown Meet');
                 currentMeetTitle = dataToProcess.title || 'Selected Week';
-                const meetStartDate = dataToProcess.started_at.split(' ')[0];
-                currentMeetDateRange = formatMMDDYYYY(meetStartDate); // Use new format for single week
-
+                currentMeetDateRaw = dataToProcess.started_at.split(' ')[0]; // YYYY-MM-DD
             } else {
                 // Fetch all files if "all-results" is selected
                 const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
@@ -460,10 +479,10 @@
                     const overallMinDate = allDates[0];
                     const overallMaxDate = allDates[allDates.length - 1];
                     currentMeetTitle = "All Meets Combined";
-                    currentMeetDateRange = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
+                    currentMeetDateRaw = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
                 } else {
                     currentMeetTitle = "No Data Loaded";
-                    currentMeetDateRange = "";
+                    currentMeetDateRaw = "";
                 }
             }
 
@@ -471,26 +490,38 @@
             if (allAthleteData && allAthleteData.length > 0) {
                 applyFilters(); // Apply current filters (including date filters) after new data loads
                 populateSwimmerSelect(); // Repopulate swimmer select based on new data
-                // Update header display
-                updateReportHeaderDisplay(currentMeetTitle, currentMeetDateRange);
+                // Update header display using the raw date string and whether it's 'all results'
+                updateReportHeaderDisplay(currentMeetTitle, currentMeetDateRaw, isAllResultsSelected);
 
                 // Clear and update charts if a swimmer was previously selected
                 if (selectSwimmer.value) {
                     updateSpecialtyChart(selectSwimmer.value);
-                    updateProgressionChart(selectSwimmer.value);
+                    populateEventSelectForProgression(selectSwimmer.value); // Populate event dropdown
+                    // After populating, try to select the first event and update progression chart
+                    if (selectEventForProgression.options.length > 1) {
+                         selectEventForProgression.value = selectEventForProgression.options[1].value;
+                         updateProgressionChart(selectSwimmer.value, selectEventForProgression.value);
+                    } else {
+                         if (progressionChartInstance) progressionChartInstance.destroy();
+                    }
+                    selectEventForProgression.disabled = false;
                 } else {
                     // Clear charts if no swimmer selected
                     if (specialtyChartInstance) specialtyChartInstance.destroy();
                     if (progressionChartInstance) progressionChartInstance.destroy();
+                    selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                    selectEventForProgression.disabled = true;
                 }
             } else {
                 console.warn(`No data loaded for ${fileName} after transformation.`);
                 filteredAthleteData = [];
                 renderTable(filteredAthleteData);
                 populateSwimmerSelect();
-                updateReportHeaderDisplay("No Data Loaded", ""); // Clear header info
+                updateReportHeaderDisplay("No Data Loaded", "", false); // Clear header info
                 if (specialtyChartInstance) specialtyChartInstance.destroy();
                 if (progressionChartInstance) progressionChartInstance.destroy();
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                selectEventForProgression.disabled = true;
             }
         }
 
@@ -650,6 +681,27 @@
         }
 
         /**
+         * Populates the event selection dropdown for the progression chart based on the selected swimmer.
+         * @param {string} swimmerId - The ID of the selected swimmer.
+         */
+        function populateEventSelectForProgression(swimmerId) {
+            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>'; // Clear and add default
+            selectEventForProgression.disabled = true; // Disable until a swimmer is selected
+
+            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
+            
+            if (swimmerEvents.length > 0) {
+                swimmerEvents.sort().forEach(event => { // Sort events alphabetically
+                    const option = document.createElement('option');
+                    option.value = event;
+                    option.textContent = event;
+                    selectEventForProgression.appendChild(option);
+                });
+                selectEventForProgression.disabled = false;
+            }
+        }
+
+        /**
          * Generates data for the Specialty (Radar) Chart for a given swimmer.
          */
         function getSpecialtyChartData(swimmerId) {
@@ -697,7 +749,7 @@
             if (swimmerEventData.length === 0) return null;
 
             return {
-                labels: swimmerEventData.map(d => `${d.meetDate} (${d.meetName})`), // Include meet date for unique labels
+                labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`), // Use MM/DD/YYYY and include meet name
                 datasets: [{
                     label: `${eventSwum} Time Progression`,
                     data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
@@ -788,22 +840,23 @@
 
         /**
          * Initializes or updates the Progression (Line) Chart.
+         * @param {string} swimmerId - The ID of the selected swimmer.
+         * @param {string} selectedEvent - The event to display progression for.
          */
-        function updateProgressionChart(swimmerId) {
+        function updateProgressionChart(swimmerId, selectedEvent) {
             if (progressionChartInstance) {
                 progressionChartInstance.destroy();
             }
 
-            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
-            const ctx = document.getElementById('progressionChart').getContext('2d');
-
-            if (swimmerEvents.length === 0) {
-                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                 return;
+            // Ensure an event is selected
+            if (!selectedEvent) {
+                const ctx = document.getElementById('progressionChart').getContext('2d');
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Clear canvas if no event
+                return;
             }
 
-            const selectedEventForProgression = swimmerEvents[0];
-            const chartData = getProgressionChartData(swimmerId, selectedEventForProgression);
+            const chartData = getProgressionChartData(swimmerId, selectedEvent);
+            const ctx = document.getElementById('progressionChart').getContext('2d');
 
             if (!chartData) {
                  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -820,7 +873,7 @@
                         x: {
                             title: {
                                 display: true,
-                                text: 'Meet Date',
+                                text: 'Meet Date (Meet Name)',
                                 color: '#4a5568',
                                 font: {
                                     size: 10 // Smaller axis title font
@@ -942,12 +995,33 @@
             const selectedSwimmerId = event.target.value;
             if (selectedSwimmerId) {
                 updateSpecialtyChart(selectedSwimmerId);
-                updateProgressionChart(selectedSwimmerId);
+                populateEventSelectForProgression(selectedSwimmerId); // Populate event dropdown based on selected swimmer
+                // Attempt to select the first event and update progression chart
+                if (selectEventForProgression.options.length > 1) {
+                    selectEventForProgression.value = selectEventForProgression.options[1].value; // Select the first actual event
+                    updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
+                } else {
+                    if (progressionChartInstance) progressionChartInstance.destroy();
+                }
             } else {
                 if (specialtyChartInstance) specialtyChartInstance.destroy();
                 if (progressionChartInstance) progressionChartInstance.destroy();
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>'; // Clear events
+                selectEventForProgression.disabled = true; // Disable event dropdown
             }
         });
+
+        // Event listener for the new event selection dropdown
+        selectEventForProgression.addEventListener('change', (event) => {
+            const selectedEvent = event.target.value;
+            const selectedSwimmerId = selectSwimmer.value; // Get the currently selected swimmer
+            if (selectedSwimmerId && selectedEvent) {
+                updateProgressionChart(selectedSwimmerId, selectedEvent);
+            } else {
+                if (progressionChartInstance) progressionChartInstance.destroy();
+            }
+        });
+
 
         jsonFileSelector.addEventListener('change', (event) => {
             filterNameInput.value = '';
