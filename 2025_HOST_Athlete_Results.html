@@ -9,140 +9,187 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Set default font to Inter */
         body {
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem; /* Slightly smaller base font */
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f8f8;
+            color: #333;
         }
 
-        /* Basic table styling for better readability */
+        h1 {
+            text-align: center;
+            color: #0156B3;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .dropdown-container {
+            position: sticky;
+            top: 0;
+            background-color: #f8f8f8;
+            padding: 10px;
+            text-align: center;
+            z-index: 10;
+            border-bottom: 1px solid #ccc;
+            font-size: 0.7em;
+        }
+
+        .dropdown-box {
+            display: inline-block;
+            margin: 0 4px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        select, input[type="text"] {
+            padding: 3px 6px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            border: 1px solid #ccc; /* Added border as it was removed with Tailwind */
+        }
+
+        button {
+            padding: 4px 8px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            background-color: #0156B3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 0.85rem; /* Smaller table font */
+            font-size: 0.68em;
+            margin-top: 10px;
         }
 
         th, td {
-            padding: 8px 12px; /* Reduced padding for smaller font */
+            padding: 6px 10px;
+            border: 1px solid #ccc;
             text-align: left;
-            /* Applying border only to bottom for data rows, full border for headers */
-            border-bottom: 1px solid #e2e8f0; /* Tailwind's gray-200 */
+            vertical-align: top;
         }
 
-        /* Specific styling for the new athlete header rows */
-        .athlete-header-row {
-            background-color: #e0e7ff; /* Light blue-200 */
-            font-weight: bold;
-            font-size: 1em; /* Relative to table font size (0.85rem) */
-            color: #1f2937; /* Gray-800 */
-            border-top: 2px solid #6366f1; /* Indigo-500 */
-            border-bottom: 2px solid #6366f1; /* Indigo-500 */
-            text-align: left !important;
+        th {
+            background-color: #e5f1ff;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            cursor: pointer;
         }
 
-        /* Specific styling for the event sub-header rows */
-        .event-subheader-row th {
-            background-color: #f8fafc; /* Tailwind's gray-50 */
-            font-weight: 600;
-            color: #4a5568; /* Tailwind's gray-700 */
-            padding-left: 20px; /* Reduced indent for sub-headers */
-            border-bottom: 1px solid #cbd5e0; /* Gray-300 */
-            font-size: 0.8em; /* Even smaller for sub-headers */
+        th.sortable::after {
+            content: ' ⇅';
+            font-size: 0.68em;
+            color: #666;
         }
 
-        /* Styling for the data rows under events */
-        .event-data-row td {
-            padding-left: 30px; /* Reduced indent for event data */
-            font-size: 0.85em; /* Keep it readable */
+        th.sorted-asc::after {
+            content: ' ↑';
+            color: #333;
         }
 
-        tr:hover {
-            background-color: #f0f4f8; /* Lighter hover effect */
+        th.sorted-desc::after {
+            content: ' ↓';
+            color: #333;
         }
 
-        /* Custom styles for printing */
+        .row-group-even {
+            background-color: #ffffff;
+        }
+
+        .row-group-odd {
+            background-color: #f4f4f4;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Specific column widths based on provided CSS */
+        th:nth-child(1), td:nth-child(1) { max-width: 140px; } /* Athlete Details Placeholder */
+        th:nth-child(2), td:nth-child(2) { max-width: 90px; } /* Meet Date */
+        th:nth-child(3), td:nth-child(3) { max-width: 150px; } /* Meet Name */
+        th:nth-child(4), td:nth-child(4) { max-width: 130px; } /* Event */
+        th:nth-child(5), td:nth-child(5) { max-width: 70px; text-align: center; } /* Seed */
+        th:nth-child(6), td:nth-child(6) { max-width: 70px; text-align: center; } /* Final */
+        th:nth-child(7), td:nth-child(7) { max-width: 50px; text-align: center; } /* Place */
+        th:nth-child(8), td:nth-child(8) { max-width: 50px; text-align: center; } /* Points */
+        th:nth-child(9), td:nth-child(9) { max-width: 100px; text-align: center; } /* % Improvement */
+
+        td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Print-specific styles from original, adjusted for new base styles */
         @media print {
             body {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                font-size: 0.75rem; /* Smaller base font for print */
-                margin: 0.5cm; /* Reduce overall margins */
+                font-size: 0.75rem !important; /* Smaller base font for print */
+                margin: 0.5cm !important; /* Reduce overall margins */
             }
             .no-print {
                 display: none !important;
             }
-            /* Ensure table borders are visible for print */
             table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 0.8em; /* Smaller table font for print */
+                font-size: 0.8em !important; /* Smaller table font for print */
             }
             th, td {
-                border: 1px solid #ddd; /* Light gray border for all cells */
-                padding: 3px 5px; /* Reduced padding for print */
-                text-align: left;
+                padding: 3px 5px !important; /* Reduced padding for print */
             }
-            /* Override background for printing */
-            .bg-gray-100 {
-                background-color: #ffffff !important;
-            }
-            .text-gray-800 {
-                color: #000000 !important;
-            }
-            /* Hide charts on print for cleaner table output, unless explicitly needed */
-            .chart-section {
-                display: none !important;
-            }
-            /* Adjust padding for print to avoid cutting off text */
             .athlete-header-row {
-                background-color: #e0e7ff !important;
-                color: #1f2937 !important;
-                border-top: 1px solid #6366f1 !important;
-                border-bottom: 1px solid #6366f1 !important;
-                font-size: 0.9em; /* Slightly smaller for print */
+                font-size: 0.9em !important; /* Slightly smaller for print */
             }
             .event-subheader-row th {
-                padding-left: 10px; /* Further reduce indent for print */
-                font-size: 0.75em; /* Smaller font for print sub-headers */
+                padding-left: 10px !important; /* Further reduce indent for print */
+                font-size: 0.75em !important; /* Smaller font for print sub-headers */
             }
             .event-data-row td {
-                padding-left: 15px; /* Further reduce indent for print */
-                font-size: 0.75em; /* Smaller font for print data rows */
+                padding-left: 15px !important; /* Further reduce indent for print */
+                font-size: 0.75em !important; /* Smaller font for print data rows */
             }
             #reportHeaderInfo {
-                font-size: 0.9em; /* Smaller header info for print */
-                margin-bottom: 5px; /* Reduce margin */
+                font-size: 0.9em !important; /* Smaller header info for print */
+                margin-bottom: 5px !important; /* Reduce margin */
             }
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 p-6 sm:p-10 min-h-screen flex flex-col items-center">
-    <div class="container mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg max-w-7xl w-full">
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 text-center">Athlete Meet Summary Dashboard</h1>
+<body>
+    <div class="container">
+        <h1>Athlete Meet Summary Dashboard</h1>
 
         <!-- Report Header Info (for screen and print) -->
-        <div id="reportHeaderInfo" class="text-lg text-gray-700 text-center mb-4 font-semibold">
+        <div id="reportHeaderInfo">
             <!-- Content will be dynamically updated by JavaScript -->
         </div>
 
         <!-- Filter Controls - No Print -->
-        <div class="no-print mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
+        <div class="no-print dropdown-container">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
-            <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
-                <div class="flex-1 min-w-[200px]">
-                    <label for="jsonFileSelector" class="block text-sm font-medium text-gray-700 mb-1">Load Results File:</label>
-                    <select id="jsonFileSelector" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+            <div class="flex-container"> <!-- Use a flexbox or similar for inline layout -->
+                <div class="dropdown-box">
+                    <label for="jsonFileSelector">Load Results File:</label>
+                    <select id="jsonFileSelector">
                         <!-- Options populated by JavaScript with date ranges -->
                     </select>
                 </div>
-                <div class="flex-1 min-w-[150px]">
-                    <label for="filterName" class="block text-sm font-medium text-gray-700 mb-1">Filter by Athlete Name:</label>
-                    <input type="text" id="filterName" placeholder="Enter full name or part" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <div class="dropdown-box">
+                    <label for="filterName">Filter by Athlete Name:</label>
+                    <input type="text" id="filterName" placeholder="Enter full name or part">
                 </div>
-                <div class="flex-1 min-w-[150px]">
-                    <label for="filterStroke" class="block text-sm font-medium text-gray-700 mb-1">Filter by Stroke:</label>
-                    <select id="filterStroke" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <div class="dropdown-box">
+                    <label for="filterStroke">Filter by Stroke:</label>
+                    <select id="filterStroke">
                         <option value="">All Strokes</option>
                         <option value="Freestyle">Freestyle</option>
                         <option value="Backstroke">Backstroke</option>
@@ -151,54 +198,54 @@
                         <option value="IM">IM</option>
                     </select>
                 </div>
-                <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
-                    Apply Filters
-                </button>
-                <button id="resetFilters" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
-                    Reset Filters
-                </button>
+                <div class="dropdown-box">
+                    <button id="applyFilters">Apply Filters</button>
+                </div>
+                <div class="dropdown-box">
+                    <button id="resetFilters">Reset Filters</button>
+                </div>
             </div>
         </div>
 
         <!-- Dashboard Section -->
-        <div class="chart-section mt-8 mb-6 p-4 bg-purple-50 rounded-lg shadow-inner no-print">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 text-center">Swimmer Performance Dashboard</h2>
+        <div class="chart-section">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Swimmer Performance Dashboard</h2>
 
-            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="selectSwimmer" class="block text-lg font-medium text-gray-700 mb-2">Select Swimmer:</label>
-                    <select id="selectSwimmer" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
+            <div class="chart-controls"> <!-- Container for select elements -->
+                <div class="dropdown-box">
+                    <label for="selectSwimmer">Select Swimmer:</label>
+                    <select id="selectSwimmer">
                         <option value="">-- Select an Athlete --</option>
                         <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
-                <div>
-                    <label for="selectEventForProgression" class="block text-lg font-medium text-gray-700 mb-2">Select Event (Progression Chart):</label>
-                    <select id="selectEventForProgression" class="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500" disabled>
+                <div class="dropdown-box">
+                    <label for="selectEventForProgression">Select Event (Progression Chart):</label>
+                    <select id="selectEventForProgression" disabled>
                         <option value="">-- Select an Event --</option>
                         <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+            <div class="chart-display"> <!-- Container for canvases -->
                 <!-- Specialty Chart -->
-                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center h-96">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Swimmer Specialty (Radar Chart)</h3>
+                <div class="chart-canvas-container">
+                    <h3>Swimmer Specialty (Radar Chart)</h3>
                     <canvas id="specialtyChart"></canvas>
                 </div>
 
                 <!-- Progression Chart -->
-                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center h-96">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Time Progression (Line Chart)</h3>
+                <div class="chart-canvas-container">
+                    <h3>Time Progression (Line Chart)</h3>
                     <canvas id="progressionChart"></canvas>
                 </div>
             </div>
         </div>
 
         <!-- Print Button - No Print -->
-        <div class="no-print flex justify-center mb-6">
-            <button id="printReport" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center space-x-2">
+        <div class="no-print-button">
+            <button id="printReport">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0v1a2 2 0 002 2h6a2 2 0 002-2v-1m0 0H7m0 0h10" />
                 </svg>
@@ -207,23 +254,22 @@
         </div>
 
         <!-- Report Table -->
-        <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
-            <table class="min-w-full bg-white">
+        <div class="table-container">
+            <table>
                 <thead>
-                    <!-- This header is just for screen readers/initial structure, actual headers are per athlete -->
                     <tr>
-                        <th class="hidden">Athlete Details</th>
-                        <th class="hidden">Meet Date</th> <!-- Moved Meet Date Header first -->
-                        <th class="hidden">Meet Name</th>
-                        <th class="hidden">Event</th>
-                        <th class="hidden">Seed Time</th>
-                        <th class="hidden">Final Time</th>
-                        <th class="hidden">Place</th>
-                        <th class="hidden">Points</th>
-                        <th class="hidden">% Improvement</th>
+                        <th class="hidden-header">Athlete Details</th> <!-- Placeholder for proper column count alignment -->
+                        <th>Meet Date</th>
+                        <th>Meet Name</th>
+                        <th>Event</th>
+                        <th>Seed</th>
+                        <th>Final</th>
+                        <th>Place</th>
+                        <th>Points</th>
+                        <th>% Improvement</th>
                     </tr>
                 </thead>
-                <tbody id="reportTableBody" class="bg-white divide-y divide-gray-200">
+                <tbody id="reportTableBody">
                     <!-- Data will be populated here by JavaScript -->
                 </tbody>
             </table>
@@ -231,36 +277,32 @@
     </div>
 
     <script>
-        // Helper function to convert time string (MM:SS.ms or SS.ms) to seconds
+        // Helper functions (timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY) remain the same
         function timeToSeconds(timeStr) {
-            if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity; // Added 'NT' for No Time
-            const parts = String(timeStr).split(':'); // Ensure timeStr is a string
+            if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity;
+            const parts = String(timeStr).split(':');
             if (parts.length === 2) {
                 const minutes = parseInt(parts[0]);
                 const seconds = parseFloat(parts[1]);
                 return minutes * 60 + seconds;
             } else if (parts.length === 1) {
-                return parseFloat(parts[0]); // Handles cases like "28.15" if no minutes
+                return parseFloat(parts[0]);
             }
-            return Infinity; // Invalid format
+            return Infinity;
         }
 
-        // Helper function to convert seconds to time string (MM:SS.ms)
         function secondsToTime(totalSeconds) {
             if (totalSeconds === Infinity || isNaN(totalSeconds)) return 'N/A';
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
-            // Pad seconds with leading zero if less than 10, and ensure two decimal places
             return `${minutes}:${seconds < 10 ? '0' : ''}${seconds.toFixed(2)}`;
         }
 
-        // Helper to format date for display (e.g., "June 8")
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
         }
 
-        // Helper to format date as MM/DD/YYYY (e.g., "06/11/2025")
         function formatMMDDYYYY(dateString) {
             const date = new Date(dateString);
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -269,46 +311,37 @@
             return `${month}/${day}/${year}`;
         }
 
-        // --- Configuration for JSON file paths and weekly file names ---
         const weeklyFileNames = [
             "2025resultsweek01.json",
             "2025resultsweek02.json"
         ];
 
-        let allAthleteData = []; // This will now be populated dynamically
+        let allAthleteData = [];
         let filteredAthleteData = [];
-        let currentLoadedMeetInfo = { title: '', dateRange: '' }; // Stores current meet title and date range
+        let currentLoadedMeetInfo = { title: '', dateRange: '' };
 
         const reportTableBody = document.getElementById('reportTableBody');
         const filterNameInput = document.getElementById('filterName');
-        const filterStrokeInput = document.getElementById('filterStroke'); // New stroke filter input
+        const filterStrokeInput = document.getElementById('filterStroke');
         const applyFiltersButton = document.getElementById('applyFilters');
         const resetFiltersButton = document.getElementById('resetFilters');
         const printReportButton = document.getElementById('printReport');
         const selectSwimmer = document.getElementById('selectSwimmer');
         const jsonFileSelector = document.getElementById('jsonFileSelector');
         const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
-        const selectEventForProgression = document.getElementById('selectEventForProgression'); // New event select
+        const selectEventForProgression = document.getElementById('selectEventForProgression');
 
         let specialtyChartInstance = null;
         let progressionChartInstance = null;
 
-        /**
-         * Transforms raw data from the JSON "values" array into an array of objects
-         * with meaningful property names and adds an 'id', 'meetDate', and 'meetName'.
-         * @param {Array<Array>} rawValues - The "values" array from the JSON.
-         * @param {Array<string>} fieldNames - The "fields" array from the JSON.
-         * @returns {Array<Object>} Transformed athlete data.
-         */
         function transformRawData(rawValues, fieldNames) {
             const transformed = [];
-            // Mapping indices based on your 'fields' array
             const lastNameIndex = fieldNames.indexOf('last_name');
             const firstNameIndex = fieldNames.indexOf('first_name');
-            const genderIndex = fieldNames.indexOf('competition_category'); // Maps to 'M' or 'F'
+            const genderIndex = fieldNames.indexOf('competition_category');
             const ageIndex = fieldNames.indexOf('age');
-            const meetDateIndex = fieldNames.indexOf('meet_date'); // Index for meet_date in the row
-            const meetNameIndex = fieldNames.indexOf('meet_name'); // Index for meet_name in the row
+            const meetDateIndex = fieldNames.indexOf('meet_date');
+            const meetNameIndex = fieldNames.indexOf('meet_name');
             const eventSwumIndex = fieldNames.indexOf('event_swum');
             const seedTimeIndex = fieldNames.indexOf('seed_time');
             const resultTimeIndex = fieldNames.indexOf('result_time');
@@ -316,20 +349,19 @@
             const pointsIndex = fieldNames.indexOf('points');
 
             rawValues.forEach((row, index) => {
-                // Generate a consistent ID for the athlete (lastName-firstName-age)
                 const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
                 
                 transformed.push({
-                    id: athleteId, // Consistent ID for the athlete (used for charts across different dates)
+                    id: athleteId,
                     lastName: row[lastNameIndex],
                     firstName: row[firstNameIndex],
-                    category: row[genderIndex], // This is 'gender' from your JSON, used as 'category' for display
+                    category: row[genderIndex],
                     age: row[ageIndex],
-                    meetDate: row[meetDateIndex], // Use meet_date from the current row
-                    meetName: String(row[meetNameIndex]).replace('2025 ', ''), // Use meet_name from the current row and remove "2025 "
+                    meetDate: row[meetDateIndex],
+                    meetName: String(row[meetNameIndex]).replace('2025 ', ''),
                     eventSwum: row[eventSwumIndex],
-                    seedTime: String(row[seedTimeIndex]), // Ensure it's a string for timeToSeconds
-                    resultTime: String(row[resultTimeIndex]), // Ensure it's a string for timeToSeconds
+                    seedTime: String(row[seedTimeIndex]),
+                    resultTime: String(row[resultTimeIndex]),
                     place: row[placeIndex],
                     points: row[pointsIndex]
                 });
@@ -337,11 +369,8 @@
             return transformed;
         }
 
-        /**
-         * Populates the JSON file selector with options including meet dates.
-         */
         function populateJsonFileSelector() {
-            jsonFileSelector.innerHTML = ''; // Clear existing options
+            jsonFileSelector.innerHTML = '';
 
             const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
                 const filePath = new URL(fileName, window.location.href).toString();
@@ -362,7 +391,6 @@
 
                 let displayDate = 'N/A';
                 
-                // Prioritize top-level "meet date"
                 if (rawFileData && rawFileData["meet date"]) {
                     displayDate = rawFileData["meet date"];
                 } else if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
@@ -382,7 +410,7 @@
                     option.textContent = `Week #${index + 1} (${formattedDate})`;
                     return option;
                 }
-                return null; // Return null if no valid date found
+                return null;
             });
 
             Promise.all(optionsPromises).then(options => {
@@ -397,14 +425,8 @@
             });
         }
 
-        /**
-         * Updates the header display with current meet information.
-         * @param {string} title - The title of the current meet/report (top-level title).
-         * @param {string} rawDateOrRange - The raw date string (e.g., "YYYY-MM-DD" or "Jun 11, 2025") or date range for "All Results".
-         * @param {boolean} isAllResults - True if "All Results" is selected.
-         */
         function updateReportHeaderDisplay(title, rawDateOrRange, isAllResults) {
-            const cleanedTitle = String(title || '').replace('2025 ', ''); // Ensure title is a string before replace
+            const cleanedTitle = String(title || '').replace('2025 ', '');
             let displayDate = "";
 
             if (isAllResults) {
@@ -421,10 +443,6 @@
             reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
         }
 
-        /**
-         * Fetches data from JSON file(s) and updates the report.
-         * @param {string} fileName - The name of the JSON file to load, or "all-results".
-         */
         async function fetchAndRenderData(fileName) {
             let rawFileData = null;
             let currentMeetTitleForHeader = '';
@@ -456,9 +474,9 @@
                 } catch (error) {
                     console.error(`Error fetching ${filePath}:`, error);
                     alert(`Failed to load data for ${fileName}. Please ensure the file exists and is accessible. Error: ${error.message}`);
-                    allAthleteData = []; // Clear data if fetch fails
+                    allAthleteData = [];
                     filteredAthleteData = [];
-                    renderTable(filteredFileData); // Use filteredData here
+                    renderTable(filteredAthleteData); // Use filteredData here
                     populateSwimmerSelect();
                     updateReportHeaderDisplay("Error Loading Data", "", false);
                     if (specialtyChartInstance) specialtyChartInstance.destroy();
@@ -479,7 +497,7 @@
                         const response = await fetch(filePath);
                         if (!response.ok) {
                             console.warn(`Could not fetch ${filePath}. Skipping this week.`);
-                            return []; // Return empty array for this week if fetch fails
+                            return [];
                         }
                         rawWeekData = await response.json();
                         if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
@@ -489,7 +507,7 @@
                     } catch (error) {
                         console.error(`Error fetching ${filePath}:`, error);
                         console.warn(`Skipping ${name} due to network error.`);
-                        return []; // Return empty array on network error
+                        return [];
                     }
                 });
 
@@ -543,37 +561,30 @@
             }
         }
 
-        /**
-         * Renders the athlete data into the table, grouped by athlete.
-         * @param {Array<Object>} data - The array of athlete data to render.
-         */
         function renderTable(data) {
-            reportTableBody.innerHTML = ''; // Clear existing rows
+            reportTableBody.innerHTML = '';
 
-            // Group data by athlete
             const athletesGrouped = data.reduce((acc, current) => {
                 const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
-                // Now grouping only by the athlete's unique ID for their main header
                 const uniqueAthleteId = `${current.lastName}-${current.firstName}-${current.age}`;
                 
                 if (!acc[uniqueAthleteId]) {
                     acc[uniqueAthleteId] = {
-                        id: uniqueAthleteId, // This is the ID for charts and overall athlete grouping
-                        displayKey: athleteDisplayKey, // For table header
+                        id: uniqueAthleteId,
+                        displayKey: athleteDisplayKey,
                         details: {
                             lastName: current.lastName,
                             firstName: current.firstName,
                             age: current.age,
                             category: current.category
                         },
-                        events: [] // All events for this athlete, across all meets
+                        events: []
                     };
                 }
                 acc[uniqueAthleteId].events.push(current);
                 return acc;
             }, {});
 
-            // Sort the grouped athletes for consistent display
             const athleteKeys = Object.keys(athletesGrouped).sort();
 
             if (athleteKeys.length === 0) {
@@ -590,7 +601,6 @@
             athleteKeys.forEach(athleteKey => {
                 const athlete = athletesGrouped[athleteKey];
 
-                // Athlete Header Row
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
                 athleteHeaderRow.innerHTML = `
@@ -598,11 +608,10 @@
                 `;
                 reportTableBody.appendChild(athleteHeaderRow);
 
-                // Event Sub-Header Row
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
                 eventSubHeaderRow.innerHTML = `
-                    <th>Meet Date</th> <!-- Moved Meet Date Column Header first -->
+                    <th>Meet Date</th>
                     <th>Meet Name</th>
                     <th>Event</th>
                     <th>Seed</th>
@@ -616,7 +625,6 @@
                 eventSubHeaderRow.prepend(emptyTh);
                 reportTableBody.appendChild(eventSubHeaderRow);
 
-                // Sort events by Meet Date, then Event Name (alphabetically)
                 athlete.events.sort((a, b) => {
                     const dateA = new Date(a.meetDate);
                     const dateB = new Date(b.meetDate);
@@ -626,7 +634,6 @@
                     return a.eventSwum.localeCompare(b.eventSwum);
                 });
 
-                // Event Data Rows
                 athlete.events.forEach(eventData => {
                     const seedSeconds = timeToSeconds(eventData.seedTime);
                     const resultSeconds = timeToSeconds(eventData.resultTime);
@@ -644,7 +651,7 @@
                     const eventRow = document.createElement('tr');
                     eventRow.className = 'event-data-row hover:bg-gray-50 transition duration-150 ease-in-out';
                     eventRow.innerHTML = `
-                        <td>${formatMMDDYYYY(eventData.meetDate)}</td> <!-- Display formatted meet date -->
+                        <td>${formatMMDDYYYY(eventData.meetDate)}</td>
                         <td>${eventData.meetName}</td>
                         <td>${eventData.eventSwum}</td>
                         <td>${eventData.seedTime}</td>
@@ -661,9 +668,6 @@
             });
         }
 
-        /**
-         * Initializes the swimmer selection dropdown.
-         */
         function populateSwimmerSelect() {
             while (selectSwimmer.children.length > 1) {
                 selectSwimmer.removeChild(selectSwimmer.lastChild);
@@ -673,10 +677,10 @@
             const swimmerMap = new Map();
 
             allAthleteData.forEach(athlete => {
-                const key = `${athlete.lastName}-${athlete.firstName}-${athlete.age}`; // Consistent ID for charts
+                const key = `${athlete.lastName}-${athlete.firstName}-${athlete.age}`;
                 if (!swimmerMap.has(key)) {
                     swimmerMap.set(key, {
-                        id: key, // Use this consistent key as the ID for chart selection
+                        id: key,
                         firstName: athlete.firstName,
                         lastName: athlete.lastName
                     });
@@ -697,18 +701,14 @@
             });
         }
 
-        /**
-         * Populates the event selection dropdown for the progression chart based on the selected swimmer.
-         * @param {string} swimmerId - The ID of the selected swimmer.
-         */
         function populateEventSelectForProgression(swimmerId) {
-            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>'; // Clear and add default
-            selectEventForProgression.disabled = true; // Disable until a swimmer is selected
+            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+            selectEventForProgression.disabled = true;
 
             const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
             
             if (swimmerEvents.length > 0) {
-                swimmerEvents.sort().forEach(event => { // Sort events alphabetically
+                swimmerEvents.sort().forEach(event => {
                     const option = document.createElement('option');
                     option.value = event;
                     option.textContent = event;
@@ -718,9 +718,6 @@
             }
         }
 
-        /**
-         * Generates data for the Specialty (Radar) Chart for a given swimmer.
-         */
         function getSpecialtyChartData(swimmerId) {
             const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
             if (swimmerData.length === 0) return null;
@@ -745,7 +742,7 @@
             return {
                 labels: strokes,
                 datasets: [{
-                    label: `${swimmerData[0].lastName}, ${swimmerData[0].firstName}'s Specialty`, // Updated format
+                    label: `${swimmerData[0].lastName}, ${swimmerData[0].firstName}'s Specialty`,
                     data: strokes.map(stroke => specialtyScores[stroke]),
                     backgroundColor: 'rgba(153, 102, 255, 0.4)',
                     borderColor: 'rgba(153, 102, 255, 1)',
@@ -755,9 +752,6 @@
             };
         }
 
-        /**
-         * Generates data for the Progression (Line) Chart for a given swimmer and event.
-         */
         function getProgressionChartData(swimmerId, eventSwum) {
             const swimmerEventData = allAthleteData
                 .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
@@ -766,7 +760,7 @@
             if (swimmerEventData.length === 0) return null;
 
             return {
-                labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`), // Use MM/DD/YYYY and include meet name
+                labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`),
                 datasets: [{
                     label: `${eventSwum} Time Progression`,
                     data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
@@ -778,9 +772,6 @@
             };
         }
 
-        /**
-         * Initializes or updates the Specialty (Radar) Chart.
-         */
         function updateSpecialtyChart(swimmerId) {
             if (specialtyChartInstance) {
                 specialtyChartInstance.destroy();
@@ -809,7 +800,7 @@
                             },
                             pointLabels: {
                                 font: {
-                                    size: 10, // Smaller font for radar labels
+                                    size: 10,
                                     weight: 'bold'
                                 },
                                 color: '#4a5568'
@@ -821,7 +812,7 @@
                                 backdropColor: 'rgba(255, 255, 255, 0.75)',
                                 color: '#4a5568',
                                 font: {
-                                    size: 9 // Smaller tick labels
+                                    size: 9
                                 }
                             }
                         }
@@ -833,7 +824,7 @@
                             labels: {
                                 color: '#4a5568',
                                 font: {
-                                    size: 10 // Smaller legend font
+                                    size: 10
                                 }
                             }
                         },
@@ -847,7 +838,7 @@
                                 }
                             },
                             bodyFont: {
-                                size: 10 // Smaller tooltip font
+                                size: 10
                             }
                         }
                     }
@@ -855,20 +846,14 @@
             });
         }
 
-        /**
-         * Initializes or updates the Progression (Line) Chart.
-         * @param {string} swimmerId - The ID of the selected swimmer.
-         * @param {string} selectedEvent - The event to display progression for.
-         */
         function updateProgressionChart(swimmerId, selectedEvent) {
             if (progressionChartInstance) {
                 progressionChartInstance.destroy();
             }
 
-            // Ensure an event is selected
             if (!selectedEvent) {
                 const ctx = document.getElementById('progressionChart').getContext('2d');
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Clear canvas if no event
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                 return;
             }
 
@@ -876,8 +861,8 @@
             const ctx = document.getElementById('progressionChart').getContext('2d');
 
             if (!chartData) {
-                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                 return;
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                return;
             }
 
             progressionChartInstance = new Chart(ctx, {
@@ -893,13 +878,13 @@
                                 text: 'Meet Date (Meet Name)',
                                 color: '#4a5568',
                                 font: {
-                                    size: 10 // Smaller axis title font
+                                    size: 10
                                 }
                             },
                             ticks: {
                                 color: '#4a5568',
                                 font: {
-                                    size: 9 // Smaller tick labels
+                                    size: 9
                                 }
                             },
                             grid: {
@@ -912,7 +897,7 @@
                                 text: 'Time (Seconds)',
                                 color: '#4a5568',
                                 font: {
-                                    size: 10 // Smaller axis title font
+                                    size: 10
                                 }
                             },
                             ticks: {
@@ -921,7 +906,7 @@
                                     return secondsToTime(value);
                                 },
                                 font: {
-                                    size: 9 // Smaller tick labels
+                                    size: 9
                                 }
                             },
                             grid: {
@@ -938,7 +923,7 @@
                             labels: {
                                 color: '#4a5568',
                                 font: {
-                                    size: 10 // Smaller legend font
+                                    size: 10
                                 }
                             }
                         },
@@ -952,7 +937,7 @@
                                 }
                             },
                             bodyFont: {
-                                size: 10 // Smaller tooltip font
+                                size: 10
                             }
                         }
                     }
@@ -964,14 +949,14 @@
         // Filters
         function applyFilters() {
             const nameFilter = filterNameInput.value.toLowerCase();
-            const strokeFilter = filterStrokeInput.value.toLowerCase(); // New stroke filter value
+            const strokeFilter = filterStrokeInput.value.toLowerCase();
             
             filteredAthleteData = allAthleteData.filter(athlete => {
                 const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
                 const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
-                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter); // Filter by stroke
+                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter);
                 
-                return matchesName && matchesStroke; // Apply both name and stroke filters
+                return matchesName && matchesStroke;
             });
 
             renderTable(filteredAthleteData);
@@ -979,7 +964,7 @@
 
         function resetFilters() {
             filterNameInput.value = '';
-            filterStrokeInput.value = ''; // Clear stroke input on reset
+            filterStrokeInput.value = '';
             filteredAthleteData = [...allAthleteData];
             renderTable(filteredAthleteData);
         }
@@ -1023,7 +1008,7 @@
 
         jsonFileSelector.addEventListener('change', (event) => {
             filterNameInput.value = '';
-            filterStrokeInput.value = ''; // Clear stroke filter when changing file
+            filterStrokeInput.value = '';
             fetchAndRenderData(event.target.value);
         });
 
