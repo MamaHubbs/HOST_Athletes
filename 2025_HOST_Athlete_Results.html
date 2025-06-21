@@ -316,7 +316,7 @@
             jsonFileSelector.innerHTML = ''; // Clear existing options
 
             const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
-                // Use a proper base for URL construction for robustness
+                // Construct full URL using new URL() for robustness.
                 const filePath = new URL(fileName, window.location.href).toString();
                 let rawFileData = null;
 
@@ -343,7 +343,7 @@
 
                 // Use top-level 'meet date' for dropdown labels if available, otherwise fallback to first record's meet_date
                 let displayDate = 'N/A';
-                let displayMeetName = 'Unknown Meet';
+                let displayMeetName = 'Unknown Meet'; // Placeholder for meet name, will not be displayed
 
                 // Prioritize top-level "meet date" and "title" if they exist
                 if (rawFileData && rawFileData["meet date"]) {
@@ -367,10 +367,10 @@
                 if (displayDate !== 'N/A') {
                     const option = document.createElement('option');
                     option.value = fileName;
-                    // Format: Week #1 (Meet Name - 06/11/2025)
-                    // Ensure displayDate is formatted to MM/DD/YYYY if it's not already
+                    // Format: Week #1 (06/11/2025)
+                    // Ensuring displayDate is formatted to MM/DD/YYYY using the helper
                     const formattedDate = formatMMDDYYYY(displayDate);
-                    option.textContent = `Week #${index + 1} (${displayMeetName} - ${formattedDate})`;
+                    option.textContent = `Week #${index + 1} (${formattedDate})`; // Removed meet name from dropdown
                     return option;
                 }
                 return null; // Return null if no valid date found
