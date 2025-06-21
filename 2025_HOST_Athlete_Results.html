@@ -553,12 +553,12 @@
             // Group data by athlete
             const athletesGrouped = data.reduce((acc, current) => {
                 const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
-                // Group by athlete, and now also by meet for distinct rows if an athlete swims in multiple meets
-                const uniqueAthleteMeetKey = `${current.lastName}-${current.firstName}-${current.age}-${current.meetDate}-${current.meetName}`;
+                // Now grouping only by the athlete's unique ID for their main header
+                const uniqueAthleteId = `${current.lastName}-${current.firstName}-${current.age}`;
                 
-                if (!acc[uniqueAthleteMeetKey]) {
-                    acc[uniqueAthleteMeetKey] = {
-                        id: `${current.lastName}-${current.firstName}-${current.age}`, // Consistent ID for charts (remains athlete-specific)
+                if (!acc[uniqueAthleteId]) {
+                    acc[uniqueAthleteId] = {
+                        id: uniqueAthleteId, // This is the ID for charts and overall athlete grouping
                         displayKey: athleteDisplayKey, // For table header
                         details: {
                             lastName: current.lastName,
@@ -566,12 +566,10 @@
                             age: current.age,
                             category: current.category
                         },
-                        events: [],
-                        meetName: current.meetName, // Store meet name for display in table row
-                        meetDate: current.meetDate // Store meet date for display in table row
+                        events: [] // All events for this athlete, across all meets
                     };
                 }
-                acc[uniqueAthleteMeetKey].events.push(current);
+                acc[uniqueAthleteId].events.push(current);
                 return acc;
             }, {});
 
@@ -580,7 +578,6 @@
 
             if (athleteKeys.length === 0) {
                 const noResultsRow = document.createElement('tr');
-                // Adjust colspan for the new 'Meet Date' column (was 8, now 9)
                 noResultsRow.innerHTML = `
                     <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         No results found matching your filters.
@@ -605,7 +602,7 @@
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
                 eventSubHeaderRow.innerHTML = `
-                    <th>Meet Date</th> <!-- Moved Meet Date Column Header first -->
+                    <th>Meet Date</th> <!-- Meet Date first -->
                     <th>Meet Name</th>
                     <th>Event</th>
                     <th>Seed</th>
