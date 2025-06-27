@@ -448,7 +448,7 @@
             const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
             const specialtyScores = {};
             const pronunciationFactor = 2.0; 
-            const scoreOffset = 50; // Add 50 to each score for visual size
+            const scoreOffset = 50; // Adding a base value to push scores outwards
 
             strokes.forEach(stroke => {
                 const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
@@ -479,7 +479,7 @@
                     label: `${swimmerDisplayName}'s Specialty`,
                     backgroundColor: 'rgba(255, 204, 0, 0.4)',
                     borderColor: 'rgba(255, 204, 0, 1)',
-                    data: strokes.map(stroke => specialtyScores[stroke] + scoreOffset), // ADDING THE OFFSET HERE
+                    data: strokes.map(stroke => specialtyScores[stroke] + scoreOffset), // ADDING OFFSET TO DATA
                     borderWidth: 1,
                     pointBackgroundColor: 'rgba(255, 204, 0, 1)'
                 }]
@@ -528,8 +528,7 @@
             const chartData = getSpecialtyChartData(swimmerId);
             const ctx = document.getElementById('specialtyChart').getContext('2d');
 
-            // Define the scoreOffset used in getSpecialtyChartData
-            const scoreOffset = 50; 
+            const scoreOffset = 50; // The offset applied to scores in getSpecialtyChartData
 
             if (specialtyChartInstance) {
                 specialtyChartInstance.data = chartData;
@@ -545,29 +544,29 @@
                             r: {
                                 angleLines: {
                                     color: (context) => {
-                                        // Make every other angle line faint (0, 2, 4...)
+                                        // Make every other angle line very faint
                                         return context.index % 2 === 0 ? '#e2e8f0' : 'rgba(0,0,0,0.05)'; 
                                     }
                                 },
                                 grid: {
                                     color: (context) => {
-                                        // Make every other concentric grid line very faint (0, 10, 20... stronger, 5, 15, 25... faint)
-                                        // context.tick.value gives the score on the scale (e.g., 0, 50, 100, 150)
-                                        if (context.tick.value % 50 === 0) { // Stronger for multiples of 50 (0, 50, 100, 150)
+                                        // context.tick.value is the score on the radial scale (e.g., 0, 25, 50, 75, 100, 125, 150)
+                                        // Make lines at multiples of 50 stronger, others very faint.
+                                        if (context.tick.value % 50 === 0) { // e.g., 0, 50, 100, 150
                                             return '#cbd5e0';
-                                        } else if (context.tick.value % 25 === 0) { // Faint for multiples of 25 (e.g. 25, 75, 125)
+                                        } else if (context.tick.value % 25 === 0) { // e.g., 25, 75, 125
                                             return 'rgba(0,0,0,0.05)'; 
                                         }
-                                        return 'rgba(0,0,0,0)'; // Transparent for other lines (if stepSize is finer than 25)
+                                        return 'rgba(0,0,0,0)'; // Transparent for other lines
                                     },
                                     lineWidth: (context) => {
-                                        // Make lines at multiples of 50 thicker, multiples of 25 thinner
+                                        // Make lines at multiples of 50 thicker, others thinner/invisible
                                         if (context.tick.value % 50 === 0) {
                                             return 1;
                                         } else if (context.tick.value % 25 === 0) {
                                             return 0.5;
                                         }
-                                        return 0; // Or very small, if you want *some* presence
+                                        return 0; // Very thin/invisible
                                     },
                                     drawTicks: false // Do not draw the small tick marks on the axis
                                 },
@@ -575,11 +574,11 @@
                                     font: { size: 10, weight: 'bold' },
                                     color: '#4a5568'
                                 },
-                                min: 0, // Still start at 0
-                                max: 150, // Max scale value (e.g., 100 original + 50 offset)
+                                min: 0, // Always start at 0
+                                max: 100 + scoreOffset, // MAX should be 100 + scoreOffset (e.g., 150)
                                 ticks: { 
-                                    display: false, // REMOVE NUMBERS
-                                    stepSize: 25,   // Set internal tick step to 25 for grid lines (0, 25, 50, 75, 100, 125, 150)
+                                    display: false, // REMOVE NUMBERS from display
+                                    stepSize: 25,   // Set internal tick step to 25 for grid lines (e.g., 0, 25, 50, ..., 150)
                                     beginAtZero: true // Ensure the 0 point is always at the center
                                 },
                             }
@@ -894,7 +893,7 @@
         // Function to update charts and event dropdown after swimmer selection
         function updateChartsAndEventsForSwimmer(swimmerId) {
             currentSelectedSwimmerId = swimmerId; 
-            updateSpecialtyChart(swmerId);
+            updateSpecialtyChart(swimmerId);
             populateEventSelectForProgression(swimmerId);
         }
 
