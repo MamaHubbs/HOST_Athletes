@@ -599,23 +599,19 @@
                 // Ensure the range is not too tight if only one point
                 if (actualDataPointsCount === 1) {
                     // Ensure a reasonable visual spread around the single point
-                    // Target a range that's about 4-6 times the tickStepSize, centered around the point
                     const desiredRange = tickStepSize * 5; // e.g., 5 tick steps total
                     let tempMin = dataValues[0] - (desiredRange / 2);
                     let tempMax = dataValues[0] + (desiredRange / 2);
 
-                    // Re-align to tick steps
                     yAxisMin = Math.floor(tempMin / tickStepSize) * tickStepSize;
                     yAxisMax = Math.ceil(tempMax / tickStepSize) * tickStepSize;
 
-                    // Ensure min is not negative
                     if (yAxisMin < 0) yAxisMin = 0;
 
-                    // If still too tight (e.g., tickStepSize is very small)
-                    if (yAxisMax - yAxisMin < tickStepSize * 4) { // Ensure at least 4 tick steps visible
+                    if (yAxisMax - yAxisMin < tickStepSize * 4) { 
                         const neededIncrease = (tickStepSize * 4) - (yAxisMax - yAxisMin);
                         yAxisMax += neededIncrease;
-                        yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize; // Re-align
+                        yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize; 
                     }
                 }
 
@@ -668,9 +664,9 @@
                                 const datePart = parts[0];
                                 const meetNamePart = parts.length > 1 ? parts[1].replace(')', '') : ''; 
                                 
-                                // Return as an array of strings. Chart.js makes each string a line.
-                                // The titleFont option will apply bolding to the entire title.
-                                return `${datePart}, ${meetNamePart}`;
+                                // Return an array of strings for multi-line title.
+                                // The titleFont option will apply bolding to these lines.
+                                return [datePart, meetNamePart]; 
                             },
                             label: function(context) {
                                 const eventLabel = context.dataset.label; 
