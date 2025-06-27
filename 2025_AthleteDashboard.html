@@ -138,6 +138,7 @@
             /* No fixed height here, individual heights will be set or default to content */
             width: 500px; /* Set fixed width for all chart containers */
             margin: 0 auto; /* Center individual chart containers */
+            position: relative; /* Needed for overlay */
         }
 
         /* Specific height for Specialty Chart container */
@@ -196,6 +197,27 @@
             background-color: DodgerBlue !important;
             color: #ffffff;
         }
+
+        /* Overlay for "Not Enough Data" message */
+        .chart-overlay-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 5; /* Above canvas, below controls */
+            border-radius: 8px; /* Match container border-radius */
+        }
     </style>
 </head>
 <body>
@@ -232,6 +254,9 @@
                         </div>
                     </div>
                     <canvas id="progressionChart"></canvas>
+                    <div id="progressionChartOverlay" class="chart-overlay-message" style="display: none;">
+                        Not enough data to display progression (at least 2 results needed).
+                    </div>
                 </div>
             </div>
         </div>
@@ -245,6 +270,8 @@
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
         const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
         const selectEventForProgression = document.getElementById('selectEventForProgression');
+        const progressionChartOverlay = document.getElementById('progressionChartOverlay');
+
 
         let specialtyChartInstance = null;
         let progressionChartInstance = null;
@@ -333,7 +360,7 @@
 
             // Initialize empty charts on load
             updateSpecialtyChart(null); 
-            updateProgressionChart(null, null);
+            updateProgressionChart(null, null); // This will now show the overlay
         }
 
         function populateEventSelectForProgression(swimmerId) {
@@ -360,16 +387,13 @@
                 selectEventForProgression.disabled = false;
 
                 // Auto-select the first event if available and update chart
-                if (selectEventForProgression.options.length > 1) { // Check if there's more than just the default "-- Select an Event --" option
-                    selectEventForProgression.value = selectEventForProgression.options[1].value;
-                    console.log("Auto-selecting first event for progression:", selectEventForProgression.value); // Added log
-                    updateProgressionChart(swimmerId, selectEventForProgression.value);
-                } else {
-                    console.warn("Only one event or no events after filter for progression for selected swimmer. Clearing chart."); // Modified log message
-                    updateProgressionChart(null, null); // No valid events for this swimmer to show progression
-                }
+                // Instead of checking options.length > 1, let updateProgressionChart handle data sufficiency
+                selectEventForProgression.value = swimmerEvents[0]; // Auto-select the first event for the swimmer
+                console.log("Auto-selecting first event for progression:", selectEventForProgression.value); 
+                updateProgressionChart(swimmerId, selectEventForProgression.value);
+                
             } else {
-                console.warn("No events found for selected swimmer. Clearing chart.");
+                console.warn("No events found for selected swimmer. Clearing chart and showing overlay.");
                 updateProgressionChart(null, null); // No events for this swimmer
             }
         }
@@ -460,13 +484,14 @@
                 .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
                 .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
 
-            console.log("Filtered swimmerEventData for progression:", swimmerEventData); // Crucial log
+            console.log("Filtered swimmerEventData for progression:", swimmerEventData); 
 
-            if (swimmerEventData.length === 0) {
+            if (swimmerEventData.length < 2) { // Changed from === 0 to < 2
+                console.warn(`Not enough data points (${swimmerEventData.length}) for progression chart for ${swimmerId}, ${eventSwum}. Need at least 2.`);
                  return {
                     labels: [],
                     datasets: [{
-                        label: `${eventSwum} Time Progression (No Data)`,
+                        label: `${eventSwum} Time Progression (Not Enough Data)`,
                         data: [],
                         fill: false,
                         borderColor: 'rgba(150, 150, 150, 1)',
@@ -544,57 +569,67 @@
         }
 
         function updateProgressionChart(swimmerId, selectedEvent) {
-            console.log("updateProgressionChart called with swimmerId:", swimmerId, "selectedEvent:", selectedEvent); // Crucial log
+            console.log("updateProgressionChart called with swimmerId:", swimmerId, "selectedEvent:", selectedEvent); 
             const chartData = getProgressionChartData(swimmerId, selectedEvent);
             const ctx = document.getElementById('progressionChart').getContext('2d');
 
-            // If context is not available, cannot draw. (Should not happen with current HTML)
             if (!ctx) {
                 console.error("Canvas context for progressionChart not found.");
                 return;
             }
+
+            // --- Control the overlay based on data sufficiency ---
+            if (chartData.datasets[0].data.length < 2) {
+                progressionChartOverlay.style.display = 'flex'; // Show overlay
+                if (progressionChartInstance) {
+                    progressionChartInstance.data = { labels: [], datasets: [] }; // Clear data
+                    progressionChartInstance.update();
+                } else {
+                    // Initialize a blank chart if it doesn't exist, so we can overlay it
+                     progressionChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: [], datasets: [] },
+                        options: { responsive: true, maintainAspectRatio: false, animation: false } // No animation for empty chart
+                    });
+                }
+                return; // Stop here, overlay is active
+            } else {
+                progressionChartOverlay.style.display = 'none'; // Hide overlay
+            }
+            // --- End overlay control ---
 
             let yAxisMin = 0;
             let yAxisMax = 60; // Increased default range for empty chart
             let tickStepSize = 10; // Default for empty chart
             const buffer = 0.5; // Small buffer in seconds for Y-axis range
 
-            if (chartData.datasets[0].data.length > 0) {
-                const dataValues = chartData.datasets[0].data;
-                const minData = Math.min(...dataValues);
-                const maxData = Math.max(...dataValues);
+            const dataValues = chartData.datasets[0].data; // We know data.length >= 2 here
+            const minData = Math.min(...dataValues);
+            const maxData = Math.max(...dataValues);
 
-                // Calculate a dynamic range
-                yAxisMin = Math.floor((minData - buffer) * 100) / 100; // Round down to nearest 0.01
-                yAxisMax = Math.ceil((maxData + buffer) * 100) / 100; // Round up to nearest 0.01
+            // Calculate a dynamic range
+            yAxisMin = Math.floor((minData - buffer) * 100) / 100; // Round down to nearest 0.01
+            yAxisMax = Math.ceil((maxData + buffer) * 100) / 100; // Round up to nearest 0.01
 
-                // Ensure min is not negative if all times are positive
-                if (yAxisMin < 0) yAxisMin = 0;
+            // Ensure min is not negative if all times are positive
+            if (yAxisMin < 0) yAxisMin = 0;
 
-                // Adjust ticks step size for finer detail
-                const range = yAxisMax - yAxisMin;
+            // Adjust ticks step size for finer detail
+            const range = yAxisMax - yAxisMin;
 
-                if (range <= 0.5) { // Very small range, e.g., <0.5s difference
-                    tickStepSize = 0.05; // 50ms increments
-                } else if (range <= 1.5) { // Small range, e.g., <1.5s difference
-                    tickStepSize = 0.1; // 100ms increments
-                } else if (range <= 5) { // Medium range
-                    tickStepSize = 0.25; // 250ms increments
-                } else if (range <= 10) { // Larger range
-                    tickStepSize = 0.5; // 500ms increments
-                } else { // Very large ranges
-                    tickStepSize = 1.0; // 1 second increments
-                }
-                 console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
-            } else {
-                 console.log("No data for progression chart. Using default Y-axis range (0-60s).");
-                 // If no data, ensure a reasonable default range
-                 yAxisMin = 0; 
-                 yAxisMax = 60; 
-                 tickStepSize = 10;
+            if (range <= 0.5) { 
+                tickStepSize = 0.05; 
+            } else if (range <= 1.5) { 
+                tickStepSize = 0.1; 
+            } else if (range <= 5) { 
+                tickStepSize = 0.25; 
+            } else if (range <= 10) { 
+                tickStepSize = 0.5; 
+            } else { 
+                tickStepSize = 1.0; 
             }
-
-
+            console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
+            
             const newOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -604,7 +639,7 @@
                         ticks: { 
                             color: '#4a5568', 
                             font: { size: 9 },
-                            display: chartData.labels.length > 0 // Hide x-axis labels if no data
+                            display: true // Always display x-axis labels if data exists
                         },
                         grid: { color: '#e2e8f0' }
                     },
@@ -614,7 +649,7 @@
                             color: '#4a5568',
                             callback: function(value) { return secondsToTime(value); },
                             font: { size: 9 },
-                            stepSize: tickStepSize // Apply dynamic step size
+                            stepSize: tickStepSize 
                         },
                         grid: { color: '#e2e8f0' },
                         reverse: true, // Lower time is better
@@ -643,7 +678,7 @@
             if (progressionChartInstance) {
                 console.log("Updating existing progressionChartInstance.");
                 progressionChartInstance.data = chartData;
-                progressionChartInstance.options = newOptions; // Update options completely
+                progressionChartInstance.options = newOptions; 
                 progressionChartInstance.update();
             } else {
                 console.log("Creating new progressionChartInstance.");
@@ -667,7 +702,7 @@
             let currentFocus = -1;
             const matches = uniqueSwimmersData.filter(swimmer => 
                 `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal) ||
-                `${swimmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal)
+                `${swmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal)
             );
 
             matches.forEach((swimmer, i) => {
