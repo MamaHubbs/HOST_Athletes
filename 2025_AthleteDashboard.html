@@ -598,7 +598,7 @@
 
                 // Ensure the range is not too tight if only one point
                 if (actualDataPointsCount === 1) {
-                    // Adjust yAxisMin and yAxisMax to center the single point within a reasonable visible range.
+                    // Ensure a reasonable visual spread around the single point
                     // Target a range that's about 4-6 times the tickStepSize, centered around the point
                     const desiredRange = tickStepSize * 5; // e.g., 5 tick steps total
                     let tempMin = dataValues[0] - (desiredRange / 2);
@@ -629,8 +629,8 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        title: { display: true, text: 'Meet Date (Meet Name)', color: '#4a5568', font: { size: 10 } }, // Reverted X-axis title
-                        labels: chartData.labels, // Use dynamic labels from getProgressionChartData
+                        title: { display: true, text: 'Meet Date (Meet Name)', color: '#4a5568', font: { size: 10 } }, 
+                        labels: chartData.labels, 
                         ticks: { 
                             color: '#4a5568', 
                             font: { size: 9 },
@@ -663,26 +663,27 @@
                         callbacks: {
                             title: function(tooltipItems) {
                                 // tooltipItems[0].label contains "DATE (Meet Name)"
-                                // We need to split this to bold the date.
-                                const fullLabel = tooltipItems[0].label; // e.g., "06/25/2025 (Massad Marlins)"
+                                const fullLabel = tooltipItems[0].label;
                                 const parts = fullLabel.split(' (');
                                 const datePart = parts[0];
-                                const meetNamePart = parts.length > 1 ? `(${parts[1]}` : ''; // Re-add '(' for meet name
-
-                                return `**${datePart}**, **${meetNamePart.replace(')','') }**`; // Remove ')' to bold meet name
+                                const meetNamePart = parts.length > 1 ? parts[1].replace(')', '') : ''; 
+                                
+                                // Return as an array of strings. Chart.js makes each string a line.
+                                // The titleFont option will apply bolding to the entire title.
+                                return `${datePart}, ${meetNamePart}`;
                             },
                             label: function(context) {
-                                const eventLabel = context.dataset.label; // e.g., "15-18 Boys 50m Freestyle"
+                                const eventLabel = context.dataset.label; 
                                 const time = secondsToTime(context.raw);
-                                return `Event: ${eventLabel}\nTime: ${time}`;
+                                // Return an array for multiline label content
+                                return [
+                                    `Event: ${eventLabel}`,
+                                    `Time: ${time}`
+                                ];
                             },
-                            // Customizing body font for line breaks and bolding might require custom tooltip rendering,
-                            // but standard callback returns array of strings, which typically renders new lines.
-                            // Chart.js default HTML tooltips don't support rich text directly via callbacks
-                            // without custom rendering. We'll return strings and let Chart.js handle default line breaks.
                         },
                         bodyFont: { size: 10 },
-                        titleFont: { size: 12, weight: 'bold' }, // Make title bold
+                        titleFont: { size: 12, weight: 'bold' }, 
                         padding: 10,
                     }
                 }
