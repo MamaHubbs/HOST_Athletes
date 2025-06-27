@@ -1,1 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swimmer Performance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f8f8;
+            color: #333;
+        }
 
+        /* Centering and max-width for the entire dashboard */
+        .container {
+            max-width: 900px; /* Max width of the entire dashboard */
+            margin: 20px auto; /* Center the container horizontally */
+            background-color: #ffffff; /* Explicitly set background for the container */
+            padding: 20px; /* Add some padding inside the container */
+            border-radius: 8px; /* Rounded corners for the main container */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Subtle shadow for the container */
+        }
+
+        h1 {
+            text-align: center;
+            color: #0156B3;
+            font-size: 2em;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-shadow: none;
+        }
+
+        .dropdown-container {
+            position: sticky;
+            top: 0;
+            background-color: #f8f8f8;
+            padding: 10px;
+            text-align: center;
+            z-index: 10;
+            border-bottom: 1px solid #ccc;
+            font-size: 0.7em;
+            border-radius: 8px; /* Added for consistency */
+        }
+
+        .dropdown-box {
+            display: inline-block;
+            margin: 0 4px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        select, input[type="text"] {
+            padding: 3px 6px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 4px 8px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            background-color: #0156B3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Dashboard Specific Styles */
+        .chart-section {
+            background-color: #e5f1ff; /* Light blue background for the dashboard section */
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #0156B3; /* Border with theme blue */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-section h2 {
+            color: #0156B3; /* Heading color for dashboard section */
+            text-align: center;
+            font-size: 1.5em; /* Adjust relative to body font size */
+            margin-bottom: 15px;
+        }
+        .chart-section h3 {
+            color: #333; /* Sub-heading color */
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .chart-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .chart-controls .dropdown-box {
+            flex-grow: 1;
+            min-width: 180px;
+            text-align: left;
+        }
+        /* Centering for the dropdowns above graphs */
+        .chart-controls { /* Removed centered-dropdowns class, using inline styles for direct control */
+            justify-content: center; /* Center items horizontally */
+            text-align: center; /* Ensure labels are centered if they wrap */
+            flex-direction: row; /* Keep them in a row */
+        }
+        .chart-controls .dropdown-box { /* Adjusted for centering and non-growing behavior */
+            flex-grow: 0;
+            min-width: unset;
+            width: auto;
+            text-align: center;
+        }
+
+        .chart-display {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            .chart-display {
+                grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
+            }
+        }
+        .chart-canvas-container {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #b3d9ff; /* Lighter blue border for chart containers */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 384px; /* Fixed height for consistency */
+        }
+        .chart-canvas-container canvas {
+            max-width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chart-section">
+            <h2 style="color: #0156B3;">Swimmer Performance Dashboard</h2>
+
+            <div class="chart-controls" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
+                <div class="dropdown-box">
+                    <label for="selectSwimmer">Select Swimmer:</label>
+                    <select id="selectSwimmer">
+                        <option value="">-- Select an Athlete --</option>
+                        </select>
+                </div>
+                <div class="dropdown-box">
+                    <label for="selectEventForProgression">Select Event (Progression Chart):</label>
+                    <select id="selectEventForProgression" disabled>
+                        <option value="">-- Select an Event --</option>
+                        </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+                <div class="chart-canvas-container">
+                    <h3>Swimmer Specialty (Radar Chart)</h3>
+                    <canvas id="specialtyChart"></canvas>
+                </div>
+
+                <div class="chart-canvas-container">
+                    <h3>Time Progression (Line Chart)</h3>
+                    <canvas id="progressionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Helper functions (timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY) remain the same
+        function timeToSeconds(timeStr) {
+            if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity;
+            const parts = String(timeStr).split(':');
+            if (parts.length === 2) {
+                const minutes = parseInt(parts[0]);
+                const seconds = parseFloat(parts[1]);
+                return minutes * 60 + seconds;
+            } else if (parts.length === 1) {
+                return parseFloat(parts[0]);
+            }
+            return Infinity;
+        }
+
+        function secondsToTime(totalSeconds) {
+            if (totalSeconds === Infinity || isNaN(totalSeconds)) return 'N/A';
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds.toFixed(2)}`;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        }
+
+        function formatMMDDYYYY(dateString) {
+            const date = new Date(dateString);
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        const weeklyFileNames = [
+            "2025resultsweek01.json",
+            "2025resultsweek02.json"
+        ];
+
+        let allAthleteData = []; // Data for charts will come from here
+
+        const selectSwimmer = document.getElementById('selectSwimmer');
+        const selectEventForProgression = document.getElementById('selectEventForProgression');
+
+        let specialtyChartInstance = null;
+        let progressionChartInstance = null;
+
+        function transformRawData(rawValues, fieldNames) {
+            const transformed = [];
+            const lastNameIndex = fieldNames.indexOf('last_name');
+            const firstNameIndex = fieldNames.indexOf('first_name');
+            const genderIndex = fieldNames.indexOf('competition_category');
+            const ageIndex = fieldNames.indexOf('age');
+            const meetDateIndex = fieldNames.indexOf('meet_date');
+            const meetNameIndex = fieldNames.indexOf('meet_name');
+            const eventSwumIndex = fieldNames.indexOf('event_swum');
+            const seedTimeIndex = fieldNames.indexOf('seed_time');
+            const resultTimeIndex = fieldNames.indexOf('result_time');
+            const placeIndex = fieldNames.indexOf('place');
+            const pointsIndex = fieldNames.indexOf('points');
+
+            rawValues.forEach((row, index) => {
+                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
+                
+                transformed.push({
+                    id: athleteId,
+                    lastName: row[lastNameIndex],
+                    firstName: row[firstNameIndex],
+                    category: row[genderIndex],
+                    age: row[ageIndex],
+                    meetDate: row[meetDateIndex],
+                    meetName: String(row[meetNameIndex]).replace('2025 ', ''),
+                    eventSwum: row[eventSwumIndex],
+                    seedTime: String(row[seedTimeIndex]),
+                    resultTime: String(row[resultTimeIndex]),
+                    place: row[placeIndex],
+                    points: row[pointsIndex]
+                });
+            });
+            return transformed;
+        }
+
+        async function loadAllAthleteDataForDashboard() {
+            const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
+                const filePath = new URL(name, window.location.href).toString();
+                let rawWeekData = null;
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        console.warn(`Could not fetch ${filePath}. Skipping this week.`);
+                        return [];
+                    }
+                    rawWeekData = await response.json();
+                    if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
+                        return transformRawData(rawWeekData.values, rawWeekData.fields);
+                    }
+                    return [];
+                } catch (error) {
+                    console.error(`Error fetching ${filePath}:`, error);
+                    console.warn(`Skipping ${name} due to network error.`);
+                    return [];
+                }
+            });
+
+            const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
+            allAthleteData = allWeeksTransformedData.flat();
+
+            populateSwimmerSelect();
+            if (selectSwimmer.options.length > 1) {
+                selectSwimmer.value = selectSwimmer.options[1].value; // Auto-select first swimmer
+                selectSwimmer.dispatchEvent(new Event('change')); // Trigger change event
+            }
+        }
+
+        function populateSwimmerSelect() {
+            while (selectSwimmer.children.length > 1) {
+                selectSwimmer.removeChild(selectSwimmer.lastChild);
+            }
+
+            const uniqueSwimmers = [];
+            const swimmerMap = new Map();
+
+            allAthleteData.forEach(athlete => {
+                const key = `${athlete.lastName}-${athlete.firstName}-${athlete.age}`;
+                if (!swimmerMap.has(key)) {
+                    swimmerMap.set(key, {
+                        id: key,
+                        firstName: athlete.firstName,
+                        lastName: athlete.lastName
+                    });
+                    uniqueSwimmers.push({
+                        id: key,
+                        firstName: athlete.firstName,
+                        lastName: athlete.lastName
+                    });
+                }
+            });
+
+            uniqueSwimmers.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
+
+            uniqueSwimmers.forEach(swimmer => {
+                const option = document.createElement('option');
+                option.value = swimmer.id;
+                option.textContent = `${swimmer.lastName}, ${swimmer.firstName}`;
+                selectSwimmer.appendChild(option);
+            });
+        }
+
+        function populateEventSelectForProgression(swimmerId) {
+            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+            selectEventForProgression.disabled = true;
+
+            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
+            
+            if (swimmerEvents.length > 0) {
+                swimmerEvents.sort().forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event;
+                    option.textContent = event;
+                    selectEventForProgression.appendChild(option);
+                });
+                selectEventForProgression.disabled = false;
+            }
+        }
+
+        function getSpecialtyChartData(swimmerId) {
+            const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+            if (swimmerData.length === 0) return null;
+
+            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+            const specialtyScores = {};
+            strokes.forEach(stroke => {
+                const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
+                if (relevantEvents.length > 0) {
+                    const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
+                    const avgTime = sumTimes / relevantEvents.length;
+
+                    // A higher score indicates better performance (lower time)
+                    // Normalizing score (0-100), adjust max_expected_avg_time based on typical event times
+                    const max_expected_avg_time = 120; // Example: 2 minutes. Adjust this based on your sport's typical slowest times for a single event.
+                    let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
+                    score = Math.max(0, Math.min(100, score)); // Cap between 0 and 100
+                    specialtyScores[stroke] = score;
+                } else {
+                    specialtyScores[stroke] = 0; // No data for this stroke
+                }
+            });
+
+            return {
+                labels: strokes,
+                datasets: [{
+                    label: `${swimmerData[0].lastName}, ${swimmerData[0].firstName}'s Specialty`,
+                    backgroundColor: 'rgba(255, 204, 0, 0.4)', /* Light yellow/gold */
+                    borderColor: 'rgba(255, 204, 0, 1)',      /* Solid yellow/gold */
+                    data: strokes.map(stroke => specialtyScores[stroke]),
+                    borderWidth: 1,
+                    pointBackgroundColor: 'rgba(255, 204, 0, 1)'
+                }]
+            };
+        }
+
+        function getProgressionChartData(swimmerId, eventSwum) {
+            const swimmerEventData = allAthleteData
+                .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
+                .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
+
+            if (swimmerEventData.length === 0) return null;
+
+            return {
+                labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`),
+                datasets: [{
+                    label: `${eventSwum} Time Progression`,
+                    data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
+                    fill: false,
+                    borderColor: '#4169E1', /* Royal Blue */
+                    tension: 0.1,
+                    pointBackgroundColor: '#4169E1' /* Royal Blue */
+                }]
+            };
+        }
+
+        function updateSpecialtyChart(swimmerId) {
+            if (specialtyChartInstance) {
+                specialtyChartInstance.destroy();
+            }
+            const chartData = getSpecialtyChartData(swimmerId);
+            const ctx = document.getElementById('specialtyChart').getContext('2d');
+
+            if (!chartData) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                return;
+            }
+
+            specialtyChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: '#e2e8f0'
+                            },
+                            grid: {
+                                color: '#cbd5e0'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 10,
+                                    weight: 'bold'
+                                },
+                                color: '#4a5568'
+                            },
+                            min: 0,
+                            max: 100, // Score is 0-100
+                            ticks: {
+                                stepSize: 20,
+                                backdropColor: 'rgba(255, 255, 255, 0.75)',
+                                color: '#4a5568',
+                                font: {
+                                    size: 9
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#4a5568',
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        title: {
+                            display: false,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
+                                }
+                            },
+                            bodyFont: {
+                                size: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateProgressionChart(swimmerId, selectedEvent) {
+            if (progressionChartInstance) {
+                progressionChartInstance.destroy();
+            }
+
+            if (!selectedEvent) {
+                const ctx = document.getElementById('progressionChart').getContext('2d');
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                return;
+            }
+
+            const chartData = getProgressionChartData(swimmerId, selectedEvent);
+            const ctx = document.getElementById('progressionChart').getContext('2d');
+
+            if (!chartData) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                return;
+            }
+
+            progressionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Meet Date (Meet Name)',
+                                color: '#4a5568',
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            ticks: {
+                                color: '#4a5568',
+                                font: {
+                                    size: 9
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Time (Seconds)',
+                                color: '#4a5568',
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            ticks: {
+                                color: '#4a5568',
+                                callback: function(value, index, values) {
+                                    return secondsToTime(value);
+                                },
+                                font: {
+                                    size: 9
+                                }
+                            },
+                            grid: {
+                                color: '#e2e8f0'
+                            },
+                            reverse: true, // Lower time is better
+                            min: 0 // Ensure chart starts at 0
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#4a5568',
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        title: {
+                            display: false,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
+                                }
+                            },
+                            bodyFont: {
+                                size: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event Listeners for Dashboard
+        selectSwimmer.addEventListener('change', (event) => {
+            const selectedSwimmerId = event.target.value;
+            if (selectedSwimmerId) {
+                updateSpecialtyChart(selectedSwimmerId);
+                populateEventSelectForProgression(selectedSwimmerId);
+                if (selectEventForProgression.options.length > 1) {
+                    selectEventForProgression.value = selectEventForProgression.options[1].value;
+                    updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
+                } else {
+                    if (progressionChartInstance) progressionChartInstance.destroy();
+                }
+            } else {
+                if (specialtyChartInstance) specialtyChartInstance.destroy();
+                if (progressionChartInstance) progressionChartInstance.destroy();
+                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+                selectEventForProgression.disabled = true;
+            }
+        });
+
+        selectEventForProgression.addEventListener('change', (event) => {
+            const selectedEvent = event.target.value;
+            const selectedSwimmerId = selectSwimmer.value;
+            if (selectedSwimmerId && selectedEvent) {
+                updateProgressionChart(selectedSwimmerId, selectedEvent);
+            } else {
+                if (progressionChartInstance) progressionChartInstance.destroy();
+            }
+        });
+
+        // Initial load for dashboard
+        document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
+    </script>
+</body>
+</html>
