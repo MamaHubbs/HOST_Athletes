@@ -545,13 +545,13 @@
                                     font: { size: 10, weight: 'bold' },
                                     color: '#4a5568'
                                 },
-                                min: 0, // Keep min at 0 for now as requested
-                                max: 100, // Keep max at 100
+                                min: 0, // Start at 0 as requested for a full scale
+                                max: 100, // Max score is 100, no need to double it here
                                 ticks: { 
-                                    display: true, // Re-enable display of ticks
-                                    stepSize: 5,   // Set tick step to 5 for finer increments
-                                    backdropColor: 'rgba(255, 255, 255, 0.75)',
-                                    color: '#4a5568',
+                                    display: false, // REMOVE NUMBERS
+                                    stepSize: 5,   // Still internally calculates every 5 units for grid, but not displayed
+                                    // Removed backdropColor as ticks are not displayed
+                                    color: '#4a5568', // Still define color, even if not displayed, for consistency
                                     font: { size: 9 }
                                 },
                             }
@@ -866,7 +866,7 @@
         function updateChartsAndEventsForSwimmer(swimmerId) {
             currentSelectedSwimmerId = swimmerId; 
             updateSpecialtyChart(swimmerId);
-            populateEventSelectForProgression(swmerId);
+            populateEventSelectForProgression(swimmerId);
         }
 
         // Event Listeners
