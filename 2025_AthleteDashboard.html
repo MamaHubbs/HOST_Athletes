@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-M8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swimmer Performance Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -242,7 +242,6 @@
         let allAthleteData = [];
         let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
         let currentSelectedSwimmerId = null;
-        let allUniqueMeets = []; // New array to store all unique meet dates and names
 
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
         const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
@@ -628,7 +627,7 @@
                 scales: {
                     x: {
                         title: { display: true, text: 'Meet Date (Meet Name)', color: '#4a5568', font: { size: 10 } }, 
-                        labels: chartData.labels, // Use dynamic labels from getProgressionChartData
+                        labels: chartData.labels, 
                         ticks: { 
                             color: '#4a5568', 
                             font: { size: 9 },
@@ -661,9 +660,15 @@
                         callbacks: {
                             title: function(tooltipItems) {
                                 const fullLabel = tooltipItems[0].label;
-                                const parts = fullLabel.split(' (');
-                                const datePart = parts[0];
-                                const meetNamePart = parts.length > 1 ? parts[1].replace(')', '') : ''; 
+                                // Split only on the first ' (' to correctly separate date from meet name
+                                const firstParenIndex = fullLabel.indexOf(' (');
+                                let datePart = fullLabel;
+                                let meetNamePart = '';
+
+                                if (firstParenIndex !== -1) {
+                                    datePart = fullLabel.substring(0, firstParenIndex);
+                                    meetNamePart = fullLabel.substring(firstParenIndex + 2, fullLabel.length - 1); // Remove ' (' and ')'
+                                }
                                 
                                 // Return as an array of strings. Chart.js will bold these lines due to titleFont.
                                 return [datePart, meetNamePart]; 
