@@ -1,1 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athlete Meet Summary Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="shared-utils.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f8f8;
+            color: #333;
+        }
 
+        /* Centering and max-width for the entire dashboard */
+        .container {
+            max-width: 900px; /* Max width of the entire dashboard */
+            margin: 20px auto; /* Center the container horizontally */
+            background-color: #ffffff; /* Explicitly set background for the container */
+            padding: 20px; /* Add some padding inside the container */
+            border-radius: 8px; /* Rounded corners for the main container */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Subtle shadow for the container */
+        }
+
+        h1 {
+            text-align: center;
+            color: #0156B3;
+            font-size: 2em;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-shadow: none;
+        }
+
+        .dropdown-container {
+            position: sticky;
+            top: 0;
+            background-color: #f8f8f8;
+            padding: 10px;
+            text-align: center;
+            z-index: 10;
+            border-bottom: 1px solid #ccc;
+            font-size: 0.7em;
+            border-radius: 8px; /* Added for consistency */
+        }
+
+        .dropdown-box {
+            display: inline-block;
+            margin: 0 4px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        select, input[type="text"] {
+            padding: 3px 6px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 4px 8px;
+            font-size: 0.7em;
+            border-radius: 4px;
+            background-color: #0156B3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.68em;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #e5f1ff;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        th.sortable::after {
+            content: ' ⇅';
+            font-size: 0.68em;
+            color: #666;
+        }
+
+        th.sorted-asc::after {
+            content: ' ↑';
+            color: #333;
+        }
+
+        th.sorted-desc::after {
+            content: ' ↓';
+            color: #333;
+        }
+
+        .row-group-even {
+            background-color: #ffffff;
+        }
+
+        .row-group-odd {
+            background-color: #f4f4f4;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Specific column widths based on provided CSS */
+        th:nth-child(1), td:nth-child(1) { max-width: 140px; } /* Athlete Details Placeholder */
+        th:nth-child(2), td:nth-child(2) { max-width: 90px; } /* Meet Date */
+        th:nth-child(3), td:nth-child(3) { max-width: 150px; } /* Meet Name */
+        th:nth-child(4), td:nth-child(4) { max-width: 130px; } /* Event */
+        th:nth-child(5), td:nth-child(5) { max-width: 70px; text-align: center; } /* Seed */
+        th:nth-child(6), td:nth-child(6) { max-width: 70px; text-align: center; } /* Final */
+        th:nth-child(7), td:nth-child(7) { max-width: 50px; text-align: center; } /* Place */
+        th:nth-child(8), td:nth-child(8) { max-width: 50px; text-align: center; } /* Points */
+        th:nth-child(9), td:nth-child(9) { max-width: 100px; text-align: center; } /* % Improvement */
+
+        td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Print Button and Report Header Info Container */
+        .print-header-container {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .print-header-container #printReport {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px 15px; /* Reverted to more standard button padding */
+            font-size: 0.9em; /* Adjusted font size */
+            border-radius: 6px;
+            background-color: #4CAF50; /* Green color for print button */
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Reverted shadow */
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: auto; /* Reverted width */
+            max-width: none; /* Reverted max-width */
+            margin: 0 auto; /* Still centered if inline-flex */
+        }
+        .print-header-container #printReport:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+        }
+
+        #reportHeaderInfo {
+            font-weight: bold;
+            margin-top: 10px;
+            color: #0156B3;
+            text-align: center;
+        }
+
+        /* Print-specific styles from original, adjusted for new base styles */
+        @media print {
+            body {
+                font-size: 0.75rem !important;
+                margin: 0.5cm !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            table {
+                font-size: 0.8em !important;
+            }
+            th, td {
+                padding: 3px 5px !important;
+            }
+            .athlete-header-row {
+                font-size: 0.9em !important;
+            }
+            .event-subheader-row th {
+                padding-left: 10px !important;
+                font-size: 0.75em !important;
+                background-color: transparent !important;
+            }
+            .event-data-row td {
+                padding-left: 15px !important;
+                font-size: 0.75em !important;
+            }
+            #reportHeaderInfo {
+                font-size: 0.9em !important;
+                margin-bottom: 5px !important;
+            }
+            /* The chart section won't exist here, so no need to hide it */
+            .print-header-container {
+                text-align: center !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            .print-header-container #printReport {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="no-print dropdown-container">
+            <h2 style="color: #0156B3;">Athlete Meet Summary Report Filters</h2>
+            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
+                <div class="dropdown-box">
+                    <label for="jsonFileSelector">Load Results File:</label>
+                    <select id="jsonFileSelector">
+                        </select>
+                </div>
+                <div class="dropdown-box">
+                    <label for="filterName">Filter by Athlete Name:</label>
+                    <input type="text" id="filterName" placeholder="Enter full name or part">
+                </div>
+                <div class="dropdown-box">
+                    <label for="filterStroke">Filter by Stroke:</label>
+                    <select id="filterStroke">
+                        <option value="">All Strokes</option>
+                        <option value="Freestyle">Freestyle</option>
+                        <option value="Backstroke">Backstroke</option>
+                        <option value="Butterfly">Butterfly</option>
+                        <option value="Breaststroke">Breaststroke</option>
+                        <option value="IM">IM</option>
+                    </select>
+                </div>
+                <div class="dropdown-box">
+                    <button id="applyFilters">Apply Filters</button>
+                </div>
+                <div class="dropdown-box">
+                    <button id="resetFilters">Reset Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="print-header-container no-print">
+            <button id="printReport">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-printer">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span>Print Report</span>
+            </button>
+            <div id="reportHeaderInfo">
+                </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr class="sr-only"> <th>Athlete Details</th>
+                        <th>Meet Date</th>
+                        <th>Meet Name</th>
+                        <th>Event</th>
+                        <th>Seed</th>
+                        <th>Final</th>
+                        <th>Place</th>
+                        <th>Points</th>
+                        <th>% Improvement</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allAthleteData = [];
+        let filteredAthleteData = [];
+        let currentLoadedMeetInfo = { title: '', dateRange: '' };
+
+        const reportTableBody = document.getElementById('reportTableBody');
+        const filterNameInput = document.getElementById('filterName');
+        const filterStrokeInput = document.getElementById('filterStroke');
+        const applyFiltersButton = document.getElementById('applyFilters');
+        const resetFiltersButton = document.getElementById('resetFilters');
+        const printReportButton = document.getElementById('printReport');
+        const jsonFileSelector = document.getElementById('jsonFileSelector');
+        const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
+
+        function transformRawData(rawValues, fieldNames) {
+            const transformed = [];
+            const lastNameIndex = fieldNames.indexOf('last_name');
+            const firstNameIndex = fieldNames.indexOf('first_name');
+            const genderIndex = fieldNames.indexOf('competition_category');
+            const ageIndex = fieldNames.indexOf('age');
+            const meetDateIndex = fieldNames.indexOf('meet_date');
+            const meetNameIndex = fieldNames.indexOf('meet_name');
+            const eventSwumIndex = fieldNames.indexOf('event_swum');
+            const seedTimeIndex = fieldNames.indexOf('seed_time');
+            const resultTimeIndex = fieldNames.indexOf('result_time');
+            const placeIndex = fieldNames.indexOf('place');
+            const pointsIndex = fieldNames.indexOf('points');
+
+            rawValues.forEach((row, index) => {
+                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
+                
+                transformed.push({
+                    id: athleteId,
+                    lastName: row[lastNameIndex],
+                    firstName: row[firstNameIndex],
+                    category: row[genderIndex],
+                    age: row[ageIndex],
+                    meetDate: row[meetDateIndex],
+                    meetName: String(row[meetNameIndex]).replace('2025 ', ''),
+                    eventSwum: row[eventSwumIndex],
+                    seedTime: String(row[seedTimeIndex]),
+                    resultTime: String(row[resultTimeIndex]),
+                    place: row[placeIndex],
+                    points: row[pointsIndex]
+                });
+            });
+            return transformed;
+        }
+
+        function populateJsonFileSelector() {
+            jsonFileSelector.innerHTML = '';
+
+            const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
+                const filePath = new URL(fileName, window.location.href).toString();
+                let rawFileData = null;
+
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        console.warn(`Could not fetch ${filePath} for dropdown options.`);
+                        return null; 
+                    } else {
+                        rawFileData = await response.json();
+                    }
+                }
+                catch (error) {
+                    console.error(`Error fetching ${filePath} for dropdown options:`, error);
+                    return null;
+                }
+
+                let displayDate = 'N/A';
+                
+                if (rawFileData && rawFileData["meet date"]) {
+                    displayDate = rawFileData["meet date"];
+                } else if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
+                    const fields = rawFileData.fields;
+                    const firstRow = rawFileData.values[0];
+                    const meetDateIndex = fields.indexOf('meet_date');
+                    
+                    if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
+                        displayDate = firstRow[meetDateIndex];
+                    }
+                }
+
+                if (displayDate !== 'N/A') {
+                    const option = document.createElement('option');
+                    option.value = fileName;
+                    const formattedDate = formatMMDDYYYY(displayDate);
+                    option.textContent = `Week #${index + 1} (${formattedDate})`;
+                    return option;
+                }
+                return null;
+            });
+
+            Promise.all(optionsPromises).then(options => {
+                options.filter(Boolean).forEach(option => jsonFileSelector.appendChild(option));
+
+                const allResultsOption = document.createElement('option');
+                allResultsOption.value = "all-results";
+                allResultsOption.textContent = "All Results (All Weeks)";
+                jsonFileSelector.appendChild(allResultsOption);
+
+                if (weeklyFileNames.length > 0) {
+                    jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
+                } else {
+                    jsonFileSelector.value = "all-results";
+                }
+            });
+        }
+
+        function updateReportHeaderDisplay(title, rawDateOrRange, isAllResults) {
+            const cleanedTitle = String(title || '').replace('2025 ', '');
+            let displayDate = "";
+
+            if (isAllResults) {
+                displayDate = rawDateOrRange;
+            } else {
+                const parsedDate = new Date(rawDateOrRange);
+                if (!isNaN(parsedDate.getTime())) {
+                    displayDate = formatMMDDYYYY(parsedDate.toISOString().split('T')[0]);
+                } else {
+                    displayDate = rawDateOrRange;
+                }
+            }
+            
+            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
+        }
+
+        async function fetchAndRenderData(fileName) {
+            let rawFileData = null;
+            let currentMeetTitleForHeader = '';
+            let currentMeetDateForHeader = '';
+            let isAllResultsSelected = (fileName === "all-results");
+
+            if (!fileName) {
+                console.error("Attempted to fetch with an empty filename.");
+                allAthleteData = [];
+                filteredAthleteData = [];
+                renderTable(filteredAthleteData);
+                updateReportHeaderDisplay("No Data Loaded", "", false);
+                return;
+            }
+
+            if (!isAllResultsSelected) {
+                const filePath = new URL(fileName, window.location.href).toString();
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status} for ${filePath}`);
+                    }
+                    rawFileData = await response.json();
+                } catch (error) {
+                    console.error(`Error fetching ${filePath}:`, error);
+                    alert(`Failed to load data for ${fileName}. Please ensure the file exists and is accessible. Error: ${error.message}`);
+                    allAthleteData = [];
+                    filteredAthleteData = [];
+                    renderTable(filteredAthleteData);
+                    updateReportHeaderDisplay("Error Loading Data", "", false);
+                    return;
+                }
+                
+                allAthleteData = transformRawData(rawFileData.values, rawFileData.fields);
+                currentMeetTitleForHeader = rawFileData.title || 'Selected Week';
+                currentMeetDateForHeader = rawFileData["meet date"] || '';
+            } else {
+                const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
+                    const filePath = new URL(name, window.location.href).toString();
+                    let rawWeekData = null;
+                    try {
+                        const response = await fetch(filePath);
+                        if (!response.ok) {
+                            console.warn(`Could not fetch ${filePath}. Skipping this week.`);
+                            return [];
+                        }
+                        rawWeekData = await response.json();
+                        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
+                            return transformRawData(rawWeekData.values, rawWeekData.fields);
+                        }
+                        return [];
+                    } catch (error) {
+                        console.error(`Error fetching ${filePath}:`, error);
+                        console.warn(`Skipping ${name} due to network error.`);
+                        return [];
+                    }
+                });
+
+                const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
+                allAthleteData = allWeeksTransformedData.flat();
+
+                if (allAthleteData.length > 0) {
+                    const allDates = allAthleteData.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+                    const overallMinDate = allDates[0];
+                    const overallMaxDate = allDates[allDates.length - 1];
+                    currentMeetTitleForHeader = "All Meets Combined";
+                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
+                } else {
+                    currentMeetTitleForHeader = "No Data Loaded";
+                    currentMeetDateForHeader = "";
+                }
+            }
+
+            if (allAthleteData && allAthleteData.length > 0) {
+                applyFilters(); // Apply filters on newly loaded data
+                updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, isAllResultsSelected);
+            } else {
+                console.warn(`No data loaded for ${fileName} after transformation.`);
+                filteredAthleteData = [];
+                renderTable(filteredAthleteData);
+                updateReportHeaderDisplay("No Data Loaded", "", false);
+            }
+        }
+
+        function renderTable(data) {
+            reportTableBody.innerHTML = '';
+
+            const athletesGrouped = data.reduce((acc, current) => {
+                const athleteDisplayKey = `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`;
+                const uniqueAthleteId = `${current.lastName}-${current.firstName}-${current.age}`;
+                
+                if (!acc[uniqueAthleteId]) {
+                    acc[uniqueAthleteId] = {
+                        id: uniqueAthleteId,
+                        displayKey: athleteDisplayKey,
+                        details: {
+                            lastName: current.lastName,
+                            firstName: current.firstName,
+                            age: current.age,
+                            category: current.category
+                        },
+                        events: []
+                    };
+                }
+                acc[uniqueAthleteId].events.push(current);
+                return acc;
+            }, {});
+
+            const athleteKeys = Object.keys(athletesGrouped).sort();
+
+            if (athleteKeys.length === 0) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.innerHTML = `
+                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                        No results found matching your filters.
+                    </td>
+                `;
+                reportTableBody.appendChild(noResultsRow);
+                return;
+            }
+
+            athleteKeys.forEach(athleteKey => {
+                const athlete = athletesGrouped[athleteKey];
+
+                const athleteHeaderRow = document.createElement('tr');
+                athleteHeaderRow.className = 'athlete-header-row';
+                athleteHeaderRow.innerHTML = `
+                    <td colspan="9" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athlete.displayKey}</td>
+                `;
+                reportTableBody.appendChild(athleteHeaderRow);
+
+                const eventSubHeaderRow = document.createElement('tr');
+                eventSubHeaderRow.className = 'event-subheader-row';
+                eventSubHeaderRow.innerHTML = `
+                    <th style="width: 1%;"></th> <th>Meet Date</th>
+                    <th>Meet Name</th>
+                    <th>Event</th>
+                    <th>Seed</th>
+                    <th>Final</th>
+                    <th>Place</th>
+                    <th>Points</th>
+                    <th>% Improvement</th>
+                `;
+                reportTableBody.appendChild(eventSubHeaderRow);
+
+                athlete.events.sort((a, b) => {
+                    const dateA = new Date(a.meetDate);
+                    const dateB = new Date(b.meetDate);
+                    if (dateA.getTime() !== dateB.getTime()) {
+                        return dateA - dateB;
+                    }
+                    return a.eventSwum.localeCompare(b.eventSwum);
+                });
+
+                athlete.events.forEach(eventData => {
+                    const seedSeconds = timeToSeconds(eventData.seedTime);
+                    const resultSeconds = timeToSeconds(eventData.resultTime);
+
+                    let improvement = 'N/A';
+                    if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
+                        improvement = (((seedSeconds - resultSeconds) / seedSeconds) * 100).toFixed(2);
+                        if (parseFloat(improvement) > 0) {
+                            improvement = `+${improvement}%`;
+                        } else {
+                            improvement = `${improvement}%`;
+                        }
+                    }
+
+                    const eventRow = document.createElement('tr');
+                    eventRow.className = 'event-data-row hover:bg-gray-50';
+                    eventRow.innerHTML = `
+                        <td style="width: 1%;"></td> <td>${formatMMDDYYYY(eventData.meetDate)}</td>
+                        <td>${eventData.meetName}</td>
+                        <td>${eventData.eventSwum}</td>
+                        <td>${eventData.seedTime}</td>
+                        <td>${eventData.resultTime}</td>
+                        <td>${eventData.place}</td>
+                        <td>${eventData.points}</td>
+                        <td>${improvement}</td>
+                    `;
+                    reportTableBody.appendChild(eventRow);
+                });
+            });
+        }
+
+        // Filters
+        function applyFilters() {
+            const nameFilter = filterNameInput.value.toLowerCase();
+            const strokeFilter = filterStrokeInput.value.toLowerCase();
+            
+            filteredAthleteData = allAthleteData.filter(athlete => {
+                const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
+                const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
+                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter);
+                
+                return matchesName && matchesStroke;
+            });
+
+            renderTable(filteredAthleteData);
+        }
+
+        function resetFilters() {
+            filterNameInput.value = '';
+            filterStrokeInput.value = '';
+            filteredAthleteData = [...allAthleteData];
+            renderTable(filteredAthleteData);
+        }
+
+        // Event Listeners
+        applyFiltersButton.addEventListener('click', applyFilters);
+        resetFiltersButton.addEventListener('click', resetFilters);
+        printReportButton.addEventListener('click', () => {
+            window.print();
+        });
+
+        jsonFileSelector.addEventListener('change', (event) => {
+            filterNameInput.value = '';
+            filterStrokeInput.value = '';
+            fetchAndRenderData(event.target.value);
+        });
+
+        // Initial render on page load: populate selector, then load default data
+        document.addEventListener('DOMContentLoaded', () => {
+            populateJsonFileSelector();
+            if (weeklyFileNames.length > 0) {
+                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
+            } else {
+                jsonFileSelector.value = "all-results";
+            }
+            const defaultFile = jsonFileSelector.value;
+            fetchAndRenderData(defaultFile);
+        });
+    </script>
+</body>
+</html>
