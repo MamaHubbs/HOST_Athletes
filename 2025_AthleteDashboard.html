@@ -597,25 +597,19 @@
             const dataValues = chartData.datasets[0].data.filter(d => d !== null); 
             const actualDataPointsCount = dataValues.length;
 
-            if (actualDataPointsCount < 2) {
+            // --- Logic for overlay and chart display ---
+            if (actualDataPointsCount === 0) { // If absolutely no data points
                 progressionChartOverlay.style.display = 'flex'; // Show overlay
-                // Set the chart to display empty data but with axis structure
+                progressionChartOverlay.textContent = 'No data for this event for selected swimmer.'; // Specific message
+                // Clear chart completely if no data
                 if (progressionChartInstance) {
-                    progressionChartInstance.data = { labels: WEEK_LABELS, datasets: [{ label: '', data: Array(WEEK_LABELS.length).fill(null), borderColor: 'rgba(150, 150, 150, 1)', pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] };
-                    progressionChartInstance.options = { 
-                        responsive: true, maintainAspectRatio: false, animation: false,
-                        scales: {
-                            x: { ticks: { display: true, color: '#4a5568', font: { size: 9 } } },
-                            y: { min: 0, max: 60, ticks: { callback: function(value) { return secondsToTime(value); } } }
-                        },
-                        plugins: { legend: { display: false } }
-                    };
+                    progressionChartInstance.data = { labels: WEEK_LABELS, datasets: [{ label: '', data: Array(WEEK_LABELS.length).fill(null) }] };
+                    progressionChartInstance.options.scales.x.ticks.display = true;
                     progressionChartInstance.update();
                 } else {
-                    // Initialize a blank chart if it doesn't exist, to properly cover with overlay
-                    progressionChartInstance = new Chart(ctx, {
+                     progressionChartInstance = new Chart(ctx, {
                         type: 'line',
-                        data: { labels: WEEK_LABELS, datasets: [{ label: '', data: Array(WEEK_LABELS.length).fill(null), borderColor: 'rgba(150, 150, 150, 1)', pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] },
+                        data: { labels: WEEK_LABELS, datasets: [{ label: '', data: Array(WEEK_LABELS.length).fill(null) }] },
                         options: { 
                             responsive: true, maintainAspectRatio: false, animation: false,
                             scales: {
@@ -626,38 +620,57 @@
                         }
                     });
                 }
-                return; // Exit function, overlay handles message
+                return;
+            } else if (actualDataPointsCount < 2) { // If only one data point
+                progressionChartOverlay.style.display = 'flex'; // Show overlay
+                progressionChartOverlay.textContent = 'Only one data point found for this event.'; // Specific message
+                // Still update chart to show the single point, but overlay covers it.
+                // Or you could make the overlay more transparent here to show the point underneath.
+                // For now, keeping overlay opaque as requested.
+                // The main chart update logic below will handle rendering the single point.
             } else {
-                progressionChartOverlay.style.display = 'none'; // Hide overlay if enough data
+                progressionChartOverlay.style.display = 'none'; // Hide overlay
             }
+            // --- End overlay control ---
 
-            let yAxisMin = 0;
-            let yAxisMax = 60; 
-            let tickStepSize = 10; 
-            const buffer = 0.5; 
+            let yAxisMin;
+            let yAxisMax;
+            let tickStepSize;
+            const fixedBufferSeconds = 0.5; // Fixed buffer for visual spacing
 
-            // These are guaranteed to have data because of the check above
+            // Data values are guaranteed to have at least one element here
             const minData = Math.min(...dataValues);
             const maxData = Math.max(...dataValues);
 
-            yAxisMin = Math.floor((minData - buffer) * 100) / 100; 
-            yAxisMax = Math.ceil((maxData + buffer) * 100) / 100; 
+            // Determine tickStepSize based on the range first
+            const valueRange = maxData - minData;
 
-            if (yAxisMin < 0) yAxisMin = 0;
-
-            const range = yAxisMax - yAxisMin;
-
-            if (range <= 0.5) { 
-                tickStepSize = 0.05; 
-            } else if (range <= 1.5) { 
-                tickStepSize = 0.1; 
-            } else if (range <= 5) { 
-                tickStepSize = 0.25; 
-            } else if (range <= 10) { 
-                tickStepSize = 0.5; 
-            } else { 
-                tickStepSize = 1.0; 
+            if (valueRange <= 0.2) { // Very tight range, e.g., <0.2s difference
+                tickStepSize = 0.05; // 50ms increments
+            } else if (valueRange <= 0.5) { // Small range
+                tickStepSize = 0.1; // 100ms increments
+            } else if (valueRange <= 1.5) { // Medium range
+                tickStepSize = 0.25; // 250ms increments
+            } else if (valueRange <= 5) { // Larger range
+                tickStepSize = 0.5; // 500ms increments
+            } else { // Very large ranges
+                tickStepSize = 1.0; // 1 second increments
             }
+
+            // Calculate yAxisMin: one tick below the minimum data point, aligned to tickStepSize
+            yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize - tickStepSize; // One stop below
+            if (yAxisMin < 0) yAxisMin = 0; // Ensure it doesn't go below 0
+
+            // Calculate yAxisMax: one tick above the maximum data point, aligned to tickStepSize
+            yAxisMax = Math.ceil(maxData / tickStepSize) * tickStepSize + tickStepSize; // One stop above
+
+            // If there's only one data point, ensure a reasonable default display range
+            if (actualDataPointsCount === 1) {
+                yAxisMin = Math.max(0, minData - (tickStepSize * 2)); // Ensure at least two stops below/around it
+                yAxisMax = maxData + (tickStepSize * 2); // Ensure at least two stops above/around it
+            }
+
+
             console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
             
             const newOptions = {
@@ -733,7 +746,7 @@
             let currentFocus = -1;
             const matches = uniqueSwimmersData.filter(swimmer => 
                 `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal) ||
-                `${swimmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal)
+                `${swimmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal) // Fixed typo here
             );
 
             matches.forEach((swimmer, i) => {
