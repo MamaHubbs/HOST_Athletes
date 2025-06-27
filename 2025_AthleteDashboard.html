@@ -462,7 +462,6 @@
             console.log("getProgressionChartData called with swimmerId:", swimmerId, "eventSwum:", eventSwum);
 
             if (!swimmerId || !eventSwum) {
-                // Return data structure with fixed labels but empty/null data points
                 return { labels: WEEK_LABELS, datasets: [{ label: 'No Event Selected', data: Array(WEEK_LABELS.length).fill(null), fill: false, borderColor: 'rgba(150, 150, 150, 1)', tension: 0.1, pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] };
             }
 
@@ -472,20 +471,17 @@
 
             console.log("Filtered swimmerEventData for progression:", swimmerEventData); 
 
-            // Group data by week and get the latest time for each week
             const dataByWeek = new Map();
             swimmerEventData.forEach(entry => {
                 const weekLabel = getWeekLabel(entry.meetDate);
                 const currentTime = timeToSeconds(entry.resultTime);
 
-                // If multiple entries for the same week, take the latest (last one after sorting by date)
                 if (!dataByWeek.has(weekLabel) || new Date(entry.meetDate) > new Date(dataByWeek.get(weekLabel).meetDate)) {
                     dataByWeek.set(weekLabel, { time: currentTime, meetDate: entry.meetDate });
                 }
             });
 
-            const chartDataPoints = Array(WEEK_LABELS.length).fill(null); // Initialize with nulls for sparse data
-            // actualDataPointsCount is no longer explicitly needed here as the chart will plot what it gets
+            const chartDataPoints = Array(WEEK_LABELS.length).fill(null); 
 
             WEEK_LABELS.forEach((label, index) => {
                 if (dataByWeek.has(label)) {
@@ -493,13 +489,12 @@
                 }
             });
             
-            // Always return the data points. Chart.js will plot single points or nothing.
             return {
-                labels: WEEK_LABELS, // Fixed labels for X-axis
+                labels: WEEK_LABELS, 
                 datasets: [{
                     label: `${eventSwum} Time Progression`,
-                    data: chartDataPoints, // Use the mapped data points
-                    fill: false, // Ensure line isn't filled if sparse
+                    data: chartDataPoints, 
+                    fill: false, 
                     borderColor: '#4169E1',
                     tension: 0.1,
                     pointBackgroundColor: '#4169E1'
@@ -531,8 +526,8 @@
                                 },
                                 min: 0,
                                 max: 100,
-                                ticks: { // REMOVED NUMBERS FROM SPIDER GRAPH
-                                    display: false // Hide the tick labels (numbers)
+                                ticks: { 
+                                    display: false 
                                 },
                             }
                         },
@@ -570,22 +565,19 @@
             let yAxisMin;
             let yAxisMax; 
             let tickStepSize; 
-            const fixedBufferSeconds = 0.5; // Fixed buffer for visual spacing
 
-            // Filter out null values to get actual data points for min/max calculation
             const dataValues = chartData.datasets[0].data.filter(d => d !== null); 
-            const actualDataPointsCount = dataValues.length; // Will be 0, 1, or more
+            const actualDataPointsCount = dataValues.length; 
 
-            if (actualDataPointsCount === 0) { // If no actual data points, show a default wide range
+            if (actualDataPointsCount === 0) { 
                 yAxisMin = 0; 
                 yAxisMax = 60; 
                 tickStepSize = 10;
                 console.log("No actual data points for progression chart. Using default Y-axis range (0-60s).");
-            } else { // If 1 or more data points
+            } else { 
                 const minData = Math.min(...dataValues);
                 const maxData = Math.max(...dataValues);
 
-                // Determine tickStepSize based on the range first
                 const valueRange = maxData - minData;
 
                 if (valueRange <= 0.2) { 
@@ -601,36 +593,39 @@
                 }
 
                 // Calculate yAxisMin: one tick below the minimum data point, aligned to tickStepSize
-                // If only one point, ensure a reasonable range around it
-                if (actualDataPointsCount === 1) {
-                    // Ensure yAxisMin is a multiple of tickStepSize, and at least one tick below the point
+                yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
+                if (yAxisMin === minData && minData > 0) { // If minData is exactly on a tick and not 0, go one lower
+                    yAxisMin = Math.max(0, yAxisMin - tickStepSize);
+                } else if (minData > 0) { // If not on a tick and positive, just take the floor (will be just below)
                     yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
-                    if (yAxisMin === minData) { // If minData is exactly on a tick, go one lower
-                        yAxisMin = Math.max(0, yAxisMin - tickStepSize);
-                    } else { // Otherwise, just use the floored value
-                        yAxisMin = Math.max(0, yAxisMin);
-                    }
-
-                    // Ensure yAxisMax is a multiple of tickStepSize, and at least one tick above the point
-                    yAxisMax = Math.ceil(maxData / tickStepSize) * tickStepSize;
-                    if (yAxisMax === maxData) { // If maxData is exactly on a tick, go one higher
-                        yAxisMax = yAxisMax + tickStepSize;
-                    } else { // Otherwise, just use the ceiled value
-                        yAxisMax = yAxisMax;
-                    }
-
-                    // If after this, min and max are still the same (e.g., single point at 0), expand range
-                    if (yAxisMin === yAxisMax) {
-                        yAxisMin = Math.max(0, yAxisMin - tickStepSize);
-                        yAxisMax = yAxisMax + tickStepSize;
-                    }
-                    
-                } else { // Multiple points, use dynamic range with buffer
-                    yAxisMin = Math.floor((minData - fixedBufferSeconds) / tickStepSize) * tickStepSize;
-                    yAxisMax = Math.ceil((maxData + fixedBufferSeconds) / tickStepSize) * tickStepSize;
+                } else { // Handle 0 or negative mins
+                    yAxisMin = 0;
                 }
-                
-                if (yAxisMin < 0) yAxisMin = 0; // Ensure it doesn't go below 0
+
+                // Calculate yAxisMax: at least five ticks above the maximum data point, aligned to tickStepSize
+                const minTicksAboveMax = 5;
+                let targetMax = maxData + (minTicksAboveMax * tickStepSize);
+                yAxisMax = Math.ceil(targetMax / tickStepSize) * tickStepSize;
+
+                // Ensure the range is not too tight if only one point
+                if (actualDataPointsCount === 1) {
+                    if (yAxisMin === yAxisMax) { // If somehow min and max became the same
+                        yAxisMin = Math.max(0, yAxisMin - tickStepSize);
+                        yAxisMax = yAxisMax + tickStepSize;
+                    }
+                    // Ensure enough space around the single point
+                    if (maxData - yAxisMin < tickStepSize * 2) { // if not enough space below the point
+                        yAxisMin = Math.max(0, minData - (tickStepSize * 2));
+                    }
+                    if (yAxisMax - minData < tickStepSize * 2) { // if not enough space above the point
+                        yAxisMax = maxData + (tickStepSize * 2);
+                    }
+                    // Re-align after widening
+                    yAxisMin = Math.floor(yAxisMin / tickStepSize) * tickStepSize;
+                    yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize;
+                }
+
+                if (yAxisMin < 0) yAxisMin = 0; // Final check not to go below 0
 
                 console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
             }
@@ -641,7 +636,7 @@
                 scales: {
                     x: {
                         title: { display: true, text: 'Season Week', color: '#4a5568', font: { size: 10 } }, 
-                        labels: WEEK_LABELS, // Ensure fixed labels are explicitly used here
+                        labels: WEEK_LABELS, 
                         ticks: { 
                             color: '#4a5568', 
                             font: { size: 9 },
@@ -774,7 +769,7 @@
 
         // Function to update charts and event dropdown after swimmer selection
         function updateChartsAndEventsForSwimmer(swimmerId) {
-            currentSelectedSwmerId = swimmerId; 
+            currentSelectedSwimmerId = swimmerId; 
             updateSpecialtyChart(swimmerId);
             populateEventSelectForProgression(swimmerId);
         }
