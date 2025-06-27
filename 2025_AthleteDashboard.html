@@ -460,6 +460,7 @@
                     let normalizedScore = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time;
                     normalizedScore = Math.max(0, Math.min(1, normalizedScore)); 
 
+                    // Apply pronunciation factor: raising to a power > 1 amplifies differences.
                     let finalScore = Math.pow(normalizedScore, pronunciationFactor) * 100; 
 
                     finalScore = Math.max(0, Math.min(100, finalScore)); 
@@ -478,7 +479,7 @@
                     label: `${swimmerDisplayName}'s Specialty`,
                     backgroundColor: 'rgba(255, 204, 0, 0.4)',
                     borderColor: 'rgba(255, 204, 0, 1)',
-                    data: strokes.map(stroke => specialtyScores[stroke]),
+                    data: strokes.map(stroke => specialtyScores[stroke] * 2), // DOUBLING THE DATA FOR VISUAL SIZE
                     borderWidth: 1,
                     pointBackgroundColor: 'rgba(255, 204, 0, 1)'
                 }]
@@ -539,20 +540,33 @@
                         maintainAspectRatio: false,
                         scales: {
                             r: {
-                                angleLines: { color: '#e2e8f0' },
-                                grid: { color: '#cbd5e0' },
+                                angleLines: {
+                                    color: (context) => {
+                                        // Make every other angle line almost invisible
+                                        if (context.index % 2 === 1) { // Every second line (0-indexed)
+                                            return 'rgba(0,0,0,0.05)'; // Very faint color
+                                        }
+                                        return '#e2e8f0'; // Original color for others
+                                    }
+                                },
+                                grid: {
+                                    color: (context) => {
+                                        // Make every other concentric grid line almost invisible
+                                        if (context.index % 2 === 0) { // Every other grid line (0-indexed)
+                                            return 'rgba(0,0,0,0.05)'; // Very faint color
+                                        }
+                                        return '#cbd5e0'; // Original color for others
+                                    }
+                                },
                                 pointLabels: {
                                     font: { size: 10, weight: 'bold' },
                                     color: '#4a5568'
                                 },
-                                min: 0, // Start at 0 as requested for a full scale
-                                max: 100, // Max score is 100, no need to double it here
+                                min: 0, 
+                                max: 200, // MAX SET TO 200 TO VISUALLY DOUBLE THE SIZE OF 0-100 SCORES
                                 ticks: { 
                                     display: false, // REMOVE NUMBERS
-                                    stepSize: 5,   // Still internally calculates every 5 units for grid, but not displayed
-                                    // Removed backdropColor as ticks are not displayed
-                                    color: '#4a5568', // Still define color, even if not displayed, for consistency
-                                    font: { size: 9 }
+                                    stepSize: 5,   // Keep internal step size at 5 for grid, even if not displayed
                                 },
                             }
                         },
@@ -566,7 +580,8 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
+                                        // Divide by 2 because we doubled the data for visual size
+                                        return `${context.dataset.label}: ${(context.raw / 2).toFixed(1)}`;
                                     }
                                 },
                                 bodyFont: { size: 10 }
