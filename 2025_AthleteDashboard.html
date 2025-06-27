@@ -246,7 +246,6 @@
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
         const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
         const selectEventForProgression = document.getElementById('selectEventForProgression');
-        // Removed: const progressionChartOverlay = document.getElementById('progressionChartOverlay');
 
 
         let specialtyChartInstance = null;
@@ -568,9 +567,6 @@
                 return;
             }
 
-            // --- NO OVERLAY LOGIC HERE. ALWAYS TRY TO DRAW THE CHART ---
-            // The overlay div and its logic are completely removed from here.
-
             let yAxisMin;
             let yAxisMax; 
             let tickStepSize; 
@@ -605,15 +601,29 @@
                 }
 
                 // Calculate yAxisMin: one tick below the minimum data point, aligned to tickStepSize
-                // If only one point, make sure the range is visible, e.g., +/- 2 steps
+                // If only one point, ensure a reasonable range around it
                 if (actualDataPointsCount === 1) {
-                    yAxisMin = Math.max(0, minData - (tickStepSize * 2)); 
-                    yAxisMax = maxData + (tickStepSize * 2); 
-                    // Ensure that yAxisMin is a multiple of tickStepSize, and just below the point
-                    yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize; // Align to tick
-                    if (yAxisMin === minData) yAxisMin = Math.max(0, yAxisMin - tickStepSize); // Go one tick lower if it aligns
-                    yAxisMax = Math.ceil(maxData / tickStepSize) * tickStepSize + tickStepSize; // Go one tick higher
-                    if (yAxisMax === maxData) yAxisMax = yAxisMax + tickStepSize; // Go one tick higher if it aligns
+                    // Ensure yAxisMin is a multiple of tickStepSize, and at least one tick below the point
+                    yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
+                    if (yAxisMin === minData) { // If minData is exactly on a tick, go one lower
+                        yAxisMin = Math.max(0, yAxisMin - tickStepSize);
+                    } else { // Otherwise, just use the floored value
+                        yAxisMin = Math.max(0, yAxisMin);
+                    }
+
+                    // Ensure yAxisMax is a multiple of tickStepSize, and at least one tick above the point
+                    yAxisMax = Math.ceil(maxData / tickStepSize) * tickStepSize;
+                    if (yAxisMax === maxData) { // If maxData is exactly on a tick, go one higher
+                        yAxisMax = yAxisMax + tickStepSize;
+                    } else { // Otherwise, just use the ceiled value
+                        yAxisMax = yAxisMax;
+                    }
+
+                    // If after this, min and max are still the same (e.g., single point at 0), expand range
+                    if (yAxisMin === yAxisMax) {
+                        yAxisMin = Math.max(0, yAxisMin - tickStepSize);
+                        yAxisMax = yAxisMax + tickStepSize;
+                    }
                     
                 } else { // Multiple points, use dynamic range with buffer
                     yAxisMin = Math.floor((minData - fixedBufferSeconds) / tickStepSize) * tickStepSize;
@@ -764,7 +774,7 @@
 
         // Function to update charts and event dropdown after swimmer selection
         function updateChartsAndEventsForSwimmer(swimmerId) {
-            currentSelectedSwimmerId = swimmerId; 
+            currentSelectedSwmerId = swimmerId; 
             updateSpecialtyChart(swimmerId);
             populateEventSelectForProgression(swimmerId);
         }
