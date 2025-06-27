@@ -572,38 +572,36 @@
         // Custom Tooltip function for the Progression Chart
         function customProgressionTooltip(context) {
             const tooltipModel = context.tooltip;
-            const tooltipEl = document.getElementById('chartjs-tooltip'); // Assuming you will add this HTML element
+            let tooltipEl = document.getElementById('chartjs-tooltip'); // Get our custom tooltip element
 
             // Hide if no tooltip
             if (tooltipModel.opacity === 0) {
-                if (tooltipEl) tooltipEl.style.opacity = 0;
+                if (tooltipEl) {
+                    tooltipEl.style.opacity = 0;
+                    tooltipEl.style.left = '-9999px'; // Move off-screen
+                    tooltipEl.style.top = '-9999px';
+                }
                 return;
             }
 
-            // Create tooltip element if it doesn't exist
+            // Create tooltip element if it doesn't exist (should exist from HTML now)
             if (!tooltipEl) {
+                // This block should ideally not be hit if HTML is correct
                 tooltipEl = document.createElement('div');
                 tooltipEl.id = 'chartjs-tooltip';
-                tooltipEl.className = 'chartjs-tooltip'; // Add custom class for styling
+                tooltipEl.className = 'chartjs-tooltip';
                 document.body.appendChild(tooltipEl);
             }
 
-            // Set caret Position (basic positioning, adjust as needed)
-            tooltipEl.style.left = tooltipModel.caretX + 'px';
-            tooltipEl.style.top = tooltipModel.caretY + 'px';
-            tooltipEl.style.opacity = 1; // Make visible
-
-
             // Set Text
             if (tooltipModel.body) {
-                const titleLines = tooltipModel.title || [];
-                const bodyLines = tooltipModel.body.map(b => b.lines);
+                const titleLines = tooltipModel.title || []; // Contains the X-axis label (Meet Date (Meet Name))
+                const bodyLines = tooltipModel.body.map(b => b.lines); // Contains the labels from 'label' callback
 
                 let innerHtml = '<div class="chartjs-tooltip-header">';
                 titleLines.forEach(function(title) {
-                    // Title should be correctly parsed by Chart.js from labels.
-                    // Assuming title will be "Date (Meet Name)"
-                    const fullLabel = title; // e.g., "06/25/2025 (Massad Marlins)"
+                    // This title is the raw label from the X-axis, e.g., "06/25/2025 (Massad Marlins)"
+                    const fullLabel = title;
                     const firstParenIndex = fullLabel.indexOf(' (');
                     let datePart = fullLabel;
                     let meetNamePart = '';
@@ -629,19 +627,32 @@
                 tooltipEl.innerHTML = innerHtml;
             }
 
-            // Adjust position
+            // Position the tooltip
             const canvasRect = context.chart.canvas.getBoundingClientRect();
-            tooltipEl.style.left = canvasRect.left + window.pageXOffset + tooltipModel.caretX + 'px';
-            tooltipEl.style.top = canvasRect.top + window.pageYOffset + tooltipModel.caretY + 'px';
-            
-            // Adjust transform to center horizontally
-            let tooltipX = tooltipModel.caretX;
-            if (tooltipX > context.chart.width / 2) {
-                tooltipEl.style.transform = 'translateX(-100%)';
-            } else {
-                tooltipEl.style.transform = 'translateX(0)';
+            // Calculate tooltip position relative to the viewport
+            let tooltipX = canvasRect.left + window.pageXOffset + tooltipModel.caretX;
+            let tooltipY = canvasRect.top + window.pageYOffset + tooltipModel.caretY;
+
+            // Adjust position to prevent going off-screen (especially right side)
+            // Default: center on caretX
+            tooltipEl.style.left = tooltipX + 'px';
+            tooltipEl.style.top = tooltipY + 'px';
+            tooltipEl.style.transform = 'translate(-50%, 0)'; // Center horizontally by default
+
+            // If it's too far right, shift left
+            const tooltipWidth = tooltipEl.offsetWidth;
+            const viewportWidth = window.innerWidth;
+            if (tooltipX + tooltipWidth / 2 > viewportWidth) {
+                tooltipEl.style.left = (tooltipX - (tooltipX + tooltipWidth / 2 - viewportWidth) - 10) + 'px'; // Shift left + buffer
+                tooltipEl.style.transform = 'translate(0, 0)'; // Don't center
+            } else if (tooltipX - tooltipWidth / 2 < 0) { // If it's too far left, shift right
+                 tooltipEl.style.left = (tooltipX + (0 - (tooltipX - tooltipWidth / 2)) + 10) + 'px'; // Shift right + buffer
+                 tooltipEl.style.transform = 'translate(0, 0)'; // Don't center
             }
-            tooltipEl.style.transition = 'all .1s ease'; // Add transition for smooth movement
+
+
+            tooltipEl.style.opacity = 1; // Make visible
+            tooltipEl.style.pointerEvents = 'auto'; // Make it clickable (if needed, default is none)
         }
 
 
@@ -685,6 +696,7 @@
                     tickStepSize = 1.0; 
                 }
 
+                // Calculate yAxisMin: one tick below the minimum data point, aligned to tickStepSize
                 yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
                 if (yAxisMin === minData && minData > 0) { 
                     yAxisMin = Math.max(0, yAxisMin - tickStepSize);
@@ -694,6 +706,7 @@
                     yAxisMin = 0;
                 }
 
+                // Calculate yAxisMax: at least five ticks above the maximum data point, aligned to tickStepSize
                 const minTicksAboveMax = 5;
                 let targetMax = maxData + (minTicksAboveMax * tickStepSize);
                 yAxisMax = Math.ceil(targetMax / tickStepSize) * tickStepSize;
@@ -757,7 +770,7 @@
                     title: { display: false }, // Disable native Chart.js title
                     tooltip: {
                         enabled: false, // Disable native Chart.js tooltip
-                        external: customProgressionTooltip, // Use custom tooltip
+                        external: customProgressionTooltip, // Use our custom tooltip function
                     }
                 }
             };
