@@ -462,8 +462,8 @@
             console.log("getProgressionChartData called with swimmerId:", swimmerId, "eventSwum:", eventSwum);
 
             if (!swimmerId || !eventSwum) {
-                // Return data structure with fixed labels but empty/null data points
-                return { labels: WEEK_LABELS, datasets: [{ label: 'No Event Selected', data: Array(WEEK_LABELS.length).fill(null), fill: false, borderColor: 'rgba(150, 150, 150, 1)', tension: 0.1, pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] };
+                // Return data structure with empty labels but default settings
+                return { labels: [], datasets: [{ label: 'No Event Selected', data: [], fill: false, borderColor: 'rgba(150, 150, 150, 1)', tension: 0.1, pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] };
             }
 
             const swimmerEventData = allAthleteData
@@ -472,36 +472,20 @@
 
             console.log("Filtered swimmerEventData for progression:", swimmerEventData); 
 
-            // Group data by week and get the latest time for each week
-            const dataByWeek = new Map();
-            swimmerEventData.forEach(entry => {
-                const weekLabel = getWeekLabel(entry.meetDate);
-                const currentTime = timeToSeconds(entry.resultTime);
-
-                // If multiple entries for the same week, take the latest (last one after sorting by date)
-                if (!dataByWeek.has(weekLabel) || new Date(entry.meetDate) > new Date(dataByWeek.get(weekLabel).meetDate)) {
-                    dataByWeek.set(weekLabel, { time: currentTime, meetDate: entry.meetDate });
-                }
-            });
-
-            const chartDataPoints = Array(WEEK_LABELS.length).fill(null); 
-
-            WEEK_LABELS.forEach((label, index) => {
-                if (dataByWeek.has(label)) {
-                    chartDataPoints[index] = dataByWeek.get(label).time;
-                }
-            });
+            // Create labels and data directly from sorted event data
+            const labels = swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`);
+            const dataPoints = swimmerEventData.map(d => timeToSeconds(d.resultTime));
             
             return {
-                labels: WEEK_LABELS, 
+                labels: labels, // Use actual meet dates as labels
                 datasets: [{
-                    label: `${eventSwum} Time Progression`,
-                    data: chartDataPoints, 
+                    label: `${eventSwum}`, // Only event name, removed "Time Progression" part
+                    data: dataPoints, 
                     fill: false, 
                     borderColor: '#4169E1',
                     tension: 0.4, // Set tension for rounded line
                     pointBackgroundColor: '#4169E1',
-                    spanGaps: true // Connect points across null values (missing weeks)
+                    // spanGaps is not needed when plotting all points directly on a dynamic axis
                 }]
             };
         }
@@ -584,6 +568,7 @@
 
                 const valueRange = maxData - minData;
 
+                // Determine tickStepSize based on the range first
                 if (valueRange <= 0.2) { 
                     tickStepSize = 0.05; 
                 } else if (valueRange <= 0.5) { 
@@ -614,17 +599,16 @@
                 // Ensure the range is not too tight if only one point
                 if (actualDataPointsCount === 1) {
                     // Adjust yAxisMin and yAxisMax to center the single point within a reasonable visible range.
-                    // Let's aim for the point to be roughly in the middle 1/3rd of the vertical axis.
-                    // This means (yAxisMax - yAxisMin) should be approx (3 * tickStepSize) * X.
-                    // For a single point, we want 2 steps below and 2 steps above, total 4 steps around it.
-                    yAxisMin = Math.max(0, dataValues[0] - (tickStepSize * 2));
-                    yAxisMax = dataValues[0] + (tickStepSize * 2);
-                    
-                    // Re-align to nearest tickStepSize for clean display
-                    yAxisMin = Math.floor(yAxisMin / tickStepSize) * tickStepSize;
-                    yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize;
+                    // Target a range that's about 4-6 times the tickStepSize, centered around the point
+                    const desiredRange = tickStepSize * 5; // e.g., 5 tick steps total
+                    let tempMin = dataValues[0] - (desiredRange / 2);
+                    let tempMax = dataValues[0] + (desiredRange / 2);
 
-                    // Ensure min is not negative after adjustment
+                    // Re-align to tick steps
+                    yAxisMin = Math.floor(tempMin / tickStepSize) * tickStepSize;
+                    yAxisMax = Math.ceil(tempMax / tickStepSize) * tickStepSize;
+
+                    // Ensure min is not negative
                     if (yAxisMin < 0) yAxisMin = 0;
 
                     // If still too tight (e.g., tickStepSize is very small)
@@ -645,8 +629,8 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        title: { display: true, text: 'Season Week', color: '#4a5568', font: { size: 10 } }, 
-                        labels: WEEK_LABELS, 
+                        title: { display: true, text: 'Meet Date (Meet Name)', color: '#4a5568', font: { size: 10 } }, // Reverted X-axis title
+                        labels: chartData.labels, // Use dynamic labels from getProgressionChartData
                         ticks: { 
                             color: '#4a5568', 
                             font: { size: 9 },
@@ -677,11 +661,29 @@
                     title: { display: false },
                     tooltip: {
                         callbacks: {
+                            title: function(tooltipItems) {
+                                // tooltipItems[0].label contains "DATE (Meet Name)"
+                                // We need to split this to bold the date.
+                                const fullLabel = tooltipItems[0].label; // e.g., "06/25/2025 (Massad Marlins)"
+                                const parts = fullLabel.split(' (');
+                                const datePart = parts[0];
+                                const meetNamePart = parts.length > 1 ? `(${parts[1]}` : ''; // Re-add '(' for meet name
+
+                                return `**${datePart}**, **${meetNamePart.replace(')','') }**`; // Remove ')' to bold meet name
+                            },
                             label: function(context) {
-                                return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
-                            }
+                                const eventLabel = context.dataset.label; // e.g., "15-18 Boys 50m Freestyle"
+                                const time = secondsToTime(context.raw);
+                                return `Event: ${eventLabel}\nTime: ${time}`;
+                            },
+                            // Customizing body font for line breaks and bolding might require custom tooltip rendering,
+                            // but standard callback returns array of strings, which typically renders new lines.
+                            // Chart.js default HTML tooltips don't support rich text directly via callbacks
+                            // without custom rendering. We'll return strings and let Chart.js handle default line breaks.
                         },
-                        bodyFont: { size: 10 }
+                        bodyFont: { size: 10 },
+                        titleFont: { size: 12, weight: 'bold' }, // Make title bold
+                        padding: 10,
                     }
                 }
             };
