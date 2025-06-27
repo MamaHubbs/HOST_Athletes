@@ -242,6 +242,9 @@
         let allAthleteData = [];
         let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
         let currentSelectedSwimmerId = null;
+        let allUniqueMeets = []; // New array to store all unique meet dates and names
+        let maxObservedTimesPerStroke = {}; // Store max observed time for each stroke
+
 
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
         const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
@@ -253,9 +256,6 @@
 
         // Using shared-utils.js for helper functions (timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY, weeklyFileNames)
         // Ensure shared-utils.js is correctly linked in the <head>
-
-        // REMOVED GLOBAL CONSTANTS for fixed weeks
-        // getWeekLabel function is removed.
 
 
         function transformRawData(rawValues, fieldNames) {
@@ -337,7 +337,7 @@
             );
             console.log("Unique swimmers prepared:", uniqueSwimmersData.length); 
 
-            // --- NEW: Populate allUniqueMeets for consistent X-axis ---
+            // Populate allUniqueMeets for consistent X-axis
             const meetMap = new Map();
             allAthleteData.forEach(data => {
                 const meetKey = `${data.meetDate}-${data.meetName}`;
@@ -351,7 +351,29 @@
             });
             allUniqueMeets = Array.from(meetMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
             console.log("All unique meets prepared:", allUniqueMeets.length);
-            // --- END NEW ---
+
+            // Calculate max observed times per stroke for Specialty Chart dynamic scaling
+            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+            const allStrokeTimes = {
+                'Freestyle': [], 'Backstroke': [], 'Breaststroke': [], 'Butterfly': [], 'IM': []
+            };
+
+            allAthleteData.forEach(data => {
+                strokes.forEach(stroke => {
+                    if (data.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && data.resultTime !== 'NT' && data.resultTime !== 'NS' && data.resultTime !== 'DQ') {
+                        allStrokeTimes[stroke].push(timeToSeconds(data.resultTime));
+                    }
+                });
+            });
+
+            strokes.forEach(stroke => {
+                if (allStrokeTimes[stroke].length > 0) {
+                    maxObservedTimesPerStroke[stroke] = Math.max(...allStrokeTimes[stroke]) * 1.1; // 10% buffer
+                } else {
+                    maxObservedTimesPerStroke[stroke] = 120; // Fallback default if no data for stroke
+                }
+                console.log(`Max observed time for ${stroke}: ${maxObservedTimesPerStroke[stroke].toFixed(2)}s`);
+            });
 
             // Initialize empty charts on load
             updateSpecialtyChart(null); 
@@ -431,8 +453,9 @@
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    const max_expected_avg_time = 120; 
-                    let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
+                    // Use dynamically determined max_expected_avg_time for this stroke
+                    const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; // Fallback
+                    let score = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time * 100;
                     score = Math.max(0, Math.min(100, score));
                     specialtyScores[stroke] = score;
                 } else {
@@ -546,6 +569,82 @@
             }
         }
 
+        // Custom Tooltip function for the Progression Chart
+        function customProgressionTooltip(context) {
+            const tooltipModel = context.tooltip;
+            const tooltipEl = document.getElementById('chartjs-tooltip'); // Assuming you will add this HTML element
+
+            // Hide if no tooltip
+            if (tooltipModel.opacity === 0) {
+                if (tooltipEl) tooltipEl.style.opacity = 0;
+                return;
+            }
+
+            // Create tooltip element if it doesn't exist
+            if (!tooltipEl) {
+                tooltipEl = document.createElement('div');
+                tooltipEl.id = 'chartjs-tooltip';
+                tooltipEl.className = 'chartjs-tooltip'; // Add custom class for styling
+                document.body.appendChild(tooltipEl);
+            }
+
+            // Set caret Position (basic positioning, adjust as needed)
+            tooltipEl.style.left = tooltipModel.caretX + 'px';
+            tooltipEl.style.top = tooltipModel.caretY + 'px';
+            tooltipEl.style.opacity = 1; // Make visible
+
+
+            // Set Text
+            if (tooltipModel.body) {
+                const titleLines = tooltipModel.title || [];
+                const bodyLines = tooltipModel.body.map(b => b.lines);
+
+                let innerHtml = '<div class="chartjs-tooltip-header">';
+                titleLines.forEach(function(title) {
+                    // Title should be correctly parsed by Chart.js from labels.
+                    // Assuming title will be "Date (Meet Name)"
+                    const fullLabel = title; // e.g., "06/25/2025 (Massad Marlins)"
+                    const firstParenIndex = fullLabel.indexOf(' (');
+                    let datePart = fullLabel;
+                    let meetNamePart = '';
+
+                    if (firstParenIndex !== -1) {
+                        datePart = fullLabel.substring(0, firstParenIndex);
+                        meetNamePart = fullLabel.substring(firstParenIndex + 2, fullLabel.length - 1); 
+                    }
+                    innerHtml += `<div><strong>${datePart}</strong></div>`; 
+                    if (meetNamePart) {
+                         innerHtml += `<div><strong>${meetNamePart}</strong></div>`; 
+                    }
+                });
+                innerHtml += '</div><div class="chartjs-tooltip-body">';
+
+                bodyLines.forEach(function(body, i) {
+                    body.forEach(line => {
+                        innerHtml += `<span>${line}</span>`;
+                    });
+                });
+                innerHtml += '</div>';
+
+                tooltipEl.innerHTML = innerHtml;
+            }
+
+            // Adjust position
+            const canvasRect = context.chart.canvas.getBoundingClientRect();
+            tooltipEl.style.left = canvasRect.left + window.pageXOffset + tooltipModel.caretX + 'px';
+            tooltipEl.style.top = canvasRect.top + window.pageYOffset + tooltipModel.caretY + 'px';
+            
+            // Adjust transform to center horizontally
+            let tooltipX = tooltipModel.caretX;
+            if (tooltipX > context.chart.width / 2) {
+                tooltipEl.style.transform = 'translateX(-100%)';
+            } else {
+                tooltipEl.style.transform = 'translateX(0)';
+            }
+            tooltipEl.style.transition = 'all .1s ease'; // Add transition for smooth movement
+        }
+
+
         function updateProgressionChart(swimmerId, selectedEvent) {
             console.log("updateProgressionChart called with swimmerId:", swimmerId, "selectedEvent:", selectedEvent); 
             const chartData = getProgressionChartData(swimmerId, selectedEvent);
@@ -655,37 +754,10 @@
                         position: 'top',
                         labels: { color: '#4a5568', font: { size: 10 } }
                     },
-                    title: { display: false },
+                    title: { display: false }, // Disable native Chart.js title
                     tooltip: {
-                        callbacks: {
-                            title: function(tooltipItems) {
-                                const fullLabel = tooltipItems[0].label;
-                                // Split only on the first ' (' to correctly separate date from meet name
-                                const firstParenIndex = fullLabel.indexOf(' (');
-                                let datePart = fullLabel;
-                                let meetNamePart = '';
-
-                                if (firstParenIndex !== -1) {
-                                    datePart = fullLabel.substring(0, firstParenIndex);
-                                    meetNamePart = fullLabel.substring(firstParenIndex + 2, fullLabel.length - 1); // Remove ' (' and ')'
-                                }
-                                
-                                // Return as an array of strings. Chart.js will bold these lines due to titleFont.
-                                return [datePart, meetNamePart]; 
-                            },
-                            label: function(context) {
-                                const eventLabel = context.dataset.label; 
-                                const time = secondsToTime(context.raw);
-                                // Return an array for multiline label content
-                                return [
-                                    `Event: ${eventLabel}`,
-                                    `Time: ${time}`
-                                ];
-                            },
-                        },
-                        bodyFont: { size: 10 },
-                        titleFont: { size: 12, weight: 'bold' }, 
-                        padding: 10,
+                        enabled: false, // Disable native Chart.js tooltip
+                        external: customProgressionTooltip, // Use custom tooltip
                     }
                 }
             };
