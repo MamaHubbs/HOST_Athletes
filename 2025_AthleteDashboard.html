@@ -448,9 +448,7 @@
             const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
             const specialtyScores = {};
             // Define a 'pronunciationFactor'. A value greater than 1 will make differences more pronounced.
-            // 2.0 means squaring the normalized score.
-            // Adjust this value to control how aggressive the "stretch" is.
-            const pronunciationFactor = 2.0; 
+            const pronunciationFactor = 2.0; // Squaring the normalized score for more emphasis
 
             strokes.forEach(stroke => {
                 const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
@@ -458,17 +456,19 @@
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; // Fallback
+                    const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; 
                     
-                    // Calculate normalized score (0 to 1), where 1 is best performance
+                    // Calculate normalized score (0 to 1), where 1 is best performance (time close to 0)
+                    // The difference (dynamic_max_expected_avg_time - avgTime) is highest for fastest times.
+                    // Divide by dynamic_max_expected_avg_time to normalize to 0-1 range.
                     let normalizedScore = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time;
                     normalizedScore = Math.max(0, Math.min(1, normalizedScore)); // Clamp between 0 and 1
 
-                    // Apply pronunciation factor
-                    let finalScore = Math.pow(normalizedScore, 1 / pronunciationFactor) * 100; // Using 1/pronunciationFactor for better amplification
+                    // Apply pronunciation factor: raising to a power > 1 amplifies differences.
+                    // E.g., 0.9^2 = 0.81, 0.5^2 = 0.25. Spreads out good scores more.
+                    let finalScore = Math.pow(normalizedScore, pronunciationFactor) * 100; 
 
-                    // Ensure score is between 0 and 100
-                    finalScore = Math.max(0, Math.min(100, finalScore));
+                    finalScore = Math.max(0, Math.min(100, finalScore)); // Ensure score is between 0 and 100
                     specialtyScores[stroke] = finalScore;
                 } else {
                     specialtyScores[stroke] = 0;
@@ -598,21 +598,19 @@
 
             // Create tooltip element if it doesn't exist (should exist from HTML now)
             if (!tooltipEl) {
-                // This block should ideally not be hit if HTML is correct
                 tooltipEl = document.createElement('div');
                 tooltipEl.id = 'chartjs-tooltip';
-                tooltipEl.className = 'chartjs-tooltip';
+                tooltipEl.className = 'chartjs-tooltip'; 
                 document.body.appendChild(tooltipEl);
             }
 
             // Set Text
             if (tooltipModel.body) {
-                const titleLines = tooltipModel.title || []; // Contains the X-axis label (Meet Date (Meet Name))
-                const bodyLines = tooltipModel.body.map(b => b.lines); // Contains the labels from 'label' callback
+                const titleLines = tooltipModel.title || []; 
+                const bodyLines = tooltipModel.body.map(b => b.lines); 
 
                 let innerHtml = '<div class="chartjs-tooltip-header">';
                 titleLines.forEach(function(title) {
-                    // This title is the raw label from the X-axis, e.g., "06/25/2025 (Massad Marlins)"
                     const fullLabel = title;
                     const firstParenIndex = fullLabel.indexOf(' (');
                     let datePart = fullLabel;
@@ -641,30 +639,26 @@
 
             // Position the tooltip
             const canvasRect = context.chart.canvas.getBoundingClientRect();
-            // Calculate tooltip position relative to the viewport
             let tooltipX = canvasRect.left + window.pageXOffset + tooltipModel.caretX;
             let tooltipY = canvasRect.top + window.pageYOffset + tooltipModel.caretY;
 
-            // Adjust position to prevent going off-screen (especially right side)
-            // Default: center on caretX
             tooltipEl.style.left = tooltipX + 'px';
             tooltipEl.style.top = tooltipY + 'px';
-            tooltipEl.style.transform = 'translate(-50%, 0)'; // Center horizontally by default
+            tooltipEl.style.transform = 'translate(-50%, 0)'; 
 
-            // If it's too far right, shift left
             const tooltipWidth = tooltipEl.offsetWidth;
             const viewportWidth = window.innerWidth;
             if (tooltipX + tooltipWidth / 2 > viewportWidth) {
-                tooltipEl.style.left = (tooltipX - (tooltipX + tooltipWidth / 2 - viewportWidth) - 10) + 'px'; // Shift left + buffer
-                tooltipEl.style.transform = 'translate(0, 0)'; // Don't center
-            } else if (tooltipX - tooltipWidth / 2 < 0) { // If it's too far left, shift right
-                 tooltipEl.style.left = (tooltipX + (0 - (tooltipX - tooltipWidth / 2)) + 10) + 'px'; // Shift right + buffer
-                 tooltipEl.style.transform = 'translate(0, 0)'; // Don't center
+                tooltipEl.style.left = (tooltipX - (tooltipX + tooltipWidth / 2 - viewportWidth) - 10) + 'px'; 
+                tooltipEl.style.transform = 'translate(0, 0)'; 
+            } else if (tooltipX - tooltipWidth / 2 < 0) { 
+                 tooltipEl.style.left = (tooltipX + (0 - (tooltipX - tooltipWidth / 2)) + 10) + 'px'; 
+                 tooltipEl.style.transform = 'translate(0, 0)'; 
             }
 
 
-            tooltipEl.style.opacity = 1; // Make visible
-            tooltipEl.style.pointerEvents = 'auto'; // Make it clickable (if needed, default is none)
+            tooltipEl.style.opacity = 1; 
+            tooltipEl.style.pointerEvents = 'auto'; 
         }
 
 
@@ -777,7 +771,7 @@
                         position: 'top',
                         labels: { color: '#4a5568', font: { size: 10 } }
                     },
-                    title: { display: false },
+                    title: { display: false }, // Disable native Chart.js title
                     tooltip: {
                         enabled: false, // Disable native Chart.js tooltip
                         external: customProgressionTooltip, // Use our custom tooltip function
