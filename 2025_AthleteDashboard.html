@@ -34,21 +34,29 @@
             text-shadow: none;
         }
 
-        .dropdown-container {
-            position: sticky;
-            top: 0;
+        .dashboard-intro-text {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #555;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .filter-section {
             background-color: #f8f8f8;
             padding: 10px;
             text-align: center;
             z-index: 10;
             border-bottom: 1px solid #ccc;
-            font-size: 0.7em;
-            border-radius: 8詳しいpx; /* Added for consistency */
+            font-size: 0.8em; /* Slightly larger for main filters */
+            border-radius: 8px;
+            margin-bottom: 15px; /* Space between filter section and charts */
         }
 
-        .dropdown-box {
+        .filter-box {
             display: inline-block;
             margin: 0 4px;
+            vertical-align: bottom; /* Align input with label */
         }
 
         label {
@@ -59,9 +67,10 @@
 
         select, input[type="text"] {
             padding: 3px 6px;
-            font-size: 0.7em;
+            font-size: 0.8em; /* Adjusted font size for inputs */
             border-radius: 4px;
             border: 1px solid #ccc;
+            min-width: 150px; /* Ensure inputs have a decent size */
         }
 
         button {
@@ -93,26 +102,17 @@
             color: #333; /* Sub-heading color */
             font-size: 1.1em;
             margin-bottom: 10px;
+            text-align: center; /* Center chart titles */
         }
-        .chart-controls {
+        .chart-controls-inner { /* New class for specific chart controls */
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
             justify-content: center;
             margin-bottom: 20px;
+            text-align: center;
         }
-        .chart-controls .dropdown-box {
-            flex-grow: 1;
-            min-width: 180px;
-            text-align: left;
-        }
-        /* Centering for the dropdowns above graphs */
-        .chart-controls { /* Removed centered-dropdowns class, using inline styles for direct control */
-            justify-content: center; /* Center items horizontally */
-            text-align: center; /* Ensure labels are centered if they wrap */
-            flex-direction: row; /* Keep them in a row */
-        }
-        .chart-controls .dropdown-box { /* Adjusted for centering and non-growing behavior */
+        .chart-controls-inner .dropdown-box {
             flex-grow: 0;
             min-width: unset;
             width: auto;
@@ -121,14 +121,10 @@
 
         .chart-display {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr; /* Always stack for small width */
             gap: 20px;
         }
-        @media (min-width: 768px) {
-            .chart-display {
-                grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
-            }
-        }
+        
         .chart-canvas-container {
             background-color: #ffffff;
             padding: 15px;
@@ -144,29 +140,65 @@
             max-width: 100%;
             height: 100%;
         }
+
+        /* Styles for search result dropdown */
+        .autocomplete-container {
+            position: relative;
+            display: inline-block; /* Allows it to be centered like a filter-box */
+            width: auto; /* Adjust as needed */
+        }
+
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #fff;
+            text-align: left;
+        }
+
+        .autocomplete-items div {
+            padding: 8px;
+            cursor: pointer;
+            background-color: #fff; 
+            border-bottom: 1px solid #d4d4d4; 
+            font-size: 0.8em;
+        }
+
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+
+        .autocomplete-active {
+            background-color: DodgerBlue !important;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="chart-section">
-            <h2 style="color: #0156B3;">Swimmer Performance Dashboard</h2>
+        <h1>Swimmer Performance Dashboard</h1>
+        <p class="dashboard-intro-text">
+            Please select a swimmer to view their overall swim specialty. 
+            You can then use the progression chart to track their performance over time for a specific stroke or event.
+        </p>
 
-            <div class="chart-controls" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
-                <div class="dropdown-box">
-                    <label for="selectSwimmer">Select Swimmer:</label>
-                    <select id="selectSwimmer">
-                        <option value="">-- Select an Athlete --</option>
-                        </select>
-                </div>
-                <div class="dropdown-box">
-                    <label for="selectEventForProgression">Select Event (Progression Chart):</label>
-                    <select id="selectEventForProgression" disabled>
-                        <option value="">-- Select an Event --</option>
-                        </select>
-                </div>
+        <div class="filter-section">
+            <div class="filter-box autocomplete-container" style="text-align: center;">
+                <label for="filterSwimmerName">Search Swimmer:</label>
+                <input type="text" id="filterSwimmerName" placeholder="Start typing name...">
+                <div id="swimmerSearchResults" class="autocomplete-items"></div>
             </div>
+        </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+        <div class="chart-section">
+            <div class="chart-display">
                 <div class="chart-canvas-container">
                     <h3>Swimmer Specialty (Radar Chart)</h3>
                     <canvas id="specialtyChart"></canvas>
@@ -174,6 +206,14 @@
 
                 <div class="chart-canvas-container">
                     <h3>Time Progression (Line Chart)</h3>
+                    <div class="chart-controls-inner" style="margin-top: 0; margin-bottom: 10px;">
+                        <div class="dropdown-box">
+                            <label for="selectEventForProgression">Select Event:</label>
+                            <select id="selectEventForProgression" disabled>
+                                <option value="">-- Select an Event --</option>
+                                </select>
+                        </div>
+                    </div>
                     <canvas id="progressionChart"></canvas>
                 </div>
             </div>
@@ -181,13 +221,19 @@
     </div>
 
     <script>
-        let allAthleteData = []; // Data for charts will come from here
+        let allAthleteData = [];
+        let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
+        let currentSelectedSwimmerId = null;
 
-        const selectSwimmer = document.getElementById('selectSwimmer');
+        const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
+        const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
         const selectEventForProgression = document.getElementById('selectEventForProgression');
 
         let specialtyChartInstance = null;
         let progressionChartInstance = null;
+
+        // Using shared-utils.js for helper functions (timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY, weeklyFileNames)
+        // Ensure shared-utils.js is correctly linked in the <head>
 
         function transformRawData(rawValues, fieldNames) {
             const transformed = [];
@@ -203,7 +249,7 @@
             const placeIndex = fieldNames.indexOf('place');
             const pointsIndex = fieldNames.indexOf('points');
 
-            rawValues.forEach((row, index) => {
+            rawValues.forEach((row) => {
                 const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
                 
                 transformed.push({
@@ -249,50 +295,32 @@
             const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
             allAthleteData = allWeeksTransformedData.flat();
 
-            populateSwimmerSelect();
-            if (selectSwimmer.options.length > 1) {
-                selectSwimmer.value = selectSwimmer.options[1].value; // Auto-select first swimmer
-                selectSwimmer.dispatchEvent(new Event('change')); // Trigger change event
-            }
-        }
-
-        function populateSwimmerSelect() {
-            while (selectSwimmer.children.length > 1) {
-                selectSwimmer.removeChild(selectSwimmer.lastChild);
-            }
-
-            const uniqueSwimmers = [];
+            // Populate uniqueSwimmersData for search functionality
             const swimmerMap = new Map();
-
             allAthleteData.forEach(athlete => {
                 const key = `${athlete.lastName}-${athlete.firstName}-${athlete.age}`;
                 if (!swimmerMap.has(key)) {
                     swimmerMap.set(key, {
                         id: key,
                         firstName: athlete.firstName,
-                        lastName: athlete.lastName
-                    });
-                    uniqueSwimmers.push({
-                        id: key,
-                        firstName: athlete.firstName,
-                        lastName: athlete.lastName
+                        lastName: athlete.lastName,
+                        age: athlete.age // Include age for unique identification in search results
                     });
                 }
             });
-
-            uniqueSwimmers.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
-
-            uniqueSwimmers.forEach(swimmer => {
-                const option = document.createElement('option');
-                option.value = swimmer.id;
-                option.textContent = `${swimmer.lastName}, ${swimmer.firstName}`;
-                selectSwimmer.appendChild(option);
-            });
+            uniqueSwimmersData = Array.from(swimmerMap.values()).sort((a, b) => 
+                a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
+            );
         }
 
         function populateEventSelectForProgression(swimmerId) {
             selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
             selectEventForProgression.disabled = true;
+
+            if (!swimmerId) {
+                if (progressionChartInstance) progressionChartInstance.destroy();
+                return;
+            }
 
             const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
             
@@ -304,9 +332,20 @@
                     selectEventForProgression.appendChild(option);
                 });
                 selectEventForProgression.disabled = false;
+
+                // Auto-select the first event if available
+                if (selectEventForProgression.options.length > 1) {
+                    selectEventForProgression.value = selectEventForProgression.options[1].value;
+                    updateProgressionChart(swimmerId, selectEventForProgression.value);
+                } else {
+                    if (progressionChartInstance) progressionChartInstance.destroy();
+                }
+            } else {
+                if (progressionChartInstance) progressionChartInstance.destroy();
             }
         }
 
+        // --- Chart Data & Update Functions (remain largely the same) ---
         function getSpecialtyChartData(swimmerId) {
             const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
             if (swimmerData.length === 0) return null;
@@ -319,23 +358,24 @@
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    // A higher score indicates better performance (lower time)
-                    // Normalizing score (0-100), adjust max_expected_avg_time based on typical event times
-                    const max_expected_avg_time = 120; // Example: 2 minutes. Adjust this based on your sport's typical slowest times for a single event.
+                    const max_expected_avg_time = 120; 
                     let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
-                    score = Math.max(0, Math.min(100, score)); // Cap between 0 and 100
+                    score = Math.max(0, Math.min(100, score));
                     specialtyScores[stroke] = score;
                 } else {
-                    specialtyScores[stroke] = 0; // No data for this stroke
+                    specialtyScores[stroke] = 0;
                 }
             });
+
+            const swimmerInfo = uniqueSwimmersData.find(s => s.id === swimmerId);
+            const swimmerDisplayName = swimmerInfo ? `${swimmerInfo.lastName}, ${swimmerInfo.firstName}` : "Selected Swimmer";
 
             return {
                 labels: strokes,
                 datasets: [{
-                    label: `${swimmerData[0].lastName}, ${swimmerData[0].firstName}'s Specialty`,
-                    backgroundColor: 'rgba(255, 204, 0, 0.4)', /* Light yellow/gold */
-                    borderColor: 'rgba(255, 204, 0, 1)',      /* Solid yellow/gold */
+                    label: `${swimmerDisplayName}'s Specialty`,
+                    backgroundColor: 'rgba(255, 204, 0, 0.4)',
+                    borderColor: 'rgba(255, 204, 0, 1)',
                     data: strokes.map(stroke => specialtyScores[stroke]),
                     borderWidth: 1,
                     pointBackgroundColor: 'rgba(255, 204, 0, 1)'
@@ -356,9 +396,9 @@
                     label: `${eventSwum} Time Progression`,
                     data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
                     fill: false,
-                    borderColor: '#4169E1', /* Royal Blue */
+                    borderColor: '#4169E1',
                     tension: 0.1,
-                    pointBackgroundColor: '#4169E1' /* Royal Blue */
+                    pointBackgroundColor: '#4169E1'
                 }]
             };
         }
@@ -383,28 +423,19 @@
                     maintainAspectRatio: false,
                     scales: {
                         r: {
-                            angleLines: {
-                                color: '#e2e8f0'
-                            },
-                            grid: {
-                                color: '#cbd5e0'
-                            },
+                            angleLines: { color: '#e2e8f0' },
+                            grid: { color: '#cbd5e0' },
                             pointLabels: {
-                                font: {
-                                    size: 10,
-                                    weight: 'bold'
-                                },
+                                font: { size: 10, weight: 'bold' },
                                 color: '#4a5568'
                             },
                             min: 0,
-                            max: 100, // Score is 0-100
+                            max: 100,
                             ticks: {
                                 stepSize: 20,
                                 backdropColor: 'rgba(255, 255, 255, 0.75)',
                                 color: '#4a5568',
-                                font: {
-                                    size: 9
-                                }
+                                font: { size: 9 }
                             }
                         }
                     },
@@ -412,25 +443,16 @@
                         legend: {
                             display: true,
                             position: 'top',
-                            labels: {
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            }
+                            labels: { color: '#4a5568', font: { size: 10 } }
                         },
-                        title: {
-                            display: false,
-                        },
+                        title: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
                                 }
                             },
-                            bodyFont: {
-                                size: 10
-                            }
+                            bodyFont: { size: 10 }
                         }
                     }
                 }
@@ -464,103 +486,135 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            title: {
-                                display: true,
-                                text: 'Meet Date (Meet Name)',
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            },
-                            ticks: {
-                                color: '#4a5568',
-                                font: {
-                                    size: 9
-                                }
-                            },
-                            grid: {
-                                color: '#e2e8f0'
-                            }
+                            title: { display: true, text: 'Meet Date (Meet Name)', color: '#4a5568', font: { size: 10 } },
+                            ticks: { color: '#4a5568', font: { size: 9 } },
+                            grid: { color: '#e2e8f0' }
                         },
                         y: {
-                            title: {
-                                display: true,
-                                text: 'Time (Seconds)',
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            },
+                            title: { display: true, text: 'Time (Seconds)', color: '#4a5568', font: { size: 10 } },
                             ticks: {
                                 color: '#4a5568',
-                                callback: function(value, index, values) {
-                                    return secondsToTime(value);
-                                },
-                                font: {
-                                    size: 9
-                                }
+                                callback: function(value) { return secondsToTime(value); },
+                                font: { size: 9 }
                             },
-                            grid: {
-                                color: '#e2e8f0'
-                            },
-                            reverse: true, // Lower time is better
-                            min: 0 // Ensure chart starts at 0
+                            grid: { color: '#e2e8f0' },
+                            reverse: true,
+                            min: 0
                         }
                     },
                     plugins: {
                         legend: {
                             display: true,
                             position: 'top',
-                            labels: {
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            }
+                            labels: { color: '#4a5568', font: { size: 10 } }
                         },
-                        title: {
-                            display: false,
-                        },
+                        title: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
                                 }
                             },
-                            bodyFont: {
-                                size: 10
-                            }
+                            bodyFont: { size: 10 }
                         }
                     }
                 }
             });
         }
 
-        // Event Listeners for Dashboard
-        selectSwimmer.addEventListener('change', (event) => {
-            const selectedSwimmerId = event.target.value;
-            if (selectedSwimmerId) {
-                updateSpecialtyChart(selectedSwimmerId);
-                populateEventSelectForProgression(selectedSwimmerId);
-                if (selectEventForProgression.options.length > 1) {
-                    selectEventForProgression.value = selectEventForProgression.options[1].value;
-                    updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
-                } else {
-                    if (progressionChartInstance) progressionChartInstance.destroy();
+        // --- Autocomplete/Search Logic ---
+        filterSwimmerNameInput.addEventListener('input', function() {
+            const inputVal = this.value.toLowerCase();
+            closeAllLists();
+            if (!inputVal) { return false; }
+            
+            let currentFocus = -1;
+            const matches = uniqueSwimmersData.filter(swimmer => 
+                `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal) ||
+                `${swimmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal)
+            );
+
+            matches.forEach((swimmer, i) => {
+                const itemDiv = document.createElement("div");
+                itemDiv.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName} (${swimmer.age})`;
+                itemDiv.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
+                itemDiv.addEventListener("click", function() {
+                    filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName} (${swimmer.age})`;
+                    currentSelectedSwimmerId = swimmer.id;
+                    updateChartsAndEventsForSwimmer(currentSelectedSwimmerId);
+                    closeAllLists();
+                });
+                swimmerSearchResultsDiv.appendChild(itemDiv);
+            });
+        });
+
+        filterSwimmerNameInput.addEventListener('keydown', function(e) {
+            let x = document.getElementById(this.id + "Results");
+            if (x) x = x.getElementsByTagName("div");
+            if (e.keyCode == 40) { // Arrow Down
+                currentFocus++;
+                addActive(x);
+            } else if (e.keyCode == 38) { // Arrow Up
+                currentFocus--;
+                addActive(x);
+            } else if (e.keyCode == 13) { // Enter
+                e.preventDefault();
+                if (currentFocus > -1) {
+                    if (x) x[currentFocus].click();
+                } else if (swimmerSearchResultsDiv.children.length > 0) {
+                    // If no explicit selection but results exist, auto-select the first
+                    swimmerSearchResultsDiv.children[0].click();
                 }
+            }
+        });
+
+        function addActive(x) {
+            if (!x) return false;
+            removeActive(x);
+            if (currentFocus >= x.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (x.length - 1);
+            x[currentFocus].classList.add("autocomplete-active");
+        }
+
+        function removeActive(x) {
+            for (let i = 0; i < x.length; i++) {
+                x[i].classList.remove("autocomplete-active");
+            }
+        }
+
+        function closeAllLists(elmnt) {
+            const items = document.getElementsByClassName("autocomplete-items");
+            for (let i = 0; i < items.length; i++) {
+                if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
+                    items[i].innerHTML = ''; // Clear results
+                }
+            }
+        }
+
+        document.addEventListener("click", function (e) {
+            closeAllLists(e.target);
+        });
+
+        // Function to update charts and event dropdown after swimmer selection
+        function updateChartsAndEventsForSwimmer(swimmerId) {
+            if (swimmerId) {
+                currentSelectedSwimmerId = swimmerId;
+                updateSpecialtyChart(swimmerId);
+                populateEventSelectForProgression(swimmerId);
             } else {
+                currentSelectedSwimmerId = null;
                 if (specialtyChartInstance) specialtyChartInstance.destroy();
                 if (progressionChartInstance) progressionChartInstance.destroy();
                 selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
                 selectEventForProgression.disabled = true;
             }
-        });
+        }
 
+        // Event Listeners
         selectEventForProgression.addEventListener('change', (event) => {
             const selectedEvent = event.target.value;
-            const selectedSwimmerId = selectSwimmer.value;
-            if (selectedSwimmerId && selectedEvent) {
-                updateProgressionChart(selectedSwimmerId, selectedEvent);
+            if (currentSelectedSwimmerId && selectedEvent) {
+                updateProgressionChart(currentSelectedSwimmerId, selectedEvent);
             } else {
                 if (progressionChartInstance) progressionChartInstance.destroy();
             }
