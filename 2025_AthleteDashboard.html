@@ -462,6 +462,7 @@
             console.log("getProgressionChartData called with swimmerId:", swimmerId, "eventSwum:", eventSwum);
 
             if (!swimmerId || !eventSwum) {
+                // Return data structure with fixed labels but empty/null data points
                 return { labels: WEEK_LABELS, datasets: [{ label: 'No Event Selected', data: Array(WEEK_LABELS.length).fill(null), fill: false, borderColor: 'rgba(150, 150, 150, 1)', tension: 0.1, pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] };
             }
 
@@ -471,11 +472,13 @@
 
             console.log("Filtered swimmerEventData for progression:", swimmerEventData); 
 
+            // Group data by week and get the latest time for each week
             const dataByWeek = new Map();
             swimmerEventData.forEach(entry => {
                 const weekLabel = getWeekLabel(entry.meetDate);
                 const currentTime = timeToSeconds(entry.resultTime);
 
+                // If multiple entries for the same week, take the latest (last one after sorting by date)
                 if (!dataByWeek.has(weekLabel) || new Date(entry.meetDate) > new Date(dataByWeek.get(weekLabel).meetDate)) {
                     dataByWeek.set(weekLabel, { time: currentTime, meetDate: entry.meetDate });
                 }
@@ -496,8 +499,9 @@
                     data: chartDataPoints, 
                     fill: false, 
                     borderColor: '#4169E1',
-                    tension: 0.1,
-                    pointBackgroundColor: '#4169E1'
+                    tension: 0.4, // Increased tension for a more rounded line
+                    pointBackgroundColor: '#4169E1',
+                    spanGaps: true // Connect points across null values (missing weeks)
                 }]
             };
         }
@@ -594,11 +598,11 @@
 
                 // Calculate yAxisMin: one tick below the minimum data point, aligned to tickStepSize
                 yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
-                if (yAxisMin === minData && minData > 0) { // If minData is exactly on a tick and not 0, go one lower
+                if (yAxisMin === minData && minData > 0) { 
                     yAxisMin = Math.max(0, yAxisMin - tickStepSize);
-                } else if (minData > 0) { // If not on a tick and positive, just take the floor (will be just below)
+                } else if (minData > 0) { 
                     yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
-                } else { // Handle 0 or negative mins
+                } else { 
                     yAxisMin = 0;
                 }
 
@@ -609,23 +613,20 @@
 
                 // Ensure the range is not too tight if only one point
                 if (actualDataPointsCount === 1) {
-                    if (yAxisMin === yAxisMax) { // If somehow min and max became the same
+                    if (yAxisMin === yAxisMax) { 
                         yAxisMin = Math.max(0, yAxisMin - tickStepSize);
                         yAxisMax = yAxisMax + tickStepSize;
                     }
                     // Ensure enough space around the single point
-                    if (maxData - yAxisMin < tickStepSize * 2) { // if not enough space below the point
-                        yAxisMin = Math.max(0, minData - (tickStepSize * 2));
-                    }
-                    if (yAxisMax - minData < tickStepSize * 2) { // if not enough space above the point
-                        yAxisMax = maxData + (tickStepSize * 2);
-                    }
-                    // Re-align after widening
+                    // Recalculate to center the single point roughly with a 4-tick span
+                    yAxisMin = Math.max(0, minData - (tickStepSize * 2));
+                    yAxisMax = maxData + (tickStepSize * 2);
+                    // Re-align to nearest tickStepSize for clean display
                     yAxisMin = Math.floor(yAxisMin / tickStepSize) * tickStepSize;
                     yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize;
                 }
 
-                if (yAxisMin < 0) yAxisMin = 0; // Final check not to go below 0
+                if (yAxisMin < 0) yAxisMin = 0; 
 
                 console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
             }
