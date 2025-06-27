@@ -6,6 +6,7 @@
     <title>Swimmer Performance Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="shared-utils.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,7 +43,7 @@
             z-index: 10;
             border-bottom: 1px solid #ccc;
             font-size: 0.7em;
-            border-radius: 8px; /* Added for consistency */
+            border-radius: 8詳しいpx; /* Added for consistency */
         }
 
         .dropdown-box {
@@ -180,45 +181,6 @@
     </div>
 
     <script>
-        // Helper functions (timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY) remain the same
-        function timeToSeconds(timeStr) {
-            if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity;
-            const parts = String(timeStr).split(':');
-            if (parts.length === 2) {
-                const minutes = parseInt(parts[0]);
-                const seconds = parseFloat(parts[1]);
-                return minutes * 60 + seconds;
-            } else if (parts.length === 1) {
-                return parseFloat(parts[0]);
-            }
-            return Infinity;
-        }
-
-        function secondsToTime(totalSeconds) {
-            if (totalSeconds === Infinity || isNaN(totalSeconds)) return 'N/A';
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds.toFixed(2)}`;
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-        }
-
-        function formatMMDDYYYY(dateString) {
-            const date = new Date(dateString);
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            const year = date.getFullYear();
-            return `${month}/${day}/${year}`;
-        }
-
-        const weeklyFileNames = [
-            "2025resultsweek01.json",
-            "2025resultsweek02.json"
-        ];
-
         let allAthleteData = []; // Data for charts will come from here
 
         const selectSwimmer = document.getElementById('selectSwimmer');
