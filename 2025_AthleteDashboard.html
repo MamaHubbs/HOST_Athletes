@@ -499,7 +499,7 @@
                     data: chartDataPoints, 
                     fill: false, 
                     borderColor: '#4169E1',
-                    tension: 0.4, // Increased tension for a more rounded line
+                    tension: 0.4, // Set tension for rounded line
                     pointBackgroundColor: '#4169E1',
                     spanGaps: true // Connect points across null values (missing weeks)
                 }]
@@ -613,17 +613,26 @@
 
                 // Ensure the range is not too tight if only one point
                 if (actualDataPointsCount === 1) {
-                    if (yAxisMin === yAxisMax) { 
-                        yAxisMin = Math.max(0, yAxisMin - tickStepSize);
-                        yAxisMax = yAxisMax + tickStepSize;
-                    }
-                    // Ensure enough space around the single point
-                    // Recalculate to center the single point roughly with a 4-tick span
-                    yAxisMin = Math.max(0, minData - (tickStepSize * 2));
-                    yAxisMax = maxData + (tickStepSize * 2);
+                    // Adjust yAxisMin and yAxisMax to center the single point within a reasonable visible range.
+                    // Let's aim for the point to be roughly in the middle 1/3rd of the vertical axis.
+                    // This means (yAxisMax - yAxisMin) should be approx (3 * tickStepSize) * X.
+                    // For a single point, we want 2 steps below and 2 steps above, total 4 steps around it.
+                    yAxisMin = Math.max(0, dataValues[0] - (tickStepSize * 2));
+                    yAxisMax = dataValues[0] + (tickStepSize * 2);
+                    
                     // Re-align to nearest tickStepSize for clean display
                     yAxisMin = Math.floor(yAxisMin / tickStepSize) * tickStepSize;
                     yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize;
+
+                    // Ensure min is not negative after adjustment
+                    if (yAxisMin < 0) yAxisMin = 0;
+
+                    // If still too tight (e.g., tickStepSize is very small)
+                    if (yAxisMax - yAxisMin < tickStepSize * 4) { // Ensure at least 4 tick steps visible
+                        const neededIncrease = (tickStepSize * 4) - (yAxisMax - yAxisMin);
+                        yAxisMax += neededIncrease;
+                        yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize; // Re-align
+                    }
                 }
 
                 if (yAxisMin < 0) yAxisMin = 0; 
