@@ -242,8 +242,8 @@
         let allAthleteData = [];
         let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
         let currentSelectedSwimmerId = null;
-        let allUniqueMeets = []; 
-        let maxObservedTimesPerStroke = {}; // NEW: Store max observed time for each stroke
+        let allUniqueMeets = []; // New array to store all unique meet dates and names
+        let maxObservedTimesPerStroke = {}; // Store max observed time for each stroke
 
 
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
@@ -565,9 +565,7 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        // This label is for the radar chart tooltip.
-                                        // context.raw is the score (0-100).
-                                        return `${context.label}: ${context.raw.toFixed(1)}%`;
+                                        return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
                                     }
                                 },
                                 bodyFont: { size: 10 }
@@ -702,7 +700,8 @@
                                     meetNamePart = fullLabel.substring(firstParenIndex + 2, fullLabel.length - 1); // Remove ' (' and ')'
                                 }
                                 
-                                // Return as an array of strings. Chart.js will bold these lines due to titleFont.
+                                // Returning an array of strings ensures new lines.
+                                // The `titleFont: { weight: 'bold' }` will make both lines bold.
                                 return [datePart, meetNamePart]; 
                             },
                             label: function(context) {
@@ -777,7 +776,7 @@
             } else if (e.keyCode == 13) { // Enter
                 e.preventDefault();
                 if (currentFocus > -1) {
-                    if (x && x[currentFocus]) x[currentFocus].click();
+                    if (x && x[currentFocus]) x[current出门].click();
                 } else if (swimmerSearchResultsDiv.children.length > 0) {
                     // If no explicit selection but results exist, auto-select the first
                     swimmerSearchResultsDiv.children[0].click();
@@ -801,4 +800,33 @@
         }
 
         function closeAllLists(elmnt) {
-            const items = document.getElementsBy
+            const items = document.getElementsByClassName("autocomplete-items");
+            for (let i = 0; i < items.length; i++) {
+                if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
+                    items[i].innerHTML = ''; 
+                }
+            }
+        }
+
+        document.addEventListener("click", function (e) {
+            closeAllLists(e.target);
+        });
+
+        // Function to update charts and event dropdown after swimmer selection
+        function updateChartsAndEventsForSwimmer(swimmerId) {
+            currentSelectedSwimmerId = swimmerId; 
+            updateSpecialtyChart(swimmerId);
+            populateEventSelectForProgression(swimmerId);
+        }
+
+        // Event Listeners
+        selectEventForProgression.addEventListener('change', (event) => {
+            const selectedEvent = event.target.value;
+            updateProgressionChart(currentSelectedSwimmerId, selectedEvent);
+        });
+
+        // Initial load for dashboard
+        document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
+    </script>
+</body>
+</html>
