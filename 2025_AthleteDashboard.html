@@ -449,21 +449,12 @@
                 };
             }
 
-            const baselineTimeInSeconds = timeToSeconds(swimmerEventData[0].resultTime);
-            const progressionData = swimmerEventData.map(d => {
-                const currentTimeInSeconds = timeToSeconds(d.resultTime);
-                if (baselineTimeInSeconds === 0 || baselineTimeInSeconds === Infinity) {
-                    return 0; // Avoid division by zero or infinity issues
-                }
-                // Calculate percentage improvement: (baseline - current) / baseline * 100
-                return ((baselineTimeInSeconds - currentTimeInSeconds) / baselineTimeInSeconds) * 100;
-            });
-
+            // Return raw times in seconds for the data array
             return {
                 labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`),
                 datasets: [{
-                    label: `${eventSwum} Performance Change`,
-                    data: progressionData,
+                    label: `${eventSwum} Time Progression`,
+                    data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
                     fill: false,
                     borderColor: '#4169E1',
                     tension: 0.1,
@@ -529,26 +520,35 @@
             const chartData = getProgressionChartData(swimmerId, selectedEvent);
             const ctx = document.getElementById('progressionChart').getContext('2d');
 
-            // Determine appropriate min/max for Y-axis based on percentage data
-            let yAxisMin = -10; // Default min for percentage (e.g., 10% degradation)
-            let yAxisMax = 10;  // Default max for percentage (e.g., 10% improvement)
+            let yAxisMin = 0;
+            let yAxisMax = 1; // Default small range for empty chart
+            const buffer = 0.5; // Small buffer in seconds for Y-axis range
 
             if (chartData.datasets[0].data.length > 0) {
                 const dataValues = chartData.datasets[0].data;
                 const minData = Math.min(...dataValues);
                 const maxData = Math.max(...dataValues);
 
-                // Adjust min/max to be slightly beyond the data range for better visualization
-                yAxisMin = Math.floor(minData / 5) * 5 - 5; // Round down to nearest 5 and add buffer
-                yAxisMax = Math.ceil(maxData / 5) * 5 + 5;  // Round up to nearest 5 and add buffer
+                // Calculate a dynamic range
+                yAxisMin = Math.floor((minData - buffer) * 10) / 10; // Round down to nearest 0.1
+                yAxisMax = Math.ceil((maxData + buffer) * 10) / 10; // Round up to nearest 0.1
 
-                // Ensure 0% is always visible if applicable
-                if (yAxisMin > 0 && minData >= 0) yAxisMin = 0; // If all data is positive, start from 0
-                if (yAxisMax < 0 && maxData <= 0) yAxisMax = 0; // If all data is negative, end at 0
-            } else {
-                 // If no data, ensure a reasonable default range like -10% to +10%
-                 yAxisMin = -10;
-                 yAxisMax = 10;
+                // Ensure min is not negative if all times are positive
+                if (yAxisMin < 0) yAxisMin = 0;
+
+                // Adjust ticks step size for finer detail
+                let tickStepSize = 0.5; // Default for larger ranges (e.g., 30s-60s)
+                const range = yAxisMax - yAxisMin;
+
+                if (range < 5) { // If range is small (e.g., 20-25 seconds)
+                    tickStepSize = 0.1; // Show tenths of a second
+                } else if (range < 10) { // Medium range
+                    tickStepSize = 0.25; // Show quarter seconds
+                } else if (range < 20) { // Slightly larger
+                    tickStepSize = 0.5;
+                } else { // Even larger ranges
+                    tickStepSize = 1.0;
+                }
             }
 
 
@@ -566,17 +566,15 @@
                         grid: { color: '#e2e8f0' }
                     },
                     y: {
-                        title: { display: true, text: 'Percentage Change (%)', color: '#4a5568', font: { size: 10 } },
+                        title: { display: true, text: 'Time (MM:SS.ms)', color: '#4a5568', font: { size: 10 } },
                         ticks: {
                             color: '#4a5568',
-                            callback: function(value) {
-                                if (value > 0) return `+${value.toFixed(1)}%`;
-                                if (value < 0) return `${value.toFixed(1)}%`;
-                                return '0.0%';
-                            },
-                            font: { size: 9 }
+                            callback: function(value) { return secondsToTime(value); },
+                            font: { size: 9 },
+                            stepSize: tickStepSize // Apply dynamic step size
                         },
                         grid: { color: '#e2e8f0' },
+                        reverse: true, // Lower time is better
                         min: yAxisMin,
                         max: yAxisMax
                     }
@@ -591,10 +589,7 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const value = context.raw;
-                                if (value > 0) return `${context.dataset.label}: +${value.toFixed(2)}%`;
-                                if (value < 0) return `${context.dataset.label}: ${value.toFixed(2)}%`;
-                                return `${context.dataset.label}: ${value.toFixed(2)}%`;
+                                return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
                             }
                         },
                         bodyFont: { size: 10 }
