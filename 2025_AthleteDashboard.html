@@ -242,9 +242,6 @@
         let allAthleteData = [];
         let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
         let currentSelectedSwimmerId = null;
-        let allUniqueMeets = []; // New array to store all unique meet dates and names
-        let maxObservedTimesPerStroke = {}; // Store max observed time for each stroke
-
 
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
         const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
@@ -356,32 +353,6 @@
             console.log("All unique meets prepared:", allUniqueMeets.length);
             // --- END NEW ---
 
-            // --- NEW: Calculate max observed times per stroke for Specialty Chart dynamic scaling ---
-            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-            const allStrokeTimes = {
-                'Freestyle': [], 'Backstroke': [], 'Breaststroke': [], 'Butterfly': [], 'IM': []
-            };
-
-            allAthleteData.forEach(data => {
-                strokes.forEach(stroke => {
-                    if (data.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && data.resultTime !== 'NT' && data.resultTime !== 'NS' && data.resultTime !== 'DQ') {
-                        allStrokeTimes[stroke].push(timeToSeconds(data.resultTime));
-                    }
-                });
-            });
-
-            strokes.forEach(stroke => {
-                if (allStrokeTimes[stroke].length > 0) {
-                    // Use the slowest observed time for that stroke as the max_expected_avg_time
-                    // Add a small buffer to ensure max score isn't always 100 for fastest swimmer
-                    maxObservedTimesPerStroke[stroke] = Math.max(...allStrokeTimes[stroke]) * 1.1; // 10% buffer
-                } else {
-                    maxObservedTimesPerStroke[stroke] = 120; // Fallback default if no data for stroke
-                }
-                console.log(`Max observed time for ${stroke}: ${maxObservedTimesPerStroke[stroke].toFixed(2)}s`);
-            });
-            // --- END NEW ---
-
             // Initialize empty charts on load
             updateSpecialtyChart(null); 
             updateProgressionChart(null, null); 
@@ -460,9 +431,8 @@
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    // Use dynamically determined max_expected_avg_time for this stroke
-                    const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; // Fallback
-                    let score = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time * 100;
+                    const max_expected_avg_time = 120; 
+                    let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
                     score = Math.max(0, Math.min(100, score));
                     specialtyScores[stroke] = score;
                 } else {
@@ -700,8 +670,7 @@
                                     meetNamePart = fullLabel.substring(firstParenIndex + 2, fullLabel.length - 1); // Remove ' (' and ')'
                                 }
                                 
-                                // Returning an array of strings ensures new lines.
-                                // The `titleFont: { weight: 'bold' }` will make both lines bold.
+                                // Return as an array of strings. Chart.js will bold these lines due to titleFont.
                                 return [datePart, meetNamePart]; 
                             },
                             label: function(context) {
@@ -776,7 +745,7 @@
             } else if (e.keyCode == 13) { // Enter
                 e.preventDefault();
                 if (currentFocus > -1) {
-                    if (x && x[currentFocus]) x[current出门].click();
+                    if (x && x[currentFocus]) x[currentFocus].click();
                 } else if (swimmerSearchResultsDiv.children.length > 0) {
                     // If no explicit selection but results exist, auto-select the first
                     swimmerSearchResultsDiv.children[0].click();
