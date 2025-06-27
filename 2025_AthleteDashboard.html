@@ -448,7 +448,7 @@
             const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
             const specialtyScores = {};
             const pronunciationFactor = 2.0; 
-            const scoreOffset = 50; // Adding a base value to push scores outwards
+            const scoreOffset = 50; // Add a base value to push scores outwards
 
             strokes.forEach(stroke => {
                 const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
@@ -474,7 +474,7 @@
             const swimmerDisplayName = swimmerInfo ? `${swimmerInfo.lastName}, ${swimmerInfo.firstName}` : "Selected Swimmer";
 
             return {
-                labels: strokes,
+                labels: strokes, // Labels (Freestyle, Backstroke, etc.)
                 datasets: [{
                     label: `${swimmerDisplayName}'s Specialty`,
                     backgroundColor: 'rgba(255, 204, 0, 0.4)',
@@ -544,7 +544,7 @@
                             r: {
                                 angleLines: {
                                     color: (context) => {
-                                        // Make every other angle line very faint
+                                        // Make every other angle line faint (e.g., 0, 2, 4...)
                                         return context.index % 2 === 0 ? '#e2e8f0' : 'rgba(0,0,0,0.05)'; 
                                     }
                                 },
@@ -552,9 +552,9 @@
                                     color: (context) => {
                                         // context.tick.value is the score on the radial scale (e.g., 0, 25, 50, 75, 100, 125, 150)
                                         // Make lines at multiples of 50 stronger, others very faint.
-                                        if (context.tick.value % 50 === 0) { // e.g., 0, 50, 100, 150
+                                        if (context.tick.value % 50 === 0) { // Stronger for multiples of 50 (0, 50, 100, 150)
                                             return '#cbd5e0';
-                                        } else if (context.tick.value % 25 === 0) { // e.g., 25, 75, 125
+                                        } else if (context.tick.value % 25 === 0) { // Faint for multiples of 25 (e.g. 25, 75, 125)
                                             return 'rgba(0,0,0,0.05)'; 
                                         }
                                         return 'rgba(0,0,0,0)'; // Transparent for other lines
