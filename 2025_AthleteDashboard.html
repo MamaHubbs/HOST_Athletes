@@ -311,6 +311,7 @@
 
             const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
             allAthleteData = allWeeksTransformedData.flat();
+            console.log("All athlete data loaded:", allAthleteData.length, "records."); // Added log
 
             // Populate uniqueSwimmersData for search functionality
             const swimmerMap = new Map();
@@ -328,6 +329,7 @@
             uniqueSwimmersData = Array.from(swimmerMap.values()).sort((a, b) => 
                 a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
             );
+            console.log("Unique swimmers prepared:", uniqueSwimmersData.length); // Added log
 
             // Initialize empty charts on load
             updateSpecialtyChart(null); 
@@ -335,6 +337,7 @@
         }
 
         function populateEventSelectForProgression(swimmerId) {
+            console.log("populateEventSelectForProgression called for swimmerId:", swimmerId);
             selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
             selectEventForProgression.disabled = true;
 
@@ -345,6 +348,8 @@
 
             const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
             
+            console.log("Swimmer events found for progression:", swimmerEvents); // Added log
+
             if (swimmerEvents.length > 0) {
                 swimmerEvents.sort().forEach(event => {
                     const option = document.createElement('option');
@@ -355,13 +360,16 @@
                 selectEventForProgression.disabled = false;
 
                 // Auto-select the first event if available and update chart
-                if (selectEventForProgression.options.length > 1) {
+                if (selectEventForProgression.options.length > 1) { // Check if there's more than just the default "-- Select an Event --" option
                     selectEventForProgression.value = selectEventForProgression.options[1].value;
+                    console.log("Auto-selecting first event for progression:", selectEventForProgression.value); // Added log
                     updateProgressionChart(swimmerId, selectEventForProgression.value);
                 } else {
-                    updateProgressionChart(null, null); // No events for this swimmer
+                    console.warn("Only one event or no events after filter for progression for selected swimmer. Clearing chart."); // Modified log message
+                    updateProgressionChart(null, null); // No valid events for this swimmer to show progression
                 }
             } else {
+                console.warn("No events found for selected swimmer. Clearing chart.");
                 updateProgressionChart(null, null); // No events for this swimmer
             }
         }
@@ -383,7 +391,20 @@
             }
 
             const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-            if (swimmerData.length === 0) return null; // Should not happen if swimmerId is valid
+            if (swimmerData.length === 0) {
+                console.error("No data found for specialty chart for swimmerId:", swimmerId); // Added log
+                return { // Fallback for no data
+                    labels: ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'],
+                    datasets: [{
+                        label: 'No Data for Swimmer',
+                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
+                        borderColor: 'rgba(150, 150, 150, 1)',
+                        data: [0, 0, 0, 0, 0],
+                        borderWidth: 1,
+                        pointBackgroundColor: 'rgba(150, 150, 150, 1)'
+                    }]
+                };
+            }
 
             const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
             const specialtyScores = {};
@@ -419,6 +440,8 @@
         }
 
         function getProgressionChartData(swimmerId, eventSwum) {
+            console.log("getProgressionChartData called with swimmerId:", swimmerId, "eventSwum:", eventSwum);
+
             if (!swimmerId || !eventSwum) {
                 return {
                     labels: [],
@@ -436,6 +459,8 @@
             const swimmerEventData = allAthleteData
                 .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
                 .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
+
+            console.log("Filtered swimmerEventData for progression:", swimmerEventData); // Crucial log
 
             if (swimmerEventData.length === 0) {
                  return {
@@ -519,11 +544,19 @@
         }
 
         function updateProgressionChart(swimmerId, selectedEvent) {
+            console.log("updateProgressionChart called with swimmerId:", swimmerId, "selectedEvent:", selectedEvent); // Crucial log
             const chartData = getProgressionChartData(swimmerId, selectedEvent);
             const ctx = document.getElementById('progressionChart').getContext('2d');
 
+            // If context is not available, cannot draw. (Should not happen with current HTML)
+            if (!ctx) {
+                console.error("Canvas context for progressionChart not found.");
+                return;
+            }
+
             let yAxisMin = 0;
-            let yAxisMax = 1; // Default small range for empty chart
+            let yAxisMax = 60; // Increased default range for empty chart
+            let tickStepSize = 10; // Default for empty chart
             const buffer = 0.5; // Small buffer in seconds for Y-axis range
 
             if (chartData.datasets[0].data.length > 0) {
@@ -539,7 +572,6 @@
                 if (yAxisMin < 0) yAxisMin = 0;
 
                 // Adjust ticks step size for finer detail
-                let tickStepSize = 0.5; // Default for larger ranges (e.g., 30s-60s)
                 const range = yAxisMax - yAxisMin;
 
                 if (range <= 0.5) { // Very small range, e.g., <0.5s difference
@@ -553,6 +585,13 @@
                 } else { // Very large ranges
                     tickStepSize = 1.0; // 1 second increments
                 }
+                 console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
+            } else {
+                 console.log("No data for progression chart. Using default Y-axis range (0-60s).");
+                 // If no data, ensure a reasonable default range
+                 yAxisMin = 0; 
+                 yAxisMax = 60; 
+                 tickStepSize = 10;
             }
 
 
@@ -602,10 +641,12 @@
             };
 
             if (progressionChartInstance) {
+                console.log("Updating existing progressionChartInstance.");
                 progressionChartInstance.data = chartData;
                 progressionChartInstance.options = newOptions; // Update options completely
                 progressionChartInstance.update();
             } else {
+                console.log("Creating new progressionChartInstance.");
                 progressionChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: chartData,
