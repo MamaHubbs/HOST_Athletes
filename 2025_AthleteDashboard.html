@@ -17,7 +17,7 @@
 
         /* Centering and max-width for the entire dashboard */
         .container {
-            max-width: 900px; /* Max width of the entire dashboard */
+            max-width: 875px; /* Adjusted max width */
             margin: 20px auto; /* Center the container horizontally */
             background-color: #ffffff; /* Explicitly set background for the container */
             padding: 20px; /* Add some padding inside the container */
@@ -68,7 +68,7 @@
         select, input[type="text"] {
             padding: 3px 6px;
             font-size: 0.8em; /* Adjusted font size for inputs */
-            border-radius: 4px;
+            border-radius: 44px;
             border: 1px solid #ccc;
             min-width: 150px; /* Ensure inputs have a decent size */
         }
@@ -549,8 +549,7 @@
         });
 
         filterSwimmerNameInput.addEventListener('keydown', function(e) {
-            let x = document.getElementById(this.id + "Results");
-            if (x) x = x.getElementsByTagName("div");
+            let x = swimmerSearchResultsDiv.getElementsByTagName("div");
             if (e.keyCode == 40) { // Arrow Down
                 currentFocus++;
                 addActive(x);
@@ -560,7 +559,7 @@
             } else if (e.keyCode == 13) { // Enter
                 e.preventDefault();
                 if (currentFocus > -1) {
-                    if (x) x[currentFocus].click();
+                    if (x && x[currentFocus]) x[currentFocus].click();
                 } else if (swimmerSearchResultsDiv.children.length > 0) {
                     // If no explicit selection but results exist, auto-select the first
                     swimmerSearchResultsDiv.children[0].click();
@@ -569,7 +568,7 @@
         });
 
         function addActive(x) {
-            if (!x) return false;
+            if (!x || x.length === 0) return false;
             removeActive(x);
             if (currentFocus >= x.length) currentFocus = 0;
             if (currentFocus < 0) currentFocus = (x.length - 1);
@@ -577,6 +576,7 @@
         }
 
         function removeActive(x) {
+            if (!x) return;
             for (let i = 0; i < x.length; i++) {
                 x[i].classList.remove("autocomplete-active");
             }
