@@ -136,16 +136,18 @@
             flex-direction: column;
             align-items: center;
             /* No fixed height here, individual heights will be set or default to content */
+            width: 500px; /* Set fixed width for all chart containers */
+            margin: 0 auto; /* Center individual chart containers */
         }
 
         /* Specific height for Specialty Chart container */
         .specialty-chart-container {
-            height: 432px; /* 384px + 48px (0.5 inch) */
+            height: 500px; /* Increased for more pronounced effect */
         }
 
         /* Specific height for Progression Chart container */
         .progression-chart-container {
-            height: 480px; /* 384px + 96px (1 inch) */
+            height: 600px; /* Increased for more pronounced effect */
         }
 
         /* Ensure canvases maintain their size regardless of container padding */
@@ -364,7 +366,7 @@
             }
         }
 
-        // --- Chart Data & Update Functions (modified to update existing charts) ---
+        // --- Chart Data & Update Functions ---
         function getSpecialtyChartData(swimmerId) {
             if (!swimmerId) {
                 return {
@@ -530,8 +532,8 @@
                 const maxData = Math.max(...dataValues);
 
                 // Calculate a dynamic range
-                yAxisMin = Math.floor((minData - buffer) * 10) / 10; // Round down to nearest 0.1
-                yAxisMax = Math.ceil((maxData + buffer) * 10) / 10; // Round up to nearest 0.1
+                yAxisMin = Math.floor((minData - buffer) * 100) / 100; // Round down to nearest 0.01
+                yAxisMax = Math.ceil((maxData + buffer) * 100) / 100; // Round up to nearest 0.01
 
                 // Ensure min is not negative if all times are positive
                 if (yAxisMin < 0) yAxisMin = 0;
@@ -540,14 +542,16 @@
                 let tickStepSize = 0.5; // Default for larger ranges (e.g., 30s-60s)
                 const range = yAxisMax - yAxisMin;
 
-                if (range < 5) { // If range is small (e.g., 20-25 seconds)
-                    tickStepSize = 0.1; // Show tenths of a second
-                } else if (range < 10) { // Medium range
-                    tickStepSize = 0.25; // Show quarter seconds
-                } else if (range < 20) { // Slightly larger
-                    tickStepSize = 0.5;
-                } else { // Even larger ranges
-                    tickStepSize = 1.0;
+                if (range <= 0.5) { // Very small range, e.g., <0.5s difference
+                    tickStepSize = 0.05; // 50ms increments
+                } else if (range <= 1.5) { // Small range, e.g., <1.5s difference
+                    tickStepSize = 0.1; // 100ms increments
+                } else if (range <= 5) { // Medium range
+                    tickStepSize = 0.25; // 250ms increments
+                } else if (range <= 10) { // Larger range
+                    tickStepSize = 0.5; // 500ms increments
+                } else { // Very large ranges
+                    tickStepSize = 1.0; // 1 second increments
                 }
             }
 
@@ -610,7 +614,7 @@
             }
         }
 
-        // --- Autocomplete/Search Logic (remains the same) ---
+        // --- Autocomplete/Search Logic ---
         filterSwimmerNameInput.addEventListener('input', function() {
             const inputVal = this.value.toLowerCase();
             closeAllLists();
