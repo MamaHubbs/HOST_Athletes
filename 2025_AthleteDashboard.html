@@ -242,6 +242,9 @@
         let allAthleteData = [];
         let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
         let currentSelectedSwimmerId = null;
+        let allUniqueMeets = []; 
+        let maxObservedTimesPerStroke = {}; // NEW: Store max observed time for each stroke
+
 
         const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
         const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
@@ -353,6 +356,32 @@
             console.log("All unique meets prepared:", allUniqueMeets.length);
             // --- END NEW ---
 
+            // --- NEW: Calculate max observed times per stroke for Specialty Chart dynamic scaling ---
+            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+            const allStrokeTimes = {
+                'Freestyle': [], 'Backstroke': [], 'Breaststroke': [], 'Butterfly': [], 'IM': []
+            };
+
+            allAthleteData.forEach(data => {
+                strokes.forEach(stroke => {
+                    if (data.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && data.resultTime !== 'NT' && data.resultTime !== 'NS' && data.resultTime !== 'DQ') {
+                        allStrokeTimes[stroke].push(timeToSeconds(data.resultTime));
+                    }
+                });
+            });
+
+            strokes.forEach(stroke => {
+                if (allStrokeTimes[stroke].length > 0) {
+                    // Use the slowest observed time for that stroke as the max_expected_avg_time
+                    // Add a small buffer to ensure max score isn't always 100 for fastest swimmer
+                    maxObservedTimesPerStroke[stroke] = Math.max(...allStrokeTimes[stroke]) * 1.1; // 10% buffer
+                } else {
+                    maxObservedTimesPerStroke[stroke] = 120; // Fallback default if no data for stroke
+                }
+                console.log(`Max observed time for ${stroke}: ${maxObservedTimesPerStroke[stroke].toFixed(2)}s`);
+            });
+            // --- END NEW ---
+
             // Initialize empty charts on load
             updateSpecialtyChart(null); 
             updateProgressionChart(null, null); 
@@ -431,8 +460,9 @@
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    const max_expected_avg_time = 120; 
-                    let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
+                    // Use dynamically determined max_expected_avg_time for this stroke
+                    const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; // Fallback
+                    let score = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time * 100;
                     score = Math.max(0, Math.min(100, score));
                     specialtyScores[stroke] = score;
                 } else {
@@ -535,7 +565,9 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
+                                        // This label is for the radar chart tooltip.
+                                        // context.raw is the score (0-100).
+                                        return `${context.label}: ${context.raw.toFixed(1)}%`;
                                     }
                                 },
                                 bodyFont: { size: 10 }
@@ -769,33 +801,4 @@
         }
 
         function closeAllLists(elmnt) {
-            const items = document.getElementsByClassName("autocomplete-items");
-            for (let i = 0; i < items.length; i++) {
-                if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
-                    items[i].innerHTML = ''; 
-                }
-            }
-        }
-
-        document.addEventListener("click", function (e) {
-            closeAllLists(e.target);
-        });
-
-        // Function to update charts and event dropdown after swimmer selection
-        function updateChartsAndEventsForSwimmer(swimmerId) {
-            currentSelectedSwimmerId = swimmerId; 
-            updateSpecialtyChart(swimmerId);
-            populateEventSelectForProgression(swimmerId);
-        }
-
-        // Event Listeners
-        selectEventForProgression.addEventListener('change', (event) => {
-            const selectedEvent = event.target.value;
-            updateProgressionChart(currentSelectedSwimmerId, selectedEvent);
-        });
-
-        // Initial load for dashboard
-        document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
-    </script>
-</body>
-</html>
+            const items = document.getElementsBy
