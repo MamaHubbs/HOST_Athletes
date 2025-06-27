@@ -447,17 +447,29 @@
 
             const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
             const specialtyScores = {};
+            // Define a 'pronunciationFactor'. A value greater than 1 will make differences more pronounced.
+            // 2.0 means squaring the normalized score.
+            // Adjust this value to control how aggressive the "stretch" is.
+            const pronunciationFactor = 2.0; 
+
             strokes.forEach(stroke => {
                 const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
                 if (relevantEvents.length > 0) {
                     const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
                     const avgTime = sumTimes / relevantEvents.length;
 
-                    // Use dynamically determined max_expected_avg_time for this stroke
                     const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; // Fallback
-                    let score = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time * 100;
-                    score = Math.max(0, Math.min(100, score));
-                    specialtyScores[stroke] = score;
+                    
+                    // Calculate normalized score (0 to 1), where 1 is best performance
+                    let normalizedScore = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time;
+                    normalizedScore = Math.max(0, Math.min(1, normalizedScore)); // Clamp between 0 and 1
+
+                    // Apply pronunciation factor
+                    let finalScore = Math.pow(normalizedScore, 1 / pronunciationFactor) * 100; // Using 1/pronunciationFactor for better amplification
+
+                    // Ensure score is between 0 and 100
+                    finalScore = Math.max(0, Math.min(100, finalScore));
+                    specialtyScores[stroke] = finalScore;
                 } else {
                     specialtyScores[stroke] = 0;
                 }
@@ -696,7 +708,6 @@
                     tickStepSize = 1.0; 
                 }
 
-                // Calculate yAxisMin: one tick below the minimum data point, aligned to tickStepSize
                 yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
                 if (yAxisMin === minData && minData > 0) { 
                     yAxisMin = Math.max(0, yAxisMin - tickStepSize);
@@ -706,7 +717,6 @@
                     yAxisMin = 0;
                 }
 
-                // Calculate yAxisMax: at least five ticks above the maximum data point, aligned to tickStepSize
                 const minTicksAboveMax = 5;
                 let targetMax = maxData + (minTicksAboveMax * tickStepSize);
                 yAxisMax = Math.ceil(targetMax / tickStepSize) * tickStepSize;
@@ -767,7 +777,7 @@
                         position: 'top',
                         labels: { color: '#4a5568', font: { size: 10 } }
                     },
-                    title: { display: false }, // Disable native Chart.js title
+                    title: { display: false },
                     tooltip: {
                         enabled: false, // Disable native Chart.js tooltip
                         external: customProgressionTooltip, // Use our custom tooltip function
