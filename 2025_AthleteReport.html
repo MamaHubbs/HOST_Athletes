@@ -228,6 +228,12 @@
             <h2 style="color: #0156B3;">Athlete Meet Summary Report Filters</h2>
             <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
                 <div class="dropdown-box">
+                    <label for="filterSeason">Filter by Season:</label>
+                    <select id="filterSeason">
+                        <option value="">All Seasons</option>
+                    </select>
+                </div>
+                <div class="dropdown-box">
                     <label for="jsonFileSelector">Select Meet:</label>
                     <select id="jsonFileSelector">
                     </select>
@@ -245,12 +251,6 @@
                         <option value="Butterfly">Butterfly</option>
                         <option value="Breaststroke">Breaststroke</option>
                         <option value="IM">IM</option>
-                    </select>
-                </div>
-                <div class="dropdown-box">
-                    <label for="filterSeason">Filter by Season:</label>
-                    <select id="filterSeason">
-                        <option value="">All Seasons</option>
                     </select>
                 </div>
                 <div class="dropdown-box">
