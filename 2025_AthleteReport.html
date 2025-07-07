@@ -230,7 +230,7 @@
                 <div class="dropdown-box">
                     <label for="jsonFileSelector">Load Results File:</label>
                     <select id="jsonFileSelector">
-                        </select>
+                    </select>
                 </div>
                 <div class="dropdown-box">
                     <label for="filterName">Filter by Athlete Name:</label>
@@ -245,6 +245,12 @@
                         <option value="Butterfly">Butterfly</option>
                         <option value="Breaststroke">Breaststroke</option>
                         <option value="IM">IM</option>
+                    </select>
+                </div>
+                <div class="dropdown-box">
+                    <label for="filterSeason">Filter by Season:</label>
+                    <select id="filterSeason">
+                        <option value="">All Seasons</option>
                     </select>
                 </div>
                 <div class="dropdown-box">
@@ -266,7 +272,7 @@
                 <span>Print Report</span>
             </button>
             <div id="reportHeaderInfo">
-                </div>
+            </div>
         </div>
 
         <div class="table-container">
@@ -297,6 +303,7 @@
         const reportTableBody = document.getElementById('reportTableBody');
         const filterNameInput = document.getElementById('filterName');
         const filterStrokeInput = document.getElementById('filterStroke');
+        const filterSeasonInput = document.getElementById('filterSeason'); // New season filter element
         const applyFiltersButton = document.getElementById('applyFilters');
         const resetFiltersButton = document.getElementById('resetFilters');
         const printReportButton = document.getElementById('printReport');
@@ -417,6 +424,25 @@
             reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
         }
 
+        // New function to populate the season filter dropdown
+        function populateSeasonFilter(data) {
+            const seasons = new Set();
+            data.forEach(item => {
+                const year = new Date(item.meetDate).getFullYear();
+                if (!isNaN(year)) {
+                    seasons.add(year.toString());
+                }
+            });
+
+            filterSeasonInput.innerHTML = '<option value="">All Seasons</option>';
+            Array.from(seasons).sort().forEach(season => {
+                const option = document.createElement('option');
+                option.value = season;
+                option.textContent = season;
+                filterSeasonInput.appendChild(option);
+            });
+        }
+
         async function fetchAndRenderData(fileName) {
             let rawFileData = null;
             let currentMeetTitleForHeader = '';
@@ -489,6 +515,9 @@
                     currentMeetDateForHeader = "";
                 }
             }
+
+            // Populate the season filter after all data is loaded
+            populateSeasonFilter(allAthleteData);
 
             if (allAthleteData && allAthleteData.length > 0) {
                 applyFilters(); // Apply filters on newly loaded data
@@ -606,13 +635,18 @@
         function applyFilters() {
             const nameFilter = filterNameInput.value.toLowerCase();
             const strokeFilter = filterStrokeInput.value.toLowerCase();
-            
+            const seasonFilter = filterSeasonInput.value; // Get the selected season
+
             filteredAthleteData = allAthleteData.filter(athlete => {
                 const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
                 const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
                 const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter);
                 
-                return matchesName && matchesStroke;
+                // Add season filter logic
+                const meetYear = new Date(athlete.meetDate).getFullYear().toString();
+                const matchesSeason = seasonFilter === '' || meetYear === seasonFilter;
+
+                return matchesName && matchesStroke && matchesSeason;
             });
 
             renderTable(filteredAthleteData);
@@ -621,6 +655,7 @@
         function resetFilters() {
             filterNameInput.value = '';
             filterStrokeInput.value = '';
+            filterSeasonInput.value = ''; // Reset season filter
             filteredAthleteData = [...allAthleteData];
             renderTable(filteredAthleteData);
         }
@@ -635,8 +670,11 @@
         jsonFileSelector.addEventListener('change', (event) => {
             filterNameInput.value = '';
             filterStrokeInput.value = '';
+            filterSeasonInput.value = ''; // Reset season filter when file changes
             fetchAndRenderData(event.target.value);
         });
+
+        filterSeasonInput.addEventListener('change', applyFilters); // Listen for changes on the new season filter
 
         // Initial render on page load: populate selector, then load default data
         document.addEventListener('DOMContentLoaded', () => {
