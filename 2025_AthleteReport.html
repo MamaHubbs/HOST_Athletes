@@ -363,15 +363,16 @@
         // Global variable to store metadata about each JSON file for dropdowns
         let allFileMetadata = []; 
 
-        // New function to fetch and store metadata for all files
+// New function to fetch and store metadata for all files
         // This runs ONCE at the beginning to build up the meet list efficiently.
         async function fetchAllFileMetadata() {
             if (allFileMetadata.length > 0) { // Already fetched, prevent re-fetching
                 return; 
             }
+            console.log("Fetching all file metadata...");
 
             const tempMetadata = [];
-            for (const fileName of weeklyFileNames) { // weeklyFileNames needs to be defined globally or passed in
+            for (const fileName of weeklyFileNames) { 
                 const filePath = new URL(fileName, window.location.href).toString();
                 try {
                     const response = await fetch(filePath);
@@ -381,50 +382,45 @@
                     }
                     const rawFileData = await response.json();
 
-                    let meetDate = 'Unknown Date';
-                    let meetName = 'Unknown Meet';
+                    let meetDateForDropdown = 'Unknown Date';
+                    let meetNameForDropdown = 'Unknown Meet';
 
-                    // Prefer meet_date and meet_name from the first data row if available
-                    if (rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
+                    // --- PRIORITIZE ROOT-LEVEL PROPERTIES FOR DROPDOWN METADATA ---
+                    if (rawFileData["meet date"]) {
+                        meetDateForDropdown = rawFileData["meet date"];
+                    }
+                    if (rawFileData["title"]) {
+                        meetNameForDropdown = String(rawFileData["title"]).replace('2025 ', ''); // Keep consistent cleaning
+                    } 
+                    // --- END PRIORITIZATION ---
+
+                    // Fallback: If root-level not found or empty, try from the first row of values (less ideal for dropdowns)
+                    if (meetDateForDropdown === 'Unknown Date' && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
                         const fields = rawFileData.fields;
                         const firstRow = rawFileData.values[0];
                         const meetDateIndex = fields.indexOf('meet_date');
                         const meetNameIndex = fields.indexOf('meet_name');
 
                         if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
-                            meetDate = firstRow[meetDateIndex];
+                            meetDateForDropdown = firstRow[meetDateIndex];
                         }
-                        if (meetNameIndex !== -1 && firstRow[meetNameIndex]) {
-                            meetName = String(firstRow[meetNameIndex]).replace('2025 ', '');
+                        // Only use meet_name from values if root title was truly generic or missing
+                        if (meetNameForDropdown === 'Unknown Meet' && meetNameIndex !== -1 && firstRow[meetNameIndex]) {
+                             meetNameForDropdown = String(firstRow[meetNameIndex]).replace('2025 ', '');
                         }
-                    } else if (rawFileData["meet date"]) { // Fallback to root level "meet date"
-                        meetDate = rawFileData["meet date"];
                     }
 
-                    // For the meet name displayed in the dropdown, prioritize a good general title.
-                    // Use the `title` property if it's descriptive of the meet, otherwise fall back.
-                    let displayMeetName = meetName;
-                    if (rawFileData.title && rawFileData.title.includes('Results by Athlete')) {
-                        // If the title is "Megan - HOST Results by Athlete [Final]", derive meet name from values[0].meet_name
-                        // or from filename if it's consistent.
-                        // For your example "2025 Hurricanes at CPST Seahawks", this comes from the values array.
-                        // So, we stick with 'meetName' derived from values array, which is usually the actual meet name.
-                    } else if (rawFileData.title) {
-                        // If it's a generic title like "Hampton Oaks at Curtis Park", use it.
-                        displayMeetName = String(rawFileData.title).replace('2025 ', '');
-                    }
-                    
                     // Final check to ensure we have a reasonable date for sorting
-                    const dateObject = new Date(meetDate);
+                    const dateObject = new Date(meetDateForDropdown);
                     if (isNaN(dateObject.getTime())) {
-                        console.warn(`Invalid date format for file ${fileName}: ${meetDate}. Skipping.`);
-                        continue;
+                        console.warn(`Invalid date format for file ${fileName} for dropdown: '${meetDateForDropdown}'. Skipping this file's metadata.`);
+                        continue; // Skip this file if date is invalid
                     }
 
                     tempMetadata.push({
                         fileName: fileName,
-                        meetDate: meetDate, // Store raw date string
-                        meetName: displayMeetName, // Store cleaned meet name
+                        meetDate: meetDateForDropdown, // Store raw date string for display
+                        meetName: meetNameForDropdown, // Store cleaned meet name for display
                         dateObject: dateObject // Store Date object for sorting
                     });
 
@@ -435,7 +431,7 @@
             // Sort all metadata once after fetching
             tempMetadata.sort((a, b) => a.dateObject - b.dateObject);
             allFileMetadata = tempMetadata;
-            console.log("All File Metadata Loaded:", allFileMetadata); // For debugging
+            console.log("All File Metadata Loaded:", allFileMetadata); // Inspect this in console
         }
 
         // Modified function to populate the season filter dropdown
