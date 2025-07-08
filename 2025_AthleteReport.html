@@ -629,7 +629,7 @@
             updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileName === "all-results"); 
         }
 
-        // Modified renderTable function to handle dynamic columns and SCM/Original display
+// Modified renderTable function to handle dynamic columns and SCM/Original display
         function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
             reportTableBody.innerHTML = '';
 
@@ -755,11 +755,11 @@
                     } else {
                         // Display SCM times, with asterisk if converted (for All/Season/SCM meets)
                         let displaySeedSCM = eventData.seedTimeSCM;
-                        if (eventData.seedConverted) { // Asterisk only for times converted from yards to SCM
+                        if (eventData.seedConverted) { // Apply asterisk to seed time if converted
                             displaySeedSCM += '*';
                         }
                         let displayFinalSCM = eventData.resultTimeSCM;
-                        if (eventData.finalConverted) { // Asterisk only for times converted from yards to SCM
+                        if (eventData.finalConverted) { // Apply asterisk to final time if converted
                             displayFinalSCM += '*';
                         }
                         cellsHtml += `
