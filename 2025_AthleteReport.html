@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Meet Summary Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="shared-utils.js"></script>
-    <style>
+    <script src="shared-utils.js"></script> <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
@@ -125,17 +124,8 @@
             margin-top: 20px;
         }
 
-        /* Specific column widths based on provided CSS (Adjusted for 9 columns) */
-        th:nth-child(1), td:nth-child(1) { max-width: 140px; } /* Athlete Details Placeholder */
-        th:nth-child(2), td:nth-child(2) { max-width: 90px; } /* Meet Date */
-        th:nth-child(3), td:nth-child(3) { max-width: 150px; } /* Meet Name */
-        th:nth-child(4), td:nth-child(4) { max-width: 130px; } /* Event */
-        th:nth-child(5), td:nth-child(5) { max-width: 70px; text-align: center; } /* Seed */
-        th:nth-child(6), td:nth-child(6) { max-width: 70px; text-align: center; } /* Final */
-        th:nth-child(7), td:nth-child(7) { max-width: 50px; text-align: center; } /* Place */
-        th:nth-child(8), td:nth-child(8) { max-width: 50px; text-align: center; } /* Points */
-        th:nth-child(9), td:nth-child(9) { max-width: 100px; text-align: center; } /* % Improvement */
-
+        /* Removed specific column widths using nth-child, as column count will be dynamic.
+           Browsers will try to auto-adjust. If needed, we can use classes for specific widths. */
 
         td {
             overflow: hidden;
@@ -305,7 +295,6 @@
         const filterNameInput = document.getElementById('filterName');
         const filterStrokeInput = document.getElementById('filterStroke');
         const filterSeasonInput = document.getElementById('filterSeason');
-        // const filterCourseInput = document.getElementById('filterCourse'); // Removed Course filter element
         const applyFiltersButton = document.getElementById('applyFilters');
         const resetFiltersButton = document.getElementById('resetFilters');
         const printReportButton = document.getElementById('printReport');
@@ -331,27 +320,24 @@
             const pointsIndex = fieldNames.indexOf('points');
 
             rawValues.forEach((row) => {
-                // Ensure row has enough elements for all indices, including new SCM times
                 if (row.length > Math.max(lastNameIndex, firstNameIndex, genderIndex, ageIndex, meetDateIndex, meetNameIndex, eventSwumIndex, seedTimeIndex, resultTimeIndex, seedTimeSCMIndex, resultTimeSCMIndex, placeIndex, pointsIndex)) {
                     const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`; 
                     
                     let originalCourse = 'N/A';
                     if (row[eventSwumIndex]) {
                         if (row[eventSwumIndex].includes('y ')) { 
-                            originalCourse = 'y';
+                            originalCourse = 'y'; // Yards event
                         } else if (row[eventSwumIndex].includes('m ')) { 
-                            originalCourse = 'm';
+                            originalCourse = 'm'; // Meters event
                         }
                     }
 
-                    // Determine the display times and if they were converted
-                    let displaySeedTime = String(row[seedTimeSCMIndex] || 'NT');
-                    let displayFinalTime = String(row[resultTimeSCMIndex] || 'NT');
+                    // Determine if times were converted (only applies if original was Yards and SCM time is different)
                     let seedConverted = false;
                     let finalConverted = false;
 
-                    // If the original course was Yards, the SCM times are converted
                     if (originalCourse === 'y') {
+                        // Check if original time is actually different from SCM time to flag as converted
                         if (String(row[seedTimeIndex]).toLowerCase() !== 'nt' && String(row[seedTimeSCMIndex]).toLowerCase() !== 'nt' && String(row[seedTimeIndex]) !== String(row[seedTimeSCMIndex])) {
                             seedConverted = true;
                         }
@@ -359,9 +345,7 @@
                             finalConverted = true;
                         }
                     }
-                    // If original course was Meters, display SCM is same as original final time, no asterisk needed
-                    // If original course was N/A or if SCM is the same as original for some reason, no asterisk
-
+                    // For meters original course, seedConverted/finalConverted remains false.
 
                     transformed.push({
                         id: athleteId, 
@@ -372,13 +356,13 @@
                         meetDate: row[meetDateIndex],
                         meetName: String(row[meetNameIndex] || '').replace('2025 ', ''), 
                         eventSwum: row[eventSwumIndex],
-                        originalCourse: originalCourse, // Store original course for potential future use if needed
-                        seedTimeOriginal: String(row[seedTimeIndex]), // Keep original for debugging/display if ever needed
-                        resultTimeOriginal: String(row[resultTimeIndex]), // Keep original for debugging/display if ever needed
-                        seedTimeSCM: displaySeedTime, // This is the SCM time to display
-                        resultTimeSCM: displayFinalTime, // This is the SCM time to display
-                        seedConverted: seedConverted, // Flag if seed time was converted
-                        finalConverted: finalConverted, // Flag if final time was converted
+                        originalCourse: originalCourse, 
+                        seedTimeOriginal: String(row[seedTimeIndex]), 
+                        resultTimeOriginal: String(row[resultTimeIndex]), 
+                        seedTimeSCM: String(row[seedTimeSCMIndex]), 
+                        resultTimeSCM: String(row[resultTimeSCMIndex]), 
+                        seedConverted: seedConverted, 
+                        finalConverted: finalConverted, 
                         place: row[placeIndex],
                         points: row[pointsIndex]
                     });
@@ -410,12 +394,19 @@
 
                     let meetDateForDropdown = 'Unknown Date';
                     let meetNameForDropdown = 'Unknown Meet';
+                    let meetCourse = 'N/A'; // New: store meet course here in metadata
 
                     if (rawFileData["meet date"]) {
                         meetDateForDropdown = rawFileData["meet date"];
                     }
                     if (rawFileData["title"]) {
                         meetNameForDropdown = String(rawFileData["title"]).replace('2025 ', ''); 
+                        // Attempt to infer meet course from title if possible (e.g., "Meet Name (SCY)")
+                        if (rawFileData["title"].includes('(SCY)') || rawFileData["title"].includes('(Yards)')) {
+                            meetCourse = 'y';
+                        } else if (rawFileData["title"].includes('(SCM)') || rawFileData["title"].includes('(Meters)')) {
+                            meetCourse = 'm';
+                        }
                     } 
                     
                     if (meetDateForDropdown === 'Unknown Date' && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
@@ -423,12 +414,21 @@
                         const firstRow = rawFileData.values[0];
                         const meetDateIndex = fields.indexOf('meet_date');
                         const meetNameIndex = fields.indexOf('meet_name');
+                        const eventSwumIndex = fields.indexOf('event_swum'); 
 
                         if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
                             meetDateForDropdown = firstRow[meetDateIndex];
                         }
                         if (meetNameForDropdown === 'Unknown Meet' && meetNameIndex !== -1 && firstRow[meetNameIndex]) {
                              meetNameForDropdown = String(firstRow[meetNameIndex]).replace('2025 ', '');
+                        }
+                        // Fallback to infer meet course from first event in values if not found in title
+                        if (meetCourse === 'N/A' && eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
+                             if (firstRow[eventSwumIndex].includes('y ')) {
+                                meetCourse = 'y';
+                            } else if (firstRow[eventSwumIndex].includes('m ')) {
+                                meetCourse = 'm';
+                            }
                         }
                     }
 
@@ -442,7 +442,8 @@
                         fileName: fileName,
                         meetDate: meetDateForDropdown, 
                         meetName: meetNameForDropdown, 
-                        dateObject: dateObject 
+                        dateObject: dateObject,
+                        meetCourse: meetCourse // Store the determined course for this meet
                     });
 
                 } catch (error) {
@@ -574,6 +575,7 @@
             let currentMeetTitleForHeader = "All Meets Combined";
             let currentMeetDateForHeader = ""; 
             let isSpecificMeetSelectedFlag = false;
+            let currentMeetCourse = 'mixed'; // Default to 'mixed' for combined views
 
             if (selectedMeetFileName && selectedMeetFileName !== "all-results") {
                 isSpecificMeetSelectedFlag = true;
@@ -581,10 +583,11 @@
                 if (selectedFileMeta) {
                     currentMeetTitleForHeader = selectedFileMeta.meetName;
                     currentMeetDateForHeader = selectedFileMeta.meetDate;
+                    currentMeetCourse = selectedFileMeta.meetCourse; // Get the course for the specific meet
                     dataToFilter = dataToFilter.filter(athlete => {
                         return athlete.meetName === selectedFileMeta.meetName && athlete.meetDate === selectedFileMeta.meetDate;
                     });
-                    console.log(`Data filtered for specific meet (${selectedMeetFileName}):`, dataToFilter.length, "records.");
+                    console.log(`Data filtered for specific meet (${selectedMeetFileName}), course: ${currentMeetCourse}:`, dataToFilter.length, "records.");
                 } else {
                     console.warn(`Metadata for selected meet file ${selectedMeetFileName} not found.`);
                     dataToFilter = []; 
@@ -605,11 +608,9 @@
                 currentMeetDateForHeader = "";
             }
 
-            // Apply remaining filters (Athlete Name, Stroke, Season) to the dataToFilter
             const nameFilter = filterNameInput.value.toLowerCase();
             const strokeFilter = filterStrokeInput.value.toLowerCase();
             const seasonFilter = filterSeasonInput.value; 
-            // const courseFilter = filterCourseInput.value; // Removed course filter input
 
             filteredAthleteData = dataToFilter.filter(athlete => {
                 const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
@@ -619,18 +620,17 @@
                 const meetYear = new Date(athlete.meetDate).getFullYear().toString();
                 const matchesSeason = seasonFilter === '' || meetYear === seasonFilter;
 
-                // const matchesCourse = courseFilter === '' || athlete.originalCourse === courseFilter; // Removed course filter logic
-
-                // return matchesName && matchesStroke && matchesSeason && matchesCourse; // Old return
-                return matchesName && matchesStroke && matchesSeason; // New return without course filter
+                return matchesName && matchesStroke && matchesSeason;
             });
 
             console.log("Final filtered data for rendering:", filteredAthleteData.length, "records");
-            renderTable(filteredAthleteData, isSpecificMeetSelectedFlag);
+            // Pass the isSpecificMeetSelectedFlag AND the currentMeetCourse to renderTable
+            renderTable(filteredAthleteData, isSpecificMeetSelectedFlag, currentMeetCourse);
             updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileName === "all-results"); 
         }
 
-        function renderTable(data, showAgeInHeader = false) { 
+        // Modified renderTable function to handle dynamic columns and SCM/Original display
+        function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
             reportTableBody.innerHTML = '';
 
             const athletesGrouped = data.reduce((acc, current) => {
@@ -658,10 +658,16 @@
                 return a.firstName.localeCompare(b.firstName);
             });
 
+            // Determine colspan based on view mode (9 columns by default, 10 for specific SCY meets)
+            let colspan = 9; 
+            if (isSpecificMeetSelected && meetCourse === 'y') {
+                colspan = 10; 
+            }
+
             if (athleteGroups.length === 0) {
                 const noResultsRow = document.createElement('tr');
                 noResultsRow.innerHTML = `
-                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    <td colspan="${colspan}" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         No results found matching your filters.
                     </td>
                 `;
@@ -671,7 +677,7 @@
 
             athleteGroups.forEach(athleteGroup => {
                 let athleteDisplayName = `${athleteGroup.lastName}, ${athleteGroup.firstName}`;
-                if (showAgeInHeader && athleteGroup.events.length > 0) {
+                if (isSpecificMeetSelected && athleteGroup.events.length > 0) {
                     athleteDisplayName += ` (${athleteGroup.events[0].age})`; 
                 }
                 athleteDisplayName += ` - ${athleteGroup.category}`;
@@ -680,22 +686,32 @@
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
                 athleteHeaderRow.innerHTML = `
-                    <td colspan="9" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athleteDisplayName}</td>
+                    <td colspan="${colspan}" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athleteDisplayName}</td>
                 `;
                 reportTableBody.appendChild(athleteHeaderRow);
 
                 const eventSubHeaderRow = document.createElement('tr');
                 eventSubHeaderRow.className = 'event-subheader-row';
-                eventSubHeaderRow.innerHTML = `
+
+                let headerHtml = `
                     <th style="width: 1%;"></th> <th>Meet Date</th>
                     <th>Meet Name</th>
                     <th>Event</th>
-                    <th>Seed</th>
-                    <th>Final</th>
+                `;
+
+                // Conditional Headers based on specific meet selected and its course
+                if (isSpecificMeetSelected && meetCourse === 'y') {
+                    headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; // Yards + SCM for SCY meets
+                } else {
+                    headerHtml += `<th>Seed</th><th>Final</th>`; // Standard SCM view for All/Season/SCM meets
+                }
+
+                headerHtml += `
                     <th>Place</th>
                     <th>Points</th>
                     <th>% Improvement</th>
                 `;
+                eventSubHeaderRow.innerHTML = headerHtml;
                 reportTableBody.appendChild(eventSubHeaderRow);
 
                 athleteGroup.events.sort((a, b) => {
@@ -708,8 +724,8 @@
                 });
 
                 athleteGroup.events.forEach(eventData => {
-                    const seedSeconds = timeToSeconds(eventData.seedTimeOriginal); // Use original for % improvement calc
-                    const resultSeconds = timeToSeconds(eventData.resultTimeOriginal); // Use original for % improvement calc
+                    const seedSeconds = timeToSeconds(eventData.seedTimeOriginal); 
+                    const resultSeconds = timeToSeconds(eventData.resultTimeOriginal); 
 
                     let improvement = 'N/A';
                     if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
@@ -721,28 +737,45 @@
                         }
                     }
 
-                    // Display logic for Seed and Final times with asterisk
-                    let displaySeed = eventData.seedTimeSCM;
-                    if (eventData.seedConverted) {
-                        displaySeed += '*';
-                    }
-
-                    let displayFinal = eventData.resultTimeSCM;
-                    if (eventData.finalConverted) {
-                        displayFinal += '*';
-                    }
-
-                    const eventRow = document.createElement('tr');
-                    eventRow.className = 'event-data-row hover:bg-gray-50';
-                    eventRow.innerHTML = `
+                    let cellsHtml = `
                         <td style="width: 1%;"></td> 
                         <td>${formatMMDDYYYY(eventData.meetDate)}</td>
                         <td>${eventData.meetName}</td>
                         <td>${eventData.eventSwum}</td>
-                        <td>${displaySeed}</td> <td>${displayFinal}</td> <td>${eventData.place}</td>
+                    `;
+
+                    // Conditional Data Cells based on specific meet selected and its course
+                    if (isSpecificMeetSelected && meetCourse === 'y') {
+                        // Display Original Yards and then SCM Converted
+                        cellsHtml += `
+                            <td>${eventData.seedTimeOriginal}</td> 
+                            <td>${eventData.resultTimeOriginal}</td> 
+                            <td>${eventData.resultTimeSCM}</td> 
+                        `;
+                    } else {
+                        // Display SCM times, with asterisk if converted (for All/Season/SCM meets)
+                        let displaySeedSCM = eventData.seedTimeSCM;
+                        if (eventData.seedConverted) { // Asterisk only for times converted from yards to SCM
+                            displaySeedSCM += '*';
+                        }
+                        let displayFinalSCM = eventData.resultTimeSCM;
+                        if (eventData.finalConverted) { // Asterisk only for times converted from yards to SCM
+                            displayFinalSCM += '*';
+                        }
+                        cellsHtml += `
+                            <td>${displaySeedSCM}</td> 
+                            <td>${displayFinalSCM}</td> 
+                        `;
+                    }
+
+                    cellsHtml += `
+                        <td>${eventData.place}</td>
                         <td>${eventData.points}</td>
                         <td>${improvement}</td>
                     `;
+                    const eventRow = document.createElement('tr');
+                    eventRow.className = 'event-data-row hover:bg-gray-50';
+                    eventRow.innerHTML = cellsHtml;
                     reportTableBody.appendChild(eventRow);
                 });
             });
@@ -757,7 +790,6 @@
             filterNameInput.value = '';
             filterStrokeInput.value = '';
             filterSeasonInput.value = ''; 
-            // filterCourseInput.value = ''; // Removed Course filter reset
             jsonFileSelector.value = "all-results"; 
             fetchAndRenderData("all-results");
         }
@@ -773,7 +805,6 @@
             const selectedSeason = event.target.value;
             filterNameInput.value = ''; 
             filterStrokeInput.value = ''; 
-            // filterCourseInput.value = ''; // Removed Course filter reset
             
             await populateJsonFileSelector(selectedSeason); 
             fetchAndRenderData(jsonFileSelector.value); 
@@ -783,13 +814,10 @@
             fetchAndRenderData(event.target.value);
         });
 
-        // filterCourseInput.addEventListener('change', applyFilters); // Removed Course filter event listener
-
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchAllFileMetadata(); 
             await populateSeasonFilter(); 
             
-            // Initial load of ALL athlete data (only once)
             if (allAthleteData.length === 0) {
                  const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
                     const filePath = new URL(name, window.location.href).toString();
