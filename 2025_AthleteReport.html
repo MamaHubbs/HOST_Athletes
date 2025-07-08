@@ -457,7 +457,7 @@
             Array.from(seasons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(season => { // Sort numerically
                 const option = document.createElement('option');
                 option.value = season;
-                option.textContent = `Season ${season}`;
+                option.textContent = season; // Changed from `Season ${season}` to just `season`
                 filterSeasonInput.appendChild(option);
             });
 
