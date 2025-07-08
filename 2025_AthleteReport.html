@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Meet Summary Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="shared-utils.js"></script> <style>
+    <script src="shared-utils.js"></script>
+    <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
@@ -170,6 +171,40 @@
             text-align: center;
         }
 
+        /* Styles for the new Individual Athlete Summary Chart */
+        #individualAthleteSummary {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e5f1ff; /* Light blue background */
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none; /* Hidden by default */
+        }
+        #individualAthleteSummary h3 {
+            color: #0156B3;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        #individualAthleteSummary table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75em;
+        }
+        #individualAthleteSummary th, #individualAthleteSummary td {
+            border: 1px solid #cce5ff; /* Lighter border for this table */
+            padding: 8px;
+            text-align: left;
+        }
+        #individualAthleteSummary th {
+            background-color: #cce5ff; /* Header background */
+            font-weight: bold;
+        }
+        #individualAthleteSummary tr:nth-child(even) {
+            background-color: #f0f8ff; /* Lighter stripe for rows */
+        }
+
         /* Print-specific styles from original, adjusted for new base styles */
         @media print {
             body {
@@ -201,7 +236,28 @@
                 font-size: 0.9em !important;
                 margin-bottom: 5px !important;
             }
-            /* The chart section won't exist here, so no need to hide it */
+            /* New: control visibility of individual athlete summary in print */
+            #individualAthleteSummary {
+                display: block !important; /* Ensure it prints if visible on screen */
+                margin-top: 15px !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                background-color: transparent !important;
+                border: none !important;
+            }
+            #individualAthleteSummary h3 {
+                font-size: 1.1em !important;
+                text-align: left !important;
+                margin-bottom: 5px !important;
+            }
+            #individualAthleteSummary table {
+                font-size: 0.75em !important;
+                border: 1px solid #ccc !important;
+            }
+            #individualAthleteSummary th, #individualAthleteSummary td {
+                border: 1px solid #ccc !important;
+                padding: 3px 5px !important;
+            }
             .print-header-container {
                 text-align: center !important;
                 margin-top: 0 !important;
@@ -284,6 +340,23 @@
                     </tbody>
             </table>
         </div>
+
+        <div id="individualAthleteSummary" class="no-print">
+            <h3 id="summaryChartTitle"></h3>
+            <table id="summaryChartTable">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>First Time</th>
+                        <th>Last Time</th>
+                        <th>Overall % Improvement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+
     </div>
 
     <script>
@@ -300,6 +373,9 @@
         const printReportButton = document.getElementById('printReport');
         const jsonFileSelector = document.getElementById('jsonFileSelector');
         const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
+        const individualAthleteSummary = document.getElementById('individualAthleteSummary'); // New element
+        const summaryChartTitle = document.getElementById('summaryChartTitle'); // New element
+        const summaryChartTableBody = individualAthleteSummary.querySelector('tbody'); // New element
 
         // weeklyFileNames is expected to be defined in shared-utils.js
 
@@ -619,6 +695,7 @@
             });
 
             console.log("Final filtered data for rendering:", filteredAthleteData.length, "records");
+            // Pass the isSpecificMeetSelectedFlag AND the currentMeetCourse to renderTable
             renderTable(filteredAthleteData, isSpecificMeetSelectedFlag, currentMeetCourse);
             updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileName === "all-results"); 
         }
@@ -626,6 +703,8 @@
         // Modified renderTable function for event summary and dynamic columns
         function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
             reportTableBody.innerHTML = '';
+            summaryChartTableBody.innerHTML = ''; // Clear summary table
+            individualAthleteSummary.style.display = 'none'; // Hide summary by default
 
             const athletesGrouped = data.reduce((acc, current) => {
                 const uniqueAthleteGroupId = `${current.lastName}-${current.firstName}-${current.category}`; 
@@ -668,6 +747,10 @@
                 return;
             }
 
+            // Check if only one unique athlete is displayed for the summary chart
+            const isSingleAthleteView = athleteGroups.length === 1 && filterNameInput.value.trim() !== '';
+            let singleAthleteDisplayName = '';
+
             athleteGroups.forEach(athleteGroup => {
                 let athleteDisplayName = `${athleteGroup.lastName}, ${athleteGroup.firstName}`;
                 if (isSpecificMeetSelected && athleteGroup.events.length > 0) {
@@ -675,6 +758,10 @@
                 }
                 athleteDisplayName += ` - ${athleteGroup.category}`;
 
+                // Capture display name for summary chart if single athlete
+                if (isSingleAthleteView) {
+                    singleAthleteDisplayName = athleteDisplayName;
+                }
 
                 const athleteHeaderRow = document.createElement('tr');
                 athleteHeaderRow.className = 'athlete-header-row';
@@ -694,9 +781,9 @@
 
                 // Conditional Headers
                 if (isSpecificMeetSelected && meetCourse === 'y') {
-                    headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; // Yards + SCM for SCY meets
+                    headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; 
                 } else {
-                    headerHtml += `<th>Seed</th><th>Final</th>`; // Standard SCM view for All/Season/SCM meets
+                    headerHtml += `<th>Seed</th><th>Final</th>`; 
                 }
 
                 headerHtml += `
@@ -707,7 +794,6 @@
                 eventSubHeaderRow.innerHTML = headerHtml;
                 reportTableBody.appendChild(eventSubHeaderRow);
 
-                // Group events by eventSwum to calculate overall improvement
                 const eventsByEventSwum = athleteGroup.events.reduce((acc, current) => {
                     if (!acc[current.eventSwum]) {
                         acc[current.eventSwum] = [];
@@ -771,16 +857,15 @@
                         `;
                         const eventRow = document.createElement('tr');
                         eventRow.className = 'event-data-row hover:bg-gray-50';
-                        eventRow.innerHTML = cellsHtml;
                         reportTableBody.appendChild(eventRow);
                     });
 
-                    // Add summary row if more than one performance for this event type
-                    if (eventPerformances.length > 1) {
+                    // Prepare data for the summary chart (if single athlete is selected)
+                    if (isSingleAthleteView && eventPerformances.length > 1) {
                         const firstPerformance = eventPerformances[0];
                         const lastPerformance = eventPerformances[eventPerformances.length - 1];
 
-                        const firstTime = timeToSeconds(firstPerformance.resultTimeOriginal); // Base improvement on original final times
+                        const firstTime = timeToSeconds(firstPerformance.resultTimeOriginal); 
                         const lastTime = timeToSeconds(lastPerformance.resultTimeOriginal);
 
                         let overallImprovement = 'N/A';
@@ -793,36 +878,33 @@
                             }
                         }
 
-                        // Determine display for First and Last Times in SCM with asterisk
-                        let displayFirstTimeSCM = firstPerformance.resultTimeSCM;
-                        if (firstPerformance.finalConverted && !isSpecificMeetSelected) { // Apply asterisk if converted AND not specific meet view
-                            displayFirstTimeSCM += '*';
-                        } else if (isSpecificMeetSelected && meetCourse === 'y') {
-                            // In specific Yards meet view, show original Yards time for First/Last
-                            displayFirstTimeSCM = firstPerformance.resultTimeOriginal;
+                        // For summary chart, always display SCM with asterisk if converted
+                        let displayFirstTimeSummary = firstPerformance.resultTimeSCM;
+                        if (firstPerformance.finalConverted) {
+                            displayFirstTimeSummary += '*';
                         }
-
-                        let displayLastTimeSCM = lastPerformance.resultTimeSCM;
-                        if (lastPerformance.finalConverted && !isSpecificMeetSelected) { // Apply asterisk if converted AND not specific meet view
-                            displayLastTimeSCM += '*';
-                        } else if (isSpecificMeetSelected && meetCourse === 'y') {
-                            // In specific Yards meet view, show original Yards time for First/Last
-                            displayLastTimeSCM = lastPerformance.resultTimeOriginal;
+                        let displayLastTimeSummary = lastPerformance.resultTimeSCM;
+                        if (lastPerformance.finalConverted) {
+                            displayLastTimeSummary += '*';
                         }
-
-
-                        const summaryRow = document.createElement('tr');
-                        summaryRow.className = 'overall-improvement-row';
-                        summaryRow.innerHTML = `
-                            <td colspan="4" style="text-align: right; font-weight: bold; padding-right: 10px;">Overall Improvement for ${eventSwumType}:</td>
-                            <td>First: ${displayFirstTimeSCM}</td>
-                            <td>Last: ${displayLastTimeSCM}</td>
-                            ${isSpecificMeetSelected && meetCourse === 'y' ? `<td></td>` : ''} <td colspan="${colspan - 6}">${overallImprovement}</td>
+                        
+                        const summaryChartRow = document.createElement('tr');
+                        summaryChartRow.innerHTML = `
+                            <td>${eventSwumType}</td>
+                            <td>${displayFirstTimeSummary}</td>
+                            <td>${displayLastTimeSummary}</td>
+                            <td>${overallImprovement}</td>
                         `;
-                        reportTableBody.appendChild(summaryRow);
+                        summaryChartTableBody.appendChild(summaryChartRow);
                     }
                 });
             });
+
+            // Show summary chart if conditions met
+            if (isSingleAthleteView && summaryChartTableBody.children.length > 0) {
+                summaryChartTitle.textContent = `Overall Improvement for ${singleAthleteDisplayName}`;
+                individualAthleteSummary.style.display = 'block';
+            }
         }
 
         function applyFilters() {
@@ -842,8 +924,19 @@
         applyFiltersButton.addEventListener('click', applyFilters);
         resetFiltersButton.addEventListener('click', resetFilters);
         printReportButton.addEventListener('click', () => {
+            // Hide filters and show chart for printing
+            const filtersContainer = document.querySelector('.dropdown-container');
+            if (filtersContainer) filtersContainer.style.display = 'none';
+            const printButton = document.getElementById('printReport');
+            if (printButton) printButton.style.display = 'none';
+
             window.print();
+            
+            // Restore filters and button after printing
+            if (filtersContainer) filtersContainer.style.display = ''; // Restore default display
+            if (printButton) printButton.style.display = ''; // Restore default display
         });
+
 
         filterSeasonInput.addEventListener('change', async (event) => {
             const selectedSeason = event.target.value;
@@ -857,6 +950,10 @@
         jsonFileSelector.addEventListener('change', (event) => {
             fetchAndRenderData(event.target.value);
         });
+        
+        // Add listener for athlete name filter to trigger applyFilters
+        filterNameInput.addEventListener('input', applyFilters); // Trigger filter on input change
+
 
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchAllFileMetadata(); 
