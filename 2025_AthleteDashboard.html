@@ -287,7 +287,7 @@
             const pointsIndex = fieldNames.indexOf('points');
 
             rawValues.forEach((row) => {
-                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`;
+                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}`.toLowerCase();
                 
                 transformed.push({
                     id: athleteId,
@@ -845,10 +845,10 @@
 
             matches.forEach((swimmer, i) => {
                 const itemDiv = document.createElement("div");
-                itemDiv.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName} (${swimmer.age})`;
+                itemDiv.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName}`;
                 itemDiv.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
                 itemDiv.addEventListener("click", function() {
-                    filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName} (${swimmer.age})`;
+                    filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName}`;
                     currentSelectedSwimmerId = swimmer.id;
                     updateChartsAndEventsForSwimmer(currentSelectedSwimmerId);
                     closeAllLists();
