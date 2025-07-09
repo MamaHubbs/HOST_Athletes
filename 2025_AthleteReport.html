@@ -385,7 +385,7 @@
             const genderIndex = fieldNames.indexOf('competition_category');
             const ageIndex = fieldNames.indexOf('age');
             const meetDateIndex = fieldNames.indexOf('meet_date');
-            const meetNameIndex = fieldNames.indexOf('meet_name');
+            const meetNameIndex = fieldNames.indexOf('meet_name'); // Use this for consistent meetName
             const eventSwumIndex = fieldNames.indexOf('event_swum');
             const seedTimeIndex = fieldNames.indexOf('seed_time');
             const resultTimeIndex = fieldNames.indexOf('result_time');
@@ -435,8 +435,8 @@
                         firstName: row[firstNameIndex],
                         category: row[genderIndex],
                         age: row[ageIndex],
-                        meetDate: row[meetDateIndex],
-                        meetName: String(row[meetNameIndex] || '').replace('2025 ', ''), 
+                        meetDate: row[meetDateIndex], // This is the 'meet_date' from values
+                        meetName: String(row[meetNameIndex] || ''), // This is the 'meet_name' from values, crucial for matching
                         eventSwum: row[eventSwumIndex],
                         originalCourse: originalCourse, 
                         seedTimeOriginal: String(row[seedTimeIndex]), 
@@ -475,47 +475,47 @@
                     const rawFileData = await response.json();
 
                     let meetDateForDropdown = 'Unknown Date';
-                    let meetNameForDropdown = 'Unknown Meet';
+                    let meetNameForDropdown = 'Unknown Meet'; // Default value for dropdown display
                     let meetCourse = 'N/A'; 
 
-                    // Prefer meet date from root level "meet date"
-                    if (rawFileData["meet date"]) {
-                        meetDateForDropdown = rawFileData["meet date"];
-                    }
-                    
-                    // Prioritize meet name and course detection from first data row if available,
-                    // as it's often more consistent with individual event data.
+                    // Prioritize getting meet_date and meet_name from the *first row of values* first,
+                    // as this is what's consistently stored in `allAthleteData`
                     if (rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
                         const fields = rawFileData.fields;
                         const firstRow = rawFileData.values[0];
+                        const meetDateIndex = fields.indexOf('meet_date');
                         const meetNameIndex = fields.indexOf('meet_name');
                         const eventSwumIndex = fields.indexOf('event_swum');
 
+                        if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
+                            meetDateForDropdown = firstRow[meetDateIndex];
+                        }
                         if (meetNameIndex !== -1 && firstRow[meetNameIndex]) {
-                            meetNameForDropdown = String(firstRow[meetNameIndex]); // Directly use meet_name from data row
+                            // This is the CRUCIAL change: use meet_name from values for consistency
+                            meetNameForDropdown = String(firstRow[meetNameIndex]); 
                         }
                         
-                        // If meetCourse not inferred from root title, try from first event swum
-                        if (meetCourse === 'N/A' && eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
+                        // Infer meet course from first event in values
+                        if (eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
                             if (String(firstRow[eventSwumIndex]).includes('y ')) {
                                 meetCourse = 'y';
                             } else if (String(firstRow[eventSwumIndex]).includes('m ')) {
                                 meetCourse = 'm';
                             }
                         }
-                        // Fallback for meetDateForDropdown if not found at root (less likely now, but safe)
-                        const meetDateIndex = fields.indexOf('meet_date');
-                        if (meetDateForDropdown === 'Unknown Date' && meetDateIndex !== -1 && firstRow[meetDateIndex]) {
-                            meetDateForDropdown = firstRow[meetDateIndex];
+                    } else if (rawFileData["meet date"] || rawFileData["title"]) {
+                        // Fallback to root level properties if no 'values' array exists
+                        if (rawFileData["meet date"]) {
+                            meetDateForDropdown = rawFileData["meet date"];
                         }
-
-                    } else if (rawFileData["title"]) { // Fallback for meetNameForDropdown if no values array
-                        meetNameForDropdown = String(rawFileData["title"]); 
-                        // Try to infer course from root title if no values or event_swum in first row
-                        if (rawFileData["title"].includes('(SCY)') || rawFileData["title"].includes('(Yards)')) {
-                            meetCourse = 'y';
-                        } else if (rawFileData["title"].includes('(SCM)') || rawFileData["title"].includes('(Meters)')) {
-                            meetCourse = 'm';
+                        if (rawFileData["title"]) {
+                            meetNameForDropdown = String(rawFileData["title"]); // Use root title as last resort for name
+                            // Try to infer course from root title if values array is missing
+                            if (rawFileData["title"].includes('(SCY)') || rawFileData["title"].includes('(Yards)')) {
+                                meetCourse = 'y';
+                            } else if (rawFileData["title"].includes('(SCM)') || rawFileData["title"].includes('(Meters)')) {
+                                meetCourse = 'm';
+                            }
                         }
                     }
 
@@ -995,11 +995,12 @@
             }
 
             if (weeklyFileNames.length > 0) {
-                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
+                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1]; // Set to last file in the list
+                fetchAndRenderData(jsonFileSelector.value); 
             } else {
                 jsonFileSelector.value = "all-results"; // Fallback if no files defined
+                fetchAndRenderData("all-results"); 
             }
-            fetchAndRenderData(jsonFileSelector.value); 
         });
     </script>
 </body>
