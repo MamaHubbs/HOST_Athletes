@@ -1202,5 +1202,18 @@
             fetchAndRenderData(defaultFile);
         });
     </script>
+    <script type="module">
+  import { timeToSeconds, secondsToTime, formatMMDDYYYY, weeklyFileNames } from './dashboard-utils.js';
+
+  // Use functions as usual inside here or expose them to window if needed
+  window.timeToSeconds = timeToSeconds;
+  window.secondsToTime = secondsToTime;
+  window.formatMMDDYYYY = formatMMDDYYYY;
+  window.weeklyFileNames = weeklyFileNames;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAllAthleteDataForDashboard(); // from your existing script
+  });
+</script>
 </body>
 </html>
