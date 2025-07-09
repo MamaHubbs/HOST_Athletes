@@ -994,8 +994,12 @@
                 console.log("Initial allAthleteData load on DOMContentLoaded:", allAthleteData.length, "records.");
             }
 
-            jsonFileSelector.value = "all-results";
-            fetchAndRenderData("all-results");
+            if (weeklyFileNames.length > 0) {
+                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
+            } else {
+                jsonFileSelector.value = "all-results"; // Fallback if no files defined
+            }
+            fetchAndRenderData(jsonFileSelector.value); 
         });
     </script>
 </body>
