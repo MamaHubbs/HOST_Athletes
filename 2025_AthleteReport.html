@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Meet Summary Report</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="shared-utils.js"></script>
-    <style>
+    <script src="shared-utils.js"></script> <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
@@ -373,9 +372,9 @@
         const printReportButton = document.getElementById('printReport');
         const jsonFileSelector = document.getElementById('jsonFileSelector');
         const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
-        const individualAthleteSummary = document.getElementById('individualAthleteSummary'); // New element
-        const summaryChartTitle = document.getElementById('summaryChartTitle'); // New element
-        const summaryChartTableBody = individualAthleteSummary.querySelector('tbody'); // New element
+        const individualAthleteSummary = document.getElementById('individualAthleteSummary'); 
+        const summaryChartTitle = document.getElementById('summaryChartTitle'); 
+        const summaryChartTableBody = individualAthleteSummary.querySelector('tbody'); 
 
         // weeklyFileNames is expected to be defined in shared-utils.js
 
@@ -396,14 +395,19 @@
             const pointsIndex = fieldNames.indexOf('points');
 
             rawValues.forEach((row) => {
-                if (row.length > Math.max(lastNameIndex, firstNameIndex, genderIndex, ageIndex, meetDateIndex, meetNameIndex, eventSwumIndex, seedTimeIndex, resultTimeIndex, seedTimeSCMIndex, resultTimeSCMIndex, placeIndex, pointsIndex)) {
+                // Ensure row has enough elements for all required indices
+                // Using Math.max to find the highest index we need to ensure the row covers.
+                const requiredIndices = [lastNameIndex, firstNameIndex, genderIndex, ageIndex, meetDateIndex, meetNameIndex, eventSwumIndex, seedTimeIndex, resultTimeIndex, seedTimeSCMIndex, resultTimeSCMIndex, placeIndex, pointsIndex];
+                const maxIndex = Math.max(...requiredIndices);
+
+                if (row.length > maxIndex && !requiredIndices.some(idx => idx === -1)) { // Also check if any required index was not found
                     const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`; 
                     
                     let originalCourse = 'N/A';
                     if (row[eventSwumIndex]) {
-                        if (row[eventSwumIndex].includes('y ')) { 
+                        if (String(row[eventSwumIndex]).includes('y ')) { // Ensure it's a string before calling includes
                             originalCourse = 'y'; 
-                        } else if (row[eventSwumIndex].includes('m ')) { 
+                        } else if (String(row[eventSwumIndex]).includes('m ')) { 
                             originalCourse = 'm'; 
                         }
                     }
@@ -411,11 +415,16 @@
                     let seedConverted = false;
                     let finalConverted = false;
 
+                    // Only set converted flag if original was Yards AND times are different (not NT/DQ)
                     if (originalCourse === 'y') {
-                        if (String(row[seedTimeIndex]).toLowerCase() !== 'nt' && String(row[seedTimeSCMIndex]).toLowerCase() !== 'nt' && String(row[seedTimeIndex]) !== String(row[seedTimeSCMIndex])) {
+                        const seedStr = String(row[seedTimeIndex]).toLowerCase();
+                        const seedScmStr = String(row[seedTimeSCMIndex]).toLowerCase();
+                        if (seedStr !== 'nt' && seedScmStr !== 'nt' && seedStr !== seedScmStr) {
                             seedConverted = true;
                         }
-                        if (String(row[resultTimeIndex]).toLowerCase() !== 'nt' && String(row[resultTimeSCMIndex]).toLowerCase() !== 'nt' && String(row[resultTimeIndex]) !== String(row[resultTimeSCMIndex])) {
+                        const finalStr = String(row[resultTimeIndex]).toLowerCase();
+                        const finalScmStr = String(row[resultTimeSCMIndex]).toLowerCase();
+                        if (finalStr !== 'nt' && finalScmStr !== 'nt' && finalStr !== finalScmStr) {
                             finalConverted = true;
                         }
                     }
@@ -440,7 +449,7 @@
                         points: row[pointsIndex]
                     });
                 } else {
-                    console.warn("Skipping a row due to missing data fields:", row);
+                    console.warn(`Skipping a row due to missing data fields or unfound indices:`, row, `Max index required: ${maxIndex}`, `Indices found: ${fieldNames.map((f,i) => `${f}:${i}`).join(', ')}`);
                 }
             });
             return transformed;
@@ -469,37 +478,44 @@
                     let meetNameForDropdown = 'Unknown Meet';
                     let meetCourse = 'N/A'; 
 
+                    // Prefer meet date from root level "meet date"
                     if (rawFileData["meet date"]) {
                         meetDateForDropdown = rawFileData["meet date"];
                     }
-                    if (rawFileData["title"]) {
-                        meetNameForDropdown = String(rawFileData["title"]).replace('2025 ', ''); 
+                    
+                    // Prioritize meet name and course detection from first data row if available,
+                    // as it's often more consistent with individual event data.
+                    if (rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
+                        const fields = rawFileData.fields;
+                        const firstRow = rawFileData.values[0];
+                        const meetNameIndex = fields.indexOf('meet_name');
+                        const eventSwumIndex = fields.indexOf('event_swum');
+
+                        if (meetNameIndex !== -1 && firstRow[meetNameIndex]) {
+                            meetNameForDropdown = String(firstRow[meetNameIndex]); // Directly use meet_name from data row
+                        }
+                        
+                        // If meetCourse not inferred from root title, try from first event swum
+                        if (meetCourse === 'N/A' && eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
+                            if (String(firstRow[eventSwumIndex]).includes('y ')) {
+                                meetCourse = 'y';
+                            } else if (String(firstRow[eventSwumIndex]).includes('m ')) {
+                                meetCourse = 'm';
+                            }
+                        }
+                        // Fallback for meetDateForDropdown if not found at root (less likely now, but safe)
+                        const meetDateIndex = fields.indexOf('meet_date');
+                        if (meetDateForDropdown === 'Unknown Date' && meetDateIndex !== -1 && firstRow[meetDateIndex]) {
+                            meetDateForDropdown = firstRow[meetDateIndex];
+                        }
+
+                    } else if (rawFileData["title"]) { // Fallback for meetNameForDropdown if no values array
+                        meetNameForDropdown = String(rawFileData["title"]); 
+                        // Try to infer course from root title if no values or event_swum in first row
                         if (rawFileData["title"].includes('(SCY)') || rawFileData["title"].includes('(Yards)')) {
                             meetCourse = 'y';
                         } else if (rawFileData["title"].includes('(SCM)') || rawFileData["title"].includes('(Meters)')) {
                             meetCourse = 'm';
-                        }
-                    } 
-                    
-                    if (meetDateForDropdown === 'Unknown Date' && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
-                        const fields = rawFileData.fields;
-                        const firstRow = rawFileData.values[0];
-                        const meetDateIndex = fields.indexOf('meet_date');
-                        const meetNameIndex = fields.indexOf('meet_name');
-                        const eventSwumIndex = fields.indexOf('event_swum'); 
-
-                        if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
-                            meetDateForDropdown = firstRow[meetDateIndex];
-                        }
-                        if (meetNameForDropdown === 'Unknown Meet' && meetNameIndex !== -1 && firstRow[meetNameIndex]) {
-                             meetNameForDropdown = String(firstRow[meetNameIndex]).replace('2025 ', '');
-                        }
-                        if (meetCourse === 'N/A' && eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
-                             if (firstRow[eventSwumIndex].includes('y ')) {
-                                meetCourse = 'y';
-                            } else if (firstRow[eventSwumIndex].includes('m ')) {
-                                meetCourse = 'm';
-                            }
                         }
                     }
 
@@ -512,7 +528,7 @@
                     tempMetadata.push({
                         fileName: fileName,
                         meetDate: meetDateForDropdown, 
-                        meetName: meetNameForDropdown, 
+                        meetName: meetNameForDropdown.replace('2025 ', ''), // Keep cleaning for display
                         dateObject: dateObject,
                         meetCourse: meetCourse 
                     });
@@ -618,6 +634,7 @@
         async function fetchAndRenderData(selectedMeetFileName) {
             console.log(`fetchAndRenderData called with selectedMeetFileName: '${selectedMeetFileName}'`);
             
+            // Ensure allAthleteData is loaded once (this block moved up in previous iterations)
             if (allAthleteData.length === 0) {
                 console.log("Loading ALL athlete data from all files for comprehensive filtering (first time).");
                 const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
@@ -642,19 +659,32 @@
                 console.log("All athlete data loaded:", allAthleteData.length, "records.");
             }
 
-            let dataToFilter = [...allAthleteData]; 
+            let dataToFilter = [...allAthleteData]; // Start with all loaded data
             let currentMeetTitleForHeader = "All Meets Combined";
             let currentMeetDateForHeader = ""; 
             let isSpecificMeetSelectedFlag = false;
             let currentMeetCourse = 'mixed'; 
 
-            if (selectedMeetFileName && selectedMeetFileName !== "all-results") {
+            // Logic to determine which subset of data to work with
+            if (selectedMeetFileName === "all-results") {
+                // `dataToFilter` already has allAthleteData
+                if (dataToFilter.length > 0) {
+                    const allDates = dataToFilter.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+                    const overallMinDate = allDates[0];
+                    const overallMaxDate = allDates[allDates.length - 1];
+                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
+                } else {
+                    currentMeetTitleForHeader = "No Data Loaded";
+                }
+            } else if (selectedMeetFileName) { // A specific file is selected (non-empty string)
                 isSpecificMeetSelectedFlag = true;
                 const selectedFileMeta = allFileMetadata.find(meta => meta.fileName === selectedMeetFileName);
                 if (selectedFileMeta) {
                     currentMeetTitleForHeader = selectedFileMeta.meetName;
                     currentMeetDateForHeader = selectedFileMeta.meetDate;
                     currentMeetCourse = selectedFileMeta.meetCourse; 
+
+                    // Filter dataToFilter (which is allAthleteData) down to records for this specific meet
                     dataToFilter = dataToFilter.filter(athlete => {
                         return athlete.meetName === selectedFileMeta.meetName && athlete.meetDate === selectedFileMeta.meetDate;
                     });
@@ -664,21 +694,13 @@
                     dataToFilter = []; 
                     currentMeetTitleForHeader = "Unknown Meet";
                 }
-            } else if (selectedMeetFileName === "all-results") {
-                 if (dataToFilter.length > 0) {
-                    const allDates = dataToFilter.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
-                    const overallMinDate = allDates[0];
-                    const overallMaxDate = allDates[allDates.length - 1];
-                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
-                } else {
-                    currentMeetTitleForHeader = "No Data Loaded";
-                }
-            } else { 
-                dataToFilter = []; 
+            } else { // No specific meet file selected (empty string, e.g., after season filter applied without selecting a meet)
+                dataToFilter = []; // Display nothing for the table
                 currentMeetTitleForHeader = "No Meet Selected";
                 currentMeetDateForHeader = "";
             }
 
+            // Apply global filters (Athlete Name, Stroke, Season) to the prepared dataToFilter
             const nameFilter = filterNameInput.value.toLowerCase();
             const strokeFilter = filterStrokeInput.value.toLowerCase();
             const seasonFilter = filterSeasonInput.value; 
@@ -695,7 +717,6 @@
             });
 
             console.log("Final filtered data for rendering:", filteredAthleteData.length, "records");
-            // Pass the isSpecificMeetSelectedFlag AND the currentMeetCourse to renderTable
             renderTable(filteredAthleteData, isSpecificMeetSelectedFlag, currentMeetCourse);
             updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileName === "all-results"); 
         }
@@ -703,8 +724,8 @@
         // Modified renderTable function for event summary and dynamic columns
         function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
             reportTableBody.innerHTML = '';
-            summaryChartTableBody.innerHTML = ''; // Clear summary table
-            individualAthleteSummary.style.display = 'none'; // Hide summary by default
+            summaryChartTableBody.innerHTML = ''; 
+            individualAthleteSummary.style.display = 'none'; 
 
             const athletesGrouped = data.reduce((acc, current) => {
                 const uniqueAthleteGroupId = `${current.lastName}-${current.firstName}-${current.category}`; 
@@ -730,7 +751,6 @@
                 return a.firstName.localeCompare(b.firstName);
             });
 
-            // Determine colspan based on view mode
             let colspan = 9; 
             if (isSpecificMeetSelected && meetCourse === 'y') {
                 colspan = 10; 
@@ -747,7 +767,6 @@
                 return;
             }
 
-            // Check if only one unique athlete is displayed for the summary chart
             const isSingleAthleteView = athleteGroups.length === 1 && filterNameInput.value.trim() !== '';
             let singleAthleteDisplayName = '';
 
@@ -758,7 +777,6 @@
                 }
                 athleteDisplayName += ` - ${athleteGroup.category}`;
 
-                // Capture display name for summary chart if single athlete
                 if (isSingleAthleteView) {
                     singleAthleteDisplayName = athleteDisplayName;
                 }
@@ -779,7 +797,6 @@
                     <th>Event</th>
                 `;
 
-                // Conditional Headers
                 if (isSpecificMeetSelected && meetCourse === 'y') {
                     headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; 
                 } else {
@@ -807,7 +824,6 @@
                 sortedEventTypes.forEach(eventSwumType => {
                     const eventPerformances = eventsByEventSwum[eventSwumType].sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
 
-                    // Display individual event rows
                     eventPerformances.forEach(eventData => {
                         const seedSeconds = timeToSeconds(eventData.seedTimeOriginal); 
                         const resultSeconds = timeToSeconds(eventData.resultTimeOriginal); 
@@ -857,6 +873,7 @@
                         `;
                         const eventRow = document.createElement('tr');
                         eventRow.className = 'event-data-row hover:bg-gray-50';
+                        eventRow.innerHTML = cellsHtml;
                         reportTableBody.appendChild(eventRow);
                     });
 
@@ -878,7 +895,6 @@
                             }
                         }
 
-                        // For summary chart, always display SCM with asterisk if converted
                         let displayFirstTimeSummary = firstPerformance.resultTimeSCM;
                         if (firstPerformance.finalConverted) {
                             displayFirstTimeSummary += '*';
@@ -900,7 +916,6 @@
                 });
             });
 
-            // Show summary chart if conditions met
             if (isSingleAthleteView && summaryChartTableBody.children.length > 0) {
                 summaryChartTitle.textContent = `Overall Improvement for ${singleAthleteDisplayName}`;
                 individualAthleteSummary.style.display = 'block';
@@ -924,7 +939,6 @@
         applyFiltersButton.addEventListener('click', applyFilters);
         resetFiltersButton.addEventListener('click', resetFilters);
         printReportButton.addEventListener('click', () => {
-            // Hide filters and show chart for printing
             const filtersContainer = document.querySelector('.dropdown-container');
             if (filtersContainer) filtersContainer.style.display = 'none';
             const printButton = document.getElementById('printReport');
@@ -932,11 +946,9 @@
 
             window.print();
             
-            // Restore filters and button after printing
-            if (filtersContainer) filtersContainer.style.display = ''; // Restore default display
-            if (printButton) printButton.style.display = ''; // Restore default display
+            if (filtersContainer) filtersContainer.style.display = ''; 
+            if (printButton) printButton.style.display = ''; 
         });
-
 
         filterSeasonInput.addEventListener('change', async (event) => {
             const selectedSeason = event.target.value;
@@ -951,14 +963,14 @@
             fetchAndRenderData(event.target.value);
         });
         
-        // Add listener for athlete name filter to trigger applyFilters
-        filterNameInput.addEventListener('input', applyFilters); // Trigger filter on input change
+        filterNameInput.addEventListener('input', applyFilters); 
 
 
         document.addEventListener('DOMContentLoaded', async () => {
             await fetchAllFileMetadata(); 
             await populateSeasonFilter(); 
             
+            // Initial load of ALL athlete data (only once)
             if (allAthleteData.length === 0) {
                  const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
                     const filePath = new URL(name, window.location.href).toString();
