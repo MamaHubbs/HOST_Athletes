@@ -6,7 +6,21 @@
     <title>Swimmer Performance Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="shared-utils.js"></script>
+    <script type="module">
+      import {
+        timeToSeconds,
+        secondsToTime,
+        formatDate,
+        formatMMDDYYYY,
+        weeklyFileNames
+      } from './dashboard-utils.js';
+
+      window.timeToSeconds = timeToSeconds;
+      window.secondsToTime = secondsToTime;
+      window.formatDate = formatDate;
+      window.formatMMDDYYYY = formatMMDDYYYY;
+      window.weeklyFileNames = weeklyFileNames;
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
