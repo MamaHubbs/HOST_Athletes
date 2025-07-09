@@ -1,1194 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Swimmer Performance Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swimmer Performance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
             background-color: #f8f8f8;
             color: #333;
         }
-
-        /* Centering and max-width for the entire dashboard */
         .container {
-            max-width: 900px; /* Max width of the entire dashboard */
-            margin: 20px auto; /* Center the container horizontally */
-            background-color: #ffffff; /* Explicitly set background for the container */
-            padding: 20px; /* Add some padding inside the container */
-            border-radius: 8px; /* Rounded corners for the main container */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Subtle shadow for the container */
-        }
-
-        /* Removed h1 styling as the h1 tag will be removed */
-
-        .dashboard-intro-text {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #555;
-            font-size: 0.9em;
-            line-height: 1.4;
-        }
-
-        .filter-section {
-            background-color: #f8f8f8;
-            padding: 10px;
-            text-align: center;
-            z-index: 10;
-            border-bottom: 1px solid #ccc;
-            font-size: 0.8em; /* Slightly larger for main filters */
-            border-radius: 8px;
-            margin-bottom: 15px; /* Space between filter section and charts */
-        }
-
-        .filter-box {
-            display: inline-block;
-            margin: 0 4px;
-            vertical-align: bottom; /* Align input with label */
-        }
-
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        select, input[type="text"] {
-            padding: 3px 6px;
-            font-size: 0.8em; /* Adjusted font size for inputs */
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            min-width: 150px; /* Ensure inputs have a decent size */
-        }
-
-        button {
-            padding: 4px 8px;
-            font-size: 0.7em;
-            border-radius: 4px;
-            background-color: #0156B3;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.68em;
-            margin-top: 10px;
-        }
-
-        th, td {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            text-align: left;
-            vertical-align: top;
-        }
-
-        th {
-            background-color: #e5f1ff;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            cursor: pointer;
-        }
-
-        th.sortable::after {
-            content: ' ⇅';
-            font-size: 0.68em;
-            color: #666;
-        }
-
-        th.sorted-asc::after {
-            content: ' ↑';
-            color: #333;
-        }
-
-        th.sorted-desc::after {
-            content: ' ↓';
-            color: #333;
-        }
-
-        .row-group-even {
+            max-width: 900px;
+            margin: 20px auto;
             background-color: #ffffff;
-        }
-
-        .row-group-odd {
-            background-color: #f4f4f4;
-        }
-
-        .error {
-            color: red;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        /* Specific column widths based on provided CSS */
-        th:nth-child(1), td:nth-child(1) { max-width: 140px; } /* Athlete Details Placeholder */
-        th:nth-child(2), td:nth-child(2) { max-width: 90px; } /* Meet Date */
-        th:nth-child(3), td:nth-child(3) { max-width: 150px; } /* Meet Name */
-        th:nth-child(4), td:nth-child(4) { max-width: 130px; } /* Event */
-        th:nth-child(5), td:nth-child(5) { max-width: 70px; text-align: center; } /* Seed */
-        th:nth-child(6), td:nth-child(6) { max-width: 70px; text-align: center; } /* Final */
-        th:nth-child(7), td:nth-child(7) { max-width: 50px; text-align: center; } /* Place */
-        th:nth-child(8), td:nth-child(8) { max-width: 50px; text-align: center; } /* Points */
-        th:nth-child(9), td:nth-child(9) { max-width: 100px; text-align: center; } /* % Improvement */
-
-        td {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Dashboard Specific Styles */
-        .chart-section {
-            background-color: #e5f1ff; /* Light blue background for the dashboard section */
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
-            margin-top: 20px;
-            border: 1px solid #0156B3; /* Border with theme blue */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .chart-section h2 {
-            color: #0156B3; /* Heading color for dashboard section */
+            color: #0156B3;
             text-align: center;
-            font-size: 1.5em; /* Adjust relative to body font size */
+            font-size: 1.5em;
             margin-bottom: 15px;
         }
         .chart-section h3 {
-            color: #333; /* Sub-heading color */
+            color: #333;
             font-size: 1.1em;
             margin-bottom: 10px;
-            text-align: center; /* Center chart titles */
+            text-align: center;
         }
-        .chart-controls-inner { /* New class for specific chart controls */
+        .chart-controls-inner {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
-            justify-content: center; /* Centered */
+            justify-content: center;
             margin-bottom: 20px;
-            text-align: center; /* Center labels within their box */
+            text-align: center;
         }
-        .chart-controls-inner .dropdown-box {
+        .dropdown-box {
             flex-grow: 0;
-            min-width: unset;
             width: auto;
         }
-
+        select {
+            padding: 3px 6px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            min-width: 150px;
+        }
         .chart-display {
             display: grid;
-            grid-template-columns: 1fr; /* Always stack for small width */
+            grid-template-columns: 1fr;
             gap: 20px;
         }
         @media (min-width: 768px) {
             .chart-display {
-                grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
+                grid-template-columns: 1fr 1fr;
             }
         }
-        
-        /* Ensure canvases maintain their size regardless of container padding */
         .chart-canvas-container {
             background-color: #ffffff;
-            padding: 25px 15px 30px 15px; /* Top, Right/Left, Bottom */
+            padding: 25px 15px 30px 15px;
             border-radius: 8px;
             border: 1px solid #b3d9ff;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 100%; /* Make them fill container width */
-            max-width: 500px; /* Limit max width for individual chart containers */
-            margin: 0 auto; /* Center individual chart containers */
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
             position: relative;
         }
-
-        /* Specific height for Specialty Chart container */
         .specialty-chart-container {
-            height: 500px; /* Increased for more pronounced effect */
+            height: 500px;
         }
-
-        /* Specific height for Progression Chart container */
         .progression-chart-container {
-            height: 600px; /* Increased for more pronounced effect */
+            height: 600px;
         }
-
-        /* Ensure canvases maintain their size regardless of container padding */
         .chart-canvas-container canvas {
             max-width: 100%;
-            max-height: 384px; /* Set a fixed max height for the canvas itself */
-            width: 100% !important; /* Ensure canvas fills width if smaller */
-            height: 384px !important; /* Force canvas to original intended height */
-        }
-
-        /* Print Button and Report Header Info Container */
-        .print-header-container {
-            text-align: center;
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-
-        .print-header-container #printReport {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 6px 15px; /* Reverted to more standard button padding */
-            font-size: 0.9em; /* Adjusted font size */
-            border-radius: 6px;
-            background-color: #4CAF50; /* Green color for print button */
-            color: white;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            width: auto; /* Reverted width */
-            max-width: none; /* Reverted max-width */
-            margin: 0 auto; /* Still centered if inline-flex */
-        }
-        .print-header-container #printReport:hover {
-            background-color: #45a049;
-            transform: translateY(-1px);
-        }
-
-        #reportHeaderInfo {
-            font-weight: bold;
-            margin-top: 10px;
-            color: #0156B3;
-            text-align: center;
-        }
-
-        /* Print-specific styles from original, adjusted for new base styles */
-        @media print {
-            body {
-                font-size: 0.75rem !important;
-                margin: 0.5cm !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            table {
-                font-size: 0.8em !important;
-            }
-            th, td {
-                padding: 3px 5px !important;
-            }
-            .athlete-header-row {
-                font-size: 0.9em !important;
-            }
-            .event-subheader-row th {
-                padding-left: 10px !important;
-                font-size: 0.75em !important;
-                background-color: transparent !important;
-            }
-            .event-data-row td {
-                padding-left: 15px !important;
-                font-size: 0.75em !important;
-            }
-            #reportHeaderInfo {
-                font-size: 0.9em !important;
-                margin-bottom: 5px !important;
-            }
-            .chart-section {
-                display: none !important;
-            }
-            .print-header-container {
-                text-align: center !important;
-                margin-top: 0 !important;
-                margin-bottom: 0 !important;
-            }
-            .print-header-container #printReport {
-                display: none !important;
-            }
+            max-height: 384px;
+            width: 100% !important;
+            height: 384px !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Dashboard Section (Moved to top) -->
         <div class="chart-section">
-            <h2 style="color: #0156B3;">Swimmer Performance Dashboard</h2>
-
-            <div class="chart-controls-inner"> <!-- Changed class to chart-controls-inner -->
+            <h2>Swimmer Performance Dashboard</h2>
+            <div class="chart-controls-inner">
                 <div class="dropdown-box">
                     <label for="selectSwimmer">Select Swimmer:</label>
                     <select id="selectSwimmer">
                         <option value="">-- Select an Athlete --</option>
-                        <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
                 <div class="dropdown-box">
                     <label for="selectEventForProgression">Select Event (Progression Chart):</label>
                     <select id="selectEventForProgression" disabled>
                         <option value="">-- Select an Event --</option>
-                        <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-                <!-- Specialty Chart -->
+            <div class="chart-display">
                 <div class="chart-canvas-container specialty-chart-container">
                     <h3>Swimmer Specialty (Radar Chart)</h3>
                     <canvas id="specialtyChart"></canvas>
                 </div>
-
-                <!-- Progression Chart -->
                 <div class="chart-canvas-container progression-chart-container">
                     <h3>Time Progression (Line Chart)</h3>
                     <canvas id="progressionChart"></canvas>
                 </div>
             </div>
         </div>
-
-        <!-- Filter Controls - No Print (Moved below Dashboard) -->
-        <div class="no-print filter-section"> <!-- Changed class to filter-section -->
-            <h2 style="color: #0156B3;">Athlete Meet Summary Report Filters</h2> <!-- Changed header text -->
-            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
-                <div class="filter-box">
-                    <label for="jsonFileSelector">Load Results File:</label>
-                    <select id="jsonFileSelector">
-                        <!-- Options populated by JavaScript with date ranges -->
-                    </select>
-                </div>
-                <div class="filter-box">
-                    <label for="filterName">Filter by Athlete Name:</label>
-                    <input type="text" id="filterName" placeholder="Enter full name or part">
-                </div>
-                <div class="filter-box">
-                    <label for="filterStroke">Filter by Stroke:</label>
-                    <select id="filterStroke">
-                        <option value="">All Strokes</option>
-                        <option value="Freestyle">Freestyle</option>
-                        <option value="Backstroke">Backstroke</option>
-                        <option value="Butterfly">Butterfly</option>
-                        <option value="Breaststroke">Breaststroke</option>
-                        <option value="IM">IM</option>
-                    </select>
-                </div>
-                <div class="filter-box">
-                    <button id="applyFilters">Apply Filters</button>
-                </div>
-                <div class="filter-box">
-                    <button id="resetFilters">Reset Filters</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Print Button and Report Header Info Container (Moved and Restyled) -->
-        <div class="print-header-container no-print">
-            <button id="printReport">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-printer">
-                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                    <rect x="6" y="14" width="12" height="8"></rect>
-                </svg>
-                <span>Print Report</span>
-            </button>
-            <div id="reportHeaderInfo">
-                <!-- Content will be dynamically updated by JavaScript -->
-            </div>
-        </div>
-
-
-        <!-- Report Table -->
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr class="sr-only"> <!-- Hidden for screen readers, visual headers added per athlete -->
-                        <th>Athlete Details</th>
-                        <th>Meet Date</th>
-                        <th>Meet Name</th>
-                        <th>Event</th>
-                        <th>Seed</th>
-                        <th>Final</th>
-                        <th>Place</th>
-                        <th>Points</th>
-                        <th>% Improvement</th>
-                    </tr>
-                </thead>
-                <tbody id="reportTableBody">
-                    <!-- Data will be populated here by JavaScript -->
-                </tbody>
-            </table>
-        </div>
     </div>
 
-    <script>
+    <script type="module">
+        import {
+            timeToSeconds,
+            secondsToTime,
+            formatDate,
+            formatMMDDYYYY,
+            weeklyFileNames
+        } from './dashboard-utils.js';
+
+        window.timeToSeconds = timeToSeconds;
+        window.secondsToTime = secondsToTime;
+        window.formatDate = formatDate;
+        window.formatMMDDYYYY = formatMMDDYYYY;
+        window.weeklyFileNames = weeklyFileNames;
 
-        // New helper to standardize event names (distance + stroke, no age group)
-        function standardizeEventName(fullEventName) {
-            // Regex to capture distance (e.g., "50m", "100m", "200m") and stroke (e.g., "Freestyle", "Butterfly", "IM")
-            const match = fullEventName.match(/(\d+m|\d+y)?\s*(Freestyle|Backstroke|Breaststroke|Butterfly|IM)/i);
-            if (match) {
-                // match[1] is distance (e.g., "50m"), match[2] is stroke (e.g., "Butterfly")
-                const distance = match[1] ? match[1].toLowerCase() : '';
-                const stroke = match[2] ? match[2] : '';
-                return `${distance} ${stroke}`.trim();
-            }
-            // Fallback if format is unexpected
-            return fullEventName.replace(/(\d+-\d+\s*(Boys|Girls)\s*)/i, '').trim();
-        }
-
-        let allAthleteData = [];
-        let filteredAthleteData = [];
-        let currentLoadedMeetInfo = { title: '', dateRange: '' };
-        // Store max observed times per stroke for dynamic scaling in Specialty Chart
-        let maxObservedTimesPerStroke = {}; 
-
-        const reportTableBody = document.getElementById('reportTableBody');
-        const filterNameInput = document.getElementById('filterName');
-        const filterStrokeInput = document.getElementById('filterStroke');
-        const applyFiltersButton = document.getElementById('applyFilters');
-        const resetFiltersButton = document.getElementById('resetFilters');
-        const printReportButton = document.getElementById('printReport');
-        const selectSwimmer = document.getElementById('selectSwimmer');
-        const jsonFileSelector = document.getElementById('jsonFileSelector');
-        const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
-        const selectEventForProgression = document.getElementById('selectEventForProgression');
-
-        let specialtyChartInstance = null;
-        let progressionChartInstance = null;
-
-        function transformRawData(rawValues, fieldNames) {
-            const transformed = [];
-            const lastNameIndex = fieldNames.indexOf('last_name');
-            const firstNameIndex = fieldNames.indexOf('first_name');
-            const genderIndex = fieldNames.indexOf('competition_category');
-            const ageIndex = fieldNames.indexOf('age');
-            const meetDateIndex = fieldNames.indexOf('meet_date');
-            const meetNameIndex = fieldNames.indexOf('meet_name');
-            const eventSwumIndex = fieldNames.indexOf('event_swum');
-            const seedTimeIndex = fieldNames.indexOf('seed_time');
-            const resultTimeIndex = fieldNames.indexOf('result_time');
-            const placeIndex = fieldNames.indexOf('place');
-            const pointsIndex = fieldNames.indexOf('points');
-
-            rawValues.forEach((row, index) => {
-                // Athlete ID now ignores age
-                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}`;
-                
-                transformed.push({
-                    id: athleteId, // Updated ID to exclude age
-                    lastName: row[lastNameIndex],
-                    firstName: row[firstNameIndex],
-                    category: row[genderIndex],
-                    age: row[ageIndex], // Keep age in data for display if needed
-                    meetDate: row[meetDateIndex],
-                    meetName: String(row[meetNameIndex]).replace('2025 ', ''),
-                    eventSwum: standardizeEventName(row[eventSwumIndex]),
-                    seedTime: String(row[seedTimeIndex]),
-                    resultTime: String(row[resultTimeIndex]),
-                    place: row[placeIndex],
-                    points: row[pointsIndex]
-                });
-            });
-            return transformed;
-        }
-
-        function populateJsonFileSelector() {
-            jsonFileSelector.innerHTML = '';
-
-            const optionsPromises = weeklyFileNames.map(async (fileName, index) => {
-                const filePath = new URL(fileName, window.location.href).toString();
-                let rawFileData = null;
-
-                try {
-                    const response = await fetch(filePath);
-                    if (!response.ok) {
-                        console.warn(`Could not fetch ${filePath} for dropdown options.`);
-                        return null; 
-                    } else {
-                        rawFileData = await response.json();
-                    }
-                }
-                catch (error) {
-                    console.error(`Error fetching ${filePath} for dropdown options:`, error);
-                    return null;
-                }
-
-                let displayDate = 'N/A';
-                
-                if (rawFileData && rawFileData["meet date"]) {
-                    displayDate = rawFileData["meet date"];
-                } else if (rawFileData && rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
-                    const fields = rawFileData.fields;
-                    const firstRow = rawFileData.values[0];
-                    const meetDateIndex = fields.indexOf('meet_date');
-                    
-                    if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
-                        displayDate = firstRow[meetDateIndex];
-                    }
-                }
-
-                if (displayDate !== 'N/A') {
-                    const option = document.createElement('option');
-                    option.value = fileName;
-                    const formattedDate = formatMMDDYYYY(displayDate);
-                    option.textContent = `Week #${index + 1} (${formattedDate})`;
-                    return option;
-                }
-                return null;
-            });
-
-            Promise.all(optionsPromises).then(options => {
-                options.filter(Boolean).forEach(option => jsonFileSelector.appendChild(option));
-
-                const allResultsOption = document.createElement('option');
-                allResultsOption.value = "all-results";
-                allResultsOption.textContent = "All Results (All Weeks)";
-                jsonFileSelector.appendChild(allResultsOption);
-
-                if (weeklyFileNames.length > 0) {
-                    jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
-                } else {
-                    jsonFileSelector.value = "all-results";
-                }
-            });
-        }
-
-        function updateReportHeaderDisplay(title, rawDateOrRange, isAllResults) {
-            const cleanedTitle = String(title || '').replace('2025 ', '');
-            let displayDate = "";
-
-            if (isAllResults) {
-                displayDate = rawDateOrRange;
-            } else {
-                const parsedDate = new Date(rawDateOrRange);
-                if (!isNaN(parsedDate.getTime())) {
-                    displayDate = formatMMDDYYYY(parsedDate.toISOString().split('T')[0]);
-                } else {
-                    displayDate = rawDateOrRange;
-                }
-            }
-            
-            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
-        }
-
-        async function fetchAndRenderData(fileName) {
-            let rawFileData = null;
-            let currentMeetTitleForHeader = '';
-            let currentMeetDateForHeader = '';
-            let isAllResultsSelected = (fileName === "all-results");
-
-            if (!fileName) {
-                console.error("Attempted to fetch with an empty filename.");
-                allAthleteData = [];
-                filteredAthleteData = [];
-                renderTable(filteredAthleteData);
-                populateSwimmerSelect();
-                updateReportHeaderDisplay("No Data Loaded", "", false);
-                if (specialtyChartInstance) specialtyChartInstance.destroy();
-                if (progressionChartInstance) progressionChartInstance.destroy();
-                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-                selectEventForProgression.disabled = true;
-                return;
-            }
-
-            if (!isAllResultsSelected) {
-                const filePath = new URL(fileName, window.location.href).toString();
-                try {
-                    const response = await fetch(filePath);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status} for ${filePath}`);
-                    }
-                    rawFileData = await response.json();
-                } catch (error) {
-                    console.error(`Error fetching ${filePath}:`, error);
-                    alert(`Failed to load data for ${fileName}. Please ensure the file exists and is accessible. Error: ${error.message}`);
-                    allAthleteData = [];
-                    filteredAthleteData = [];
-                    renderTable(filteredAthleteData);
-                    populateSwimmerSelect();
-                    updateReportHeaderDisplay("Error Loading Data", "", false);
-                    if (specialtyChartInstance) specialtyChartInstance.destroy();
-                    if (progressionChartInstance) progressionChartInstance.destroy();
-                    selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-                    selectEventForProgression.disabled = true;
-                    return;
-                }
-                
-                allAthleteData = transformRawData(rawFileData.values, rawFileData.fields);
-                currentMeetTitleForHeader = rawFileData.title || 'Selected Week';
-                currentMeetDateForHeader = rawFileData["meet date"] || '';
-            } else {
-                const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
-                    const filePath = new URL(name, window.location.href).toString();
-                    let rawWeekData = null;
-                    try {
-                        const response = await fetch(filePath);
-                        if (!response.ok) {
-                            console.warn(`Could not fetch ${filePath}. Skipping this week.`);
-                            return [];
-                        }
-                        rawWeekData = await response.json();
-                        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
-                            return transformRawData(rawWeekData.values, rawWeekData.fields);
-                        }
-                        return [];
-                    } catch (error) {
-                        console.error(`Error fetching ${filePath}:`, error);
-                        console.warn(`Skipping ${name} due to network.`);
-                        return [];
-                    }
-                });
-
-                const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
-                allAthleteData = allWeeksTransformedData.flat();
-
-                if (allAthleteData.length > 0) {
-                    const allDates = allAthleteData.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
-                    const overallMinDate = allDates[0];
-                    const overallMaxDate = allDates[allDates.length - 1];
-                    currentMeetTitleForHeader = "All Meets Combined";
-                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
-                } else {
-                    currentMeetTitleForHeader = "No Data Loaded";
-                    currentMeetDateForHeader = "";
-                }
-            }
-
-
-            if (allAthleteData && allAthleteData.length > 0) {
-                applyFilters();
-                populateSwimmerSelect();
-                updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, isAllResultsSelected);
-
-                if (selectSwimmer.value) {
-                    updateSpecialtyChart(selectSwimmer.value);
-                    populateEventSelectForProgression(selectSwimmer.value);
-                    if (selectEventForProgression.options.length > 1) {
-                         selectEventForProgression.value = selectEventForProgression.options[1].value;
-                         updateProgressionChart(selectSwimmer.value, selectEventForProgression.value);
-                    } else {
-                         if (progressionChartInstance) progressionChartInstance.destroy();
-                    }
-                    selectEventForProgression.disabled = false;
-                } else {
-                    if (specialtyChartInstance) specialtyChartInstance.destroy();
-                    if (progressionChartInstance) progressionChartInstance.destroy();
-                    selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-                    selectEventForProgression.disabled = true;
-                }
-            } else {
-                console.warn(`No data loaded for ${fileName} after transformation.`);
-                filteredAthleteData = [];
-                renderTable(filteredAthleteData);
-                populateSwimmerSelect();
-                updateReportHeaderDisplay("No Data Loaded", "", false);
-                if (specialtyChartInstance) specialtyChartInstance.destroy();
-                if (progressionChartInstance) progressionChartInstance.destroy();
-                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-                selectEventForProgression.disabled = true;
-            }
-        }
-
-        function renderTable(data) {
-            reportTableBody.innerHTML = '';
-
-            // Group data by athlete (lastName-firstName only)
-            const athletesGrouped = data.reduce((acc, current) => {
-                const uniqueAthleteId = `${current.lastName}-${current.firstName}`; // Group by name only
-                
-                if (!acc[uniqueAthleteId]) {
-                    acc[uniqueAthleteId] = {
-                        id: uniqueAthleteId, // ID for charts and overall athlete grouping
-                        displayKey: `${current.lastName}, ${current.firstName} (${current.age}) - ${current.category}`, // Display with age and category
-                        details: {
-                            lastName: current.lastName,
-                            firstName: current.firstName,
-                            // Age and category here are just from the first instance found for displayKey
-                            age: current.age, 
-                            category: current.category
-                        },
-                        events: [] // All events for this athlete, across all meets and ages
-                    };
-                }
-                acc[uniqueAthleteId].events.push(current);
-                return acc;
-            }, {});
-
-            const athleteKeys = Object.keys(athletesGrouped).sort();
-
-            if (athleteKeys.length === 0) {
-                const noResultsRow = document.createElement('tr');
-                noResultsRow.innerHTML = `
-                    <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        No results found matching your filters.
-                    </td>
-                `;
-                reportTableBody.appendChild(noResultsRow);
-                return;
-            }
-
-            athleteKeys.forEach(athleteKey => {
-                const athlete = athletesGrouped[athleteKey];
-
-                const athleteHeaderRow = document.createElement('tr');
-                athleteHeaderRow.className = 'athlete-header-row';
-                athleteHeaderRow.innerHTML = `
-                    <td colspan="9" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athlete.displayKey}</td>
-                `;
-                reportTableBody.appendChild(athleteHeaderRow);
-
-                const eventSubHeaderRow = document.createElement('tr');
-                eventSubHeaderRow.className = 'event-subheader-row';
-                eventSubHeaderRow.innerHTML = `
-                    <th style="width: 1%;"></th> <!-- Empty column for alignment -->
-                    <th>Meet Date</th>
-                    <th>Meet Name</th>
-                    <th>Event</th>
-                    <th>Seed</th>
-                    <th>Final</th>
-                    <th>Place</th>
-                    <th>Points</th>
-                    <th>% Improvement</th>
-                `;
-                reportTableBody.appendChild(eventSubHeaderRow);
-
-                // Sort events by Meet Date, then Event Name (alphabetically)
-                athlete.events.sort((a, b) => {
-                    const dateA = new Date(a.meetDate);
-                    const dateB = new Date(b.meetDate);
-                    if (dateA.getTime() !== dateB.getTime()) {
-                        return dateA - dateB;
-                    }
-                    return a.eventSwum.localeCompare(b.eventSwum);
-                });
-
-                athlete.events.forEach(eventData => {
-                    const seedSeconds = timeToSeconds(eventData.seedTime);
-                    const resultSeconds = timeToSeconds(eventData.resultTime);
-
-                    let improvement = 'N/A';
-                    if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
-                        improvement = (((seedSeconds - resultSeconds) / seedSeconds) * 100).toFixed(2);
-                        if (parseFloat(improvement) > 0) {
-                             improvement = `+${improvement}%`;
-                        } else {
-                             improvement = `${improvement}%`;
-                        }
-                    }
-
-                    const eventRow = document.createElement('tr');
-                    eventRow.className = 'event-data-row hover:bg-gray-50';
-                    eventRow.innerHTML = `
-                        <td style="width: 1%;"></td> <!-- Empty column for alignment -->
-                        <td>${formatMMDDYYYY(eventData.meetDate)}</td>
-                        <td>${eventData.meetName}</td>
-                        <td>${eventData.eventSwum}</td>
-                        <td>${eventData.seedTime}</td>
-                        <td>${eventData.resultTime}</td>
-                        <td>${eventData.place}</td>
-                        <td>${eventData.points}</td>
-                        <td>${improvement}</td>
-                    `;
-                    reportTableBody.appendChild(eventRow);
-                });
-            });
-        }
-
-        function populateSwimmerSelect() {
-            while (selectSwimmer.children.length > 1) {
-                selectSwimmer.removeChild(selectSwimmer.lastChild);
-            }
-
-            const uniqueSwimmers = [];
-            const swimmerMap = new Map();
-
-            allAthleteData.forEach(athlete => {
-                // Use lastName-firstName as the key for uniqueness
-                const key = `${athlete.lastName}-${athlete.firstName}`;
-                if (!swimmerMap.has(key)) {
-                    swimmerMap.set(key, {
-                        id: key, // The ID now also excludes age
-                        firstName: athlete.firstName,
-                        lastName: athlete.lastName,
-                        age: athlete.age, // Keep age for display string
-                        category: athlete.category // Keep category for display string
-                    });
-                    uniqueSwimmers.push({
-                        id: key,
-                        firstName: athlete.firstName,
-                        lastName: athlete.lastName,
-                        age: athlete.age,
-                        category: athlete.category
-                    });
-                }
-            });
-
-            uniqueSwimmers.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
-
-            uniqueSwimmers.forEach(swimmer => {
-                const option = document.createElement('option');
-                option.value = swimmer.id;
-                // Display includes age and category from the first instance found for that name
-                option.textContent = `${swimmer.lastName}, ${swimmer.firstName} (${swimmer.age}) - ${swimmer.category}`;
-                selectSwimmer.appendChild(option);
-            });
-        }
-
-        function populateEventSelectForProgression(swimmerId) {
-            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-            selectEventForProgression.disabled = true;
-
-            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
-            
-            if (swimmerEvents.length > 0) {
-                swimmerEvents.sort().forEach(event => {
-                    const option = document.createElement('option');
-                    option.value = event;
-                    option.textContent = event;
-                    selectEventForProgression.appendChild(option);
-                });
-                selectEventForProgression.disabled = false;
-            }
-        }
-
-        function getSpecialtyChartData(swimmerId) {
-            const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-            if (swimmerData.length === 0) return null;
-
-            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-            const specialtyScores = {};
-            strokes.forEach(stroke => {
-                const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
-                if (relevantEvents.length > 0) {
-                    const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
-                    const avgTime = sumTimes / relevantEvents.length;
-
-                    const max_expected_avg_time = 120;
-                    let score = (max_expected_avg_time - avgTime) / max_expected_avg_time * 100;
-                    score = Math.max(0, Math.min(100, score));
-                    specialtyScores[stroke] = score;
-                } else {
-                    specialtyScores[stroke] = 0;
-                }
-            });
-
-            // Find the swimmer's display name from uniqueSwimmersData
-            const swimmerInfo = uniqueSwimmersData.find(s => s.id === swimmerId);
-            const swimmerDisplayName = swimmerInfo ? `${swimmerInfo.lastName}, ${swimmerInfo.firstName}` : "Selected Swimmer";
-
-
-            return {
-                labels: strokes,
-                datasets: [{
-                    label: `${swimmerDisplayName}'s Specialty`, // Use the new display name
-                    backgroundColor: 'rgba(255, 204, 0, 0.4)', /* Light yellow/gold */
-                    borderColor: 'rgba(255, 204, 0, 1)',     /* Solid yellow/gold */
-                    data: strokes.map(stroke => specialtyScores[stroke]),
-                    borderWidth: 1,
-                    pointBackgroundColor: 'rgba(255, 204, 0, 1)'
-                }]
-            };
-        }
-
-        function getProgressionChartData(swimmerId, eventSwum) {
-            const swimmerEventData = allAthleteData
-                .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
-                .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
-
-            console.log("Progression Chart Data for swimmerId:", swimmerId, "event:", eventSwum, "->", swimmerEventData); // Debug log
-
-            if (swimmerEventData.length === 0) return null;
-
-            return {
-                labels: swimmerEventData.map(d => `${formatMMDDYYYY(d.meetDate)} (${d.meetName})`),
-                datasets: [{
-                    label: `${eventSwum} Time Progression`,
-                    data: swimmerEventData.map(d => timeToSeconds(d.resultTime)),
-                    fill: false,
-                    borderColor: '#4169E1', /* Royal Blue */
-                    tension: 0.1,
-                    pointBackgroundColor: '#4169E1' /* Royal Blue */
-                }]
-            };
-        }
-
-        function updateSpecialtyChart(swimmerId) {
-            if (specialtyChartInstance) {
-                specialtyChartInstance.destroy();
-            }
-            const chartData = getSpecialtyChartData(swimmerId);
-            const ctx = document.getElementById('specialtyChart').getContext('2d');
-
-            if (!chartData) {
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                return;
-            }
-
-            specialtyChartInstance = new Chart(ctx, {
-                type: 'radar',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: {
-                                color: '#e2e8f0'
-                            },
-                            grid: {
-                                color: '#cbd5e0'
-                            },
-                            pointLabels: {
-                                font: {
-                                    size: 10,
-                                    weight: 'bold'
-                                },
-                                color: '#4a5568'
-                            },
-                            min: 0,
-                            max: 100,
-                            ticks: {
-                                stepSize: 20,
-                                backdropColor: 'rgba(255, 255, 255, 0.75)',
-                                color: '#4a5568',
-                                font: {
-                                    size: 9
-                                }
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            }
-                        },
-                        title: {
-                            display: false,
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.raw.toFixed(1)}`;
-                                }
-                            },
-                            bodyFont: {
-                                size: 10
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateProgressionChart(swimmerId, selectedEvent) {
-            if (progressionChartInstance) {
-                progressionChartInstance.destroy();
-            }
-
-            if (!selectedEvent) {
-                const ctx = document.getElementById('progressionChart').getContext('2d');
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                return;
-            }
-
-            const chartData = getProgressionChartData(swimmerId, selectedEvent);
-            const ctx = document.getElementById('progressionChart').getContext('2d');
-
-            if (!chartData) {
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                return;
-            }
-
-            progressionChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Meet Date (Meet Name)',
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            },
-                            ticks: {
-                                color: '#4a5568',
-                                font: {
-                                    size: 9
-                                }
-                            },
-                            grid: {
-                                color: '#e2e8f0'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Time (Seconds)',
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            },
-                            ticks: {
-                                color: '#4a5568',
-                                callback: function(value, index, values) {
-                                    return secondsToTime(value);
-                                },
-                                font: {
-                                    size: 9
-                                }
-                            },
-                            grid: {
-                                color: '#e2e8f0'
-                            },
-                            reverse: true,
-                            min: 0
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                color: '#4a5568',
-                                font: {
-                                    size: 10
-                                }
-                            }
-                        },
-                        title: {
-                            display: false,
-                        },
-                         tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${secondsToTime(context.raw)}`;
-                                }
-                            },
-                            bodyFont: {
-                                size: 10
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-
-        // Filters
-        function applyFilters() {
-            const nameFilter = filterNameInput.value.toLowerCase();
-            const strokeFilter = filterStrokeInput.value.toLowerCase();
-            
-            filteredAthleteData = allAthleteData.filter(athlete => {
-                const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
-                const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
-                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter);
-                
-                return matchesName && matchesStroke;
-            });
-
-            renderTable(filteredAthleteData);
-        }
-
-        function resetFilters() {
-            filterNameInput.value = '';
-            filterStrokeInput.value = '';
-            filteredAthleteData = [...allAthleteData];
-            renderTable(filteredAthleteData);
-        }
-
-        // Event Listeners
-        applyFiltersButton.addEventListener('click', applyFilters);
-        resetFiltersButton.addEventListener('click', resetFilters);
-        printReportButton.addEventListener('click', () => {
-            window.print();
-        });
-
-        selectSwimmer.addEventListener('change', (event) => {
-            const selectedSwimmerId = event.target.value;
-            if (selectedSwimmerId) {
-                updateSpecialtyChart(selectedSwimmerId);
-                populateEventSelectForProgression(selectedSwimmerId);
-                if (selectEventForProgression.options.length > 1) {
-                    selectEventForProgression.value = selectEventForProgression.options[1].value;
-                    updateProgressionChart(selectedSwimmerId, selectEventForProgression.value);
-                } else {
-                    if (progressionChartInstance) progressionChartInstance.destroy();
-                }
-            } else {
-                if (specialtyChartInstance) specialtyChartInstance.destroy();
-                if (progressionChartInstance) progressionChartInstance.destroy();
-                selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-                selectEventForProgression.disabled = true;
-            }
-        });
-
-        selectEventForProgression.addEventListener('change', (event) => {
-            const selectedEvent = event.target.value;
-            const selectedSwimmerId = selectSwimmer.value;
-            if (selectedSwimmerId && selectedEvent) {
-                updateProgressionChart(selectedSwimmerId, selectedEvent);
-            } else {
-                if (progressionChartInstance) progressionChartInstance.destroy();
-            }
-        });
-
-
-        jsonFileSelector.addEventListener('change', (event) => {
-            filterNameInput.value = '';
-            filterStrokeInput.value = '';
-            fetchAndRenderData(event.target.value);
-        });
-
-        // Initial render on page load: populate selector, then load default data
         document.addEventListener('DOMContentLoaded', () => {
-            populateJsonFileSelector();
-            if (weeklyFileNames.length > 0) {
-                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1];
-            } else {
-                jsonFileSelector.value = "all-results";
-            }
-            const defaultFile = jsonFileSelector.value;
-            fetchAndRenderData(defaultFile);
+            fetchAndRenderData(weeklyFileNames[weeklyFileNames.length - 1]);
         });
     </script>
-
-    
-
-  <!-- 📦 Import Utilities from dashboard-utils.js -->
-  <script type="module">
-    import {
-      timeToSeconds,
-      secondsToTime,
-      formatDate,
-      formatMMDDYYYY,
-      weeklyFileNames
-    } from './dashboard-utils.js';
-
-    window.timeToSeconds = timeToSeconds;
-    window.secondsToTime = secondsToTime;
-    window.formatDate = formatDate;
-    window.formatMMDDYYYY = formatMMDDYYYY;
-    window.weeklyFileNames = weeklyFileNames;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const defaultFile = weeklyFileNames[weeklyFileNames.length - 1];
-      if (typeof fetchAndRenderData === 'function') {
-        fetchAndRenderData(defaultFile);
-      } else {
-        console.warn('fetchAndRenderData is not defined.');
-      }
-    });
-  </script>
-    
 </body>
 </html>
