@@ -22,14 +22,153 @@
     window.weeklyFileNames = weeklyFileNames;
   </script>
   <style>
-    /* original styles here (unchanged) */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f8f8f8;
+      color: #333;
+    }
+
+    .container {
+      max-width: 875px;
+      margin: 20px auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #0156B3;
+      font-size: 2em;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .dashboard-intro-text {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #555;
+      font-size: 0.9em;
+    }
+
+    .filter-section {
+      background-color: #f8f8f8;
+      padding: 10px;
+      text-align: center;
+      z-index: 10;
+      border-bottom: 1px solid #ccc;
+      font-size: 0.8em;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .filter-box {
+      display: inline-block;
+      margin: 0 4px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="text"] {
+      padding: 3px 6px;
+      font-size: 0.8em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      min-width: 150px;
+    }
+
+    .chart-section {
+      background-color: #e5f1ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      border: 1px solid #0156B3;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .chart-display {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .chart-canvas-container {
+      background-color: #ffffff;
+      padding: 25px 15px 30px 15px;
+      border-radius: 8px;
+      border: 1px solid #b3d9ff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 500px;
+      margin: 0 auto;
+    }
+
+    .specialty-chart-container {
+      height: 500px;
+    }
+
+    .progression-chart-container {
+      height: 600px;
+    }
+
+    canvas {
+      max-width: 100%;
+      max-height: 384px;
+      width: 100% !important;
+      height: 384px !important;
+    }
+
+    .autocomplete-container {
+      position: relative;
+      display: inline-block;
+      width: auto;
+    }
+
+    .autocomplete-items {
+      position: absolute;
+      border: 1px solid #d4d4d4;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: #fff;
+      text-align: left;
+      z-index: 99;
+    }
+
+    .autocomplete-items div {
+      padding: 8px;
+      cursor: pointer;
+      background-color: #fff;
+      border-bottom: 1px solid #d4d4d4;
+      font-size: 0.8em;
+    }
+
+    .autocomplete-items div:hover {
+      background-color: #e9e9e9;
+    }
+
+    .autocomplete-active {
+      background-color: DodgerBlue !important;
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Swimmer Performance Dashboard</h1>
     <p class="dashboard-intro-text">
-      Please select a swimmer to view their overall swim specialty. You can then use the progression chart to track their performance over time for a specific stroke or event.
+      Please select a swimmer to view their overall swim specialty.
+      You can then use the progression chart to track their performance over time for a specific stroke or event.
     </p>
 
     <div class="filter-section">
@@ -61,352 +200,328 @@
         </div>
       </div>
     </div>
-  </div>
+    <script>
+  let allAthleteData = [];
+  let uniqueSwimmersData = [];
+  let currentSelectedSwimmerId = null;
+  let allUniqueMeets = [];
+  let maxObservedTimesPerStroke = {};
 
-  <script>
-    let allAthleteData = [];
-    let uniqueSwimmersData = [];
-    let currentSelectedSwimmerId = null;
-    let allUniqueMeets = [];
-    let maxObservedTimesPerStroke = {};
-    let specialtyChartInstance = null;
-    let progressionChartInstance = null;
+  const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
+  const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
+  const selectEventForProgression = document.getElementById('selectEventForProgression');
 
-    const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
-    const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
-    const selectEventForProgression = document.getElementById('selectEventForProgression');
+  let specialtyChartInstance = null;
+  let progressionChartInstance = null;
 
-    function transformRawData(rawValues, fieldNames) {
-      const transformed = [];
-      const lastNameIndex = fieldNames.indexOf('last_name');
-      const firstNameIndex = fieldNames.indexOf('first_name');
-      const genderIndex = fieldNames.indexOf('competition_category');
-      const ageIndex = fieldNames.indexOf('age');
-      const meetDateIndex = fieldNames.indexOf('meet_date');
-      const meetNameIndex = fieldNames.indexOf('meet_name');
-      const eventSwumIndex = fieldNames.indexOf('event_swum');
-      const seedTimeIndex = fieldNames.indexOf('seed_time');
-      const resultTimeIndex = fieldNames.indexOf('result_time');
-      const placeIndex = fieldNames.indexOf('place');
-      const pointsIndex = fieldNames.indexOf('points');
+  function transformRawData(rawValues, fieldNames) {
+    const transformed = [];
+    const lastNameIndex = fieldNames.indexOf('last_name');
+    const firstNameIndex = fieldNames.indexOf('first_name');
+    const genderIndex = fieldNames.indexOf('competition_category');
+    const ageIndex = fieldNames.indexOf('age');
+    const meetDateIndex = fieldNames.indexOf('meet_date');
+    const meetNameIndex = fieldNames.indexOf('meet_name');
+    const eventSwumIndex = fieldNames.indexOf('event_swum');
+    const seedTimeIndex = fieldNames.indexOf('seed_time');
+    const resultTimeIndex = fieldNames.indexOf('result_time');
+    const placeIndex = fieldNames.indexOf('place');
+    const pointsIndex = fieldNames.indexOf('points');
 
-      rawValues.forEach((row) => {
-        const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}`.toLowerCase();
-        transformed.push({
-          id: athleteId,
-          lastName: row[lastNameIndex],
-          firstName: row[firstNameIndex],
-          category: row[genderIndex],
-          age: row[ageIndex],
-          meetDate: row[meetDateIndex],
-          meetName: String(row[meetNameIndex]).replace('2025 ', ''),
-          eventSwum: row[eventSwumIndex],
-          seedTime: String(row[seedTimeIndex]),
-          resultTime: String(row[resultTimeIndex]),
-          place: row[placeIndex],
-          points: row[pointsIndex]
-        });
+    rawValues.forEach((row) => {
+      const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}`.toLowerCase();
+
+      transformed.push({
+        id: athleteId,
+        lastName: row[lastNameIndex],
+        firstName: row[firstNameIndex],
+        category: row[genderIndex],
+        age: row[ageIndex],
+        meetDate: row[meetDateIndex],
+        meetName: String(row[meetNameIndex]).replace('2025 ', ''),
+        eventSwum: row[eventSwumIndex],
+        seedTime: String(row[seedTimeIndex]),
+        resultTime: String(row[resultTimeIndex]),
+        place: row[placeIndex],
+        points: row[pointsIndex]
       });
-      return transformed;
+    });
+    return transformed;
+  }
+
+  async function loadAllAthleteDataForDashboard() {
+    const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
+      const filePath = new URL(name, window.location.href).toString();
+      try {
+        const response = await fetch(filePath);
+        if (!response.ok) return [];
+        const rawWeekData = await response.json();
+        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
+          return transformRawData(rawWeekData.values, rawWeekData.fields);
+        }
+        return [];
+      } catch (e) {
+        return [];
+      }
+    });
+
+    const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
+    allAthleteData = allWeeksTransformedData.flat();
+
+    const swimmerMap = new Map();
+    allAthleteData.forEach(athlete => {
+      const key = `${athlete.lastName}-${athlete.firstName}`.toLowerCase();
+      if (!swimmerMap.has(key)) {
+        swimmerMap.set(key, {
+          id: key,
+          firstName: athlete.firstName,
+          lastName: athlete.lastName,
+          age: athlete.age
+        });
+      }
+    });
+    uniqueSwimmersData = Array.from(swimmerMap.values()).sort((a, b) =>
+      a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
+    );
+
+    const meetMap = new Map();
+    allAthleteData.forEach(data => {
+      const meetKey = `${data.meetDate}-${data.meetName}`;
+      if (!meetMap.has(meetKey)) {
+        meetMap.set(meetKey, {
+          date: data.meetDate,
+          name: data.meetName,
+          display: `${formatMMDDYYYY(data.meetDate)} (${data.meetName})`
+        });
+      }
+    });
+    allUniqueMeets = Array.from(meetMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Specialty normalization
+    const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+    const allStrokeTimes = { 'Freestyle': [], 'Backstroke': [], 'Breaststroke': [], 'Butterfly': [], 'IM': [] };
+    allAthleteData.forEach(data => {
+      strokes.forEach(stroke => {
+        if (data.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && !['NT','NS','DQ'].includes(data.resultTime)) {
+          allStrokeTimes[stroke].push(timeToSeconds(data.resultTime));
+        }
+      });
+    });
+
+    strokes.forEach(stroke => {
+      maxObservedTimesPerStroke[stroke] = allStrokeTimes[stroke].length > 0
+        ? Math.max(...allStrokeTimes[stroke]) * 1.1
+        : 120;
+    });
+
+    updateSpecialtyChart(null);
+    updateProgressionChart(null, null);
+  }
+
+  function updateSpecialtyChart(swimmerId) {
+    const ctx = document.getElementById('specialtyChart').getContext('2d');
+    const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+    const scoreOffset = 50;
+    const swimmerData = allAthleteData.filter(d => d.id.toLowerCase() === swimmerId?.toLowerCase());
+
+    const specialtyScores = {};
+    const pronunciationFactor = 2.0;
+
+    strokes.forEach(stroke => {
+      const relevant = swimmerData.filter(d =>
+        d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) &&
+        !['NT','NS','DQ'].includes(d.resultTime));
+      if (relevant.length) {
+        const avgTime = relevant.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0) / relevant.length;
+        const maxTime = maxObservedTimesPerStroke[stroke] || 120;
+        let norm = (maxTime - avgTime) / maxTime;
+        norm = Math.max(0, Math.min(1, norm));
+        let finalScore = Math.pow(norm, pronunciationFactor) * 100;
+        finalScore = Math.max(0, Math.min(100, finalScore));
+        specialtyScores[stroke] = finalScore;
+      } else {
+        specialtyScores[stroke] = 0;
+      }
+    });
+
+    const swimmerInfo = uniqueSwimmersData.find(s => s.id.toLowerCase() === swimmerId?.toLowerCase());
+    const swimmerName = swimmerInfo ? `${swimmerInfo.lastName}, ${swimmerInfo.firstName}` : 'No Swimmer';
+
+    const data = {
+      labels: strokes,
+      datasets: [{
+        label: `${swimmerName}'s Specialty`,
+        backgroundColor: 'rgba(255, 204, 0, 0.4)',
+        borderColor: 'rgba(255, 204, 0, 1)',
+        pointBackgroundColor: 'rgba(255, 204, 0, 1)',
+        borderWidth: 1,
+        data: strokes.map(stroke => specialtyScores[stroke] + scoreOffset)
+      }]
+    };
+
+    if (specialtyChartInstance) {
+      specialtyChartInstance.data = data;
+      specialtyChartInstance.update();
+    } else {
+      specialtyChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0,
+              max: 150,
+              ticks: { display: false },
+              pointLabels: { font: { size: 10, weight: 'bold' }, color: '#4a5568' },
+              grid: {
+                color: ctx => (ctx.tick.value % 50 === 0 ? '#cbd5e0' : 'rgba(0,0,0,0.05)'),
+                lineWidth: ctx => (ctx.tick.value % 50 === 0 ? 1 : 0.5),
+                drawTicks: false
+              },
+              angleLines: {
+                color: ctx => (ctx.index % 2 === 0 ? '#e2e8f0' : 'rgba(0,0,0,0.05)')
+              }
+            }
+          },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { font: { size: 10 }, color: '#4a5568' } },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: ${(ctx.raw - scoreOffset).toFixed(1)}`
+              },
+              bodyFont: { size: 10 }
+            }
+          }
+        }
+      });
     }
+  }
 
-    async function loadAllAthleteDataForDashboard() {
-      const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
-        const filePath = new URL(name, window.location.href).toString();
-        try {
-          const response = await fetch(filePath);
-          if (!response.ok) return [];
-          const rawWeekData = await response.json();
-          if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
-            return transformRawData(rawWeekData.values, rawWeekData.fields);
-          }
-          return [];
-        } catch (error) {
-          console.error(`Error fetching ${filePath}:`, error);
-          return [];
+  function updateProgressionChart(swimmerId, eventName) {
+    const ctx = document.getElementById('progressionChart').getContext('2d');
+    const points = Array(allUniqueMeets.length).fill(null);
+    const swimmerEventData = allAthleteData
+      .filter(d => d.id.toLowerCase() === swimmerId?.toLowerCase() && d.eventSwum === eventName && !['NT','NS','DQ'].includes(d.resultTime))
+      .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
+
+    swimmerEventData.forEach(d => {
+      const index = allUniqueMeets.findIndex(m => m.date === d.meetDate && m.name === d.meetName);
+      if (index >= 0) points[index] = timeToSeconds(d.resultTime);
+    });
+
+    const data = {
+      labels: allUniqueMeets.map(m => m.display),
+      datasets: [{
+        label: eventName || 'No Event',
+        data: points,
+        fill: false,
+        borderColor: '#4169E1',
+        pointBackgroundColor: '#4169E1',
+        tension: 0.4,
+        spanGaps: true
+      }]
+    };
+
+    const yValues = points.filter(p => p !== null);
+    const min = yValues.length ? Math.min(...yValues) : 0;
+    const max = yValues.length ? Math.max(...yValues) : 60;
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: { font: { size: 9 }, color: '#4a5568' },
+          title: { display: true, text: 'Meet Date (Meet Name)', font: { size: 10 }, color: '#4a5568' },
+          grid: { color: '#e2e8f0' }
+        },
+        y: {
+          reverse: true,
+          min: 0,
+          max: max + 5,
+          ticks: {
+            callback: v => secondsToTime(v),
+            font: { size: 9 },
+            color: '#4a5568'
+          },
+          title: { display: true, text: 'Time (MM:SS.ms)', font: { size: 10 }, color: '#4a5568' },
+          grid: { color: '#e2e8f0' }
         }
-      });
-
-      const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
-      allAthleteData = allWeeksTransformedData.flat();
-
-      const swimmerMap = new Map();
-      allAthleteData.forEach((athlete) => {
-        const key = `${athlete.lastName}-${athlete.firstName}`.toLowerCase();
-        if (!swimmerMap.has(key)) {
-          swimmerMap.set(key, {
-            id: key,
-            firstName: athlete.firstName,
-            lastName: athlete.lastName,
-            age: athlete.age
-          });
+      },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 10 }, color: '#4a5568' } },
+        tooltip: {
+          callbacks: {
+            label: ctx => secondsToTime(ctx.raw)
+          },
+          bodyFont: { size: 10 }
         }
-      });
-      uniqueSwimmersData = Array.from(swimmerMap.values());
+      }
+    };
 
-      const meetMap = new Map();
-      allAthleteData.forEach((data) => {
-        const meetKey = `${data.meetDate}-${data.meetName}`;
-        if (!meetMap.has(meetKey)) {
-          meetMap.set(meetKey, {
-            date: data.meetDate,
-            name: data.meetName,
-            display: `${formatMMDDYYYY(data.meetDate)} (${data.meetName})`
-          });
-        }
-      });
-      allUniqueMeets = Array.from(meetMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (progressionChartInstance) {
+      progressionChartInstance.data = data;
+      progressionChartInstance.options = options;
+      progressionChartInstance.update();
+    } else {
+      progressionChartInstance = new Chart(ctx, { type: 'line', data, options });
+    }
+  }
 
-      const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-      const allStrokeTimes = { Freestyle: [], Backstroke: [], Breaststroke: [], Butterfly: [], IM: [] };
+  function updateChartsAndEventsForSwimmer(swimmerId) {
+    currentSelectedSwimmerId = swimmerId;
+    updateSpecialtyChart(swimmerId);
 
-      allAthleteData.forEach((data) => {
-        strokes.forEach((stroke) => {
-          if (
-            data.eventSwum.toLowerCase().includes(stroke.toLowerCase()) &&
-            !['NT', 'NS', 'DQ'].includes(data.resultTime)
-          ) {
-            allStrokeTimes[stroke].push(timeToSeconds(data.resultTime));
-          }
-        });
-      });
+    selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+    const events = [...new Set(allAthleteData.filter(d => d.id.toLowerCase() === swimmerId?.toLowerCase()).map(d => d.eventSwum))];
+    events.sort().forEach(evt => {
+      const opt = document.createElement('option');
+      opt.value = evt;
+      opt.textContent = evt;
+      selectEventForProgression.appendChild(opt);
+    });
 
-      strokes.forEach((stroke) => {
-        if (allStrokeTimes[stroke].length > 0) {
-          maxObservedTimesPerStroke[stroke] = Math.max(...allStrokeTimes[stroke]) * 1.1;
-        } else {
-          maxObservedTimesPerStroke[stroke] = 120;
-        }
-      });
-
-      updateSpecialtyChart(null);
+    if (events.length) {
+      selectEventForProgression.disabled = false;
+      selectEventForProgression.value = events[0];
+      updateProgressionChart(swimmerId, events[0]);
+    } else {
+      selectEventForProgression.disabled = true;
       updateProgressionChart(null, null);
     }
+  }
 
-    function updateSpecialtyChart(swimmerId) {
-      const chartData = getSpecialtyChartData(swimmerId);
-      const ctx = document.getElementById('specialtyChart').getContext('2d');
-      const scoreOffset = 50;
+  filterSwimmerNameInput.addEventListener('input', () => {
+    const val = filterSwimmerNameInput.value.toLowerCase();
+    swimmerSearchResultsDiv.innerHTML = '';
+    if (!val) return;
 
-      if (specialtyChartInstance) {
-        specialtyChartInstance.data = chartData;
-        specialtyChartInstance.update();
-      } else {
-        specialtyChartInstance = new Chart(ctx, {
-          type: 'radar',
-          data: chartData,
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              r: {
-                min: 0,
-                max: 150,
-                ticks: { display: false },
-                pointLabels: { font: { size: 10, weight: 'bold' }, color: '#4a5568' }
-              }
-            },
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                labels: { color: '#4a5568', font: { size: 10 } }
-              },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => `${ctx.dataset.label}: ${(ctx.raw - scoreOffset).toFixed(1)}`
-                }
-              }
-            }
-          }
-        });
-      }
-    }
+    const matches = uniqueSwimmersData.filter(s =>
+      `${s.firstName} ${s.lastName}`.toLowerCase().includes(val) ||
+      `${s.lastName}, ${s.firstName}`.toLowerCase().includes(val)
+    );
 
-    function getSpecialtyChartData(swimmerId) {
-      const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-      const specialtyScores = {};
-      const scoreOffset = 50;
-      const swimmerData = allAthleteData.filter((d) => d.id === swimmerId);
-
-      strokes.forEach((stroke) => {
-        const relevantEvents = swimmerData.filter(
-          (d) => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && !['NT', 'NS', 'DQ'].includes(d.resultTime)
-        );
-        if (relevantEvents.length > 0) {
-          const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
-          const avgTime = sumTimes / relevantEvents.length;
-          const maxExpected = maxObservedTimesPerStroke[stroke] || 120;
-          let norm = (maxExpected - avgTime) / maxExpected;
-          norm = Math.max(0, Math.min(1, norm));
-          let finalScore = Math.pow(norm, 2.0) * 100;
-          finalScore = Math.max(0, Math.min(100, finalScore));
-          specialtyScores[stroke] = finalScore;
-        } else {
-          specialtyScores[stroke] = 0;
-        }
+    matches.forEach(swimmer => {
+      const div = document.createElement('div');
+      div.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName}`;
+      div.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
+      div.addEventListener('click', function() {
+        filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName}`;
+        updateChartsAndEventsForSwimmer(swimmer.id);
+        swimmerSearchResultsDiv.innerHTML = '';
       });
-
-      const swimmerInfo = uniqueSwimmersData.find((s) => s.id === swimmerId);
-      const swimmerDisplayName = swimmerInfo ? `${swimmerInfo.lastName}, ${swimmerInfo.firstName}` : 'Selected Swimmer';
-
-      return {
-        labels: strokes,
-        datasets: [
-          {
-            label: `${swimmerDisplayName}'s Specialty`,
-            data: strokes.map((s) => specialtyScores[s] + scoreOffset),
-            backgroundColor: 'rgba(255, 204, 0, 0.4)',
-            borderColor: 'rgba(255, 204, 0, 1)',
-            pointBackgroundColor: 'rgba(255, 204, 0, 1)',
-            borderWidth: 1
-          }
-        ]
-      };
-    }
-
-    function updateProgressionChart(swimmerId, selectedEvent) {
-      const chartData = getProgressionChartData(swimmerId, selectedEvent);
-      const ctx = document.getElementById('progressionChart').getContext('2d');
-
-      if (progressionChartInstance) {
-        progressionChartInstance.data = chartData;
-        progressionChartInstance.update();
-      } else {
-        progressionChartInstance = new Chart(ctx, {
-          type: 'line',
-          data: chartData,
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                title: { display: true, text: 'Meet Date (Meet Name)' },
-                ticks: { font: { size: 9 } }
-              },
-              y: {
-                reverse: true,
-                ticks: {
-                  callback: (value) => secondsToTime(value),
-                  font: { size: 9 }
-                }
-              }
-            },
-            plugins: {
-              legend: { display: true },
-              tooltip: { enabled: true }
-            }
-          }
-        });
-      }
-    }
-
-    function getProgressionChartData(swimmerId, eventSwum) {
-      const labels = allUniqueMeets.map((m) => m.display);
-      const dataPoints = Array(allUniqueMeets.length).fill(null);
-
-      if (!swimmerId || !eventSwum) {
-        return {
-          labels,
-          datasets: [
-            {
-              label: 'No Event Selected',
-              data: dataPoints,
-              fill: false,
-              borderColor: 'rgba(150, 150, 150, 1)',
-              tension: 0.1,
-              pointBackgroundColor: 'rgba(150, 150, 150, 1)'
-            }
-          ]
-        };
-      }
-
-      const swimmerEventData = allAthleteData
-        .filter((d) => d.id === swimmerId && d.eventSwum === eventSwum && !['NT', 'NS', 'DQ'].includes(d.resultTime))
-        .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
-
-      swimmerEventData.forEach((entry) => {
-        const entryMeetKey = `${entry.meetDate}-${entry.meetName}`;
-        const meetIndex = allUniqueMeets.findIndex((meet) => `${meet.date}-${meet.name}` === entryMeetKey);
-        if (meetIndex !== -1) {
-          dataPoints[meetIndex] = timeToSeconds(entry.resultTime);
-        }
-      });
-
-      return {
-        labels,
-        datasets: [
-          {
-            label: eventSwum,
-            data: dataPoints,
-            fill: false,
-            borderColor: '#4169E1',
-            tension: 0.4,
-            pointBackgroundColor: '#4169E1',
-            spanGaps: true
-          }
-        ]
-      };
-    }
-
-    function populateEventSelectForProgression(swimmerId) {
-      selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-      selectEventForProgression.disabled = true;
-
-      if (!swimmerId) return;
-
-      const events = [...new Set(allAthleteData.filter((d) => d.id === swimmerId).map((d) => d.eventSwum))];
-      if (events.length > 0) {
-        events.sort().forEach((event) => {
-          const option = document.createElement('option');
-          option.value = event;
-          option.textContent = event;
-          selectEventForProgression.appendChild(option);
-        });
-        selectEventForProgression.disabled = false;
-      }
-    }
-
-    filterSwimmerNameInput.addEventListener('input', function () {
-      const inputVal = this.value.toLowerCase();
-      closeAllLists();
-      if (!inputVal) return;
-      const matches = uniqueSwimmersData.filter((s) =>
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(inputVal)
-      );
-      matches.forEach((swimmer) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName}`;
-        itemDiv.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
-        itemDiv.addEventListener('click', function () {
-          filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName}`;
-          currentSelectedSwimmerId = swimmer.id;
-          updateSpecialtyChart(currentSelectedSwimmerId);
-          populateEventSelectForProgression(currentSelectedSwimmerId);
-          closeAllLists();
-        });
-        swimmerSearchResultsDiv.appendChild(itemDiv);
-      });
+      swimmerSearchResultsDiv.appendChild(div);
     });
+  });
 
-    selectEventForProgression.addEventListener('change', (event) => {
-      updateProgressionChart(currentSelectedSwimmerId, event.target.value);
-    });
+  selectEventForProgression.addEventListener('change', (e) => {
+    const selected = e.target.value;
+    updateProgressionChart(currentSelectedSwimmerId, selected);
+  });
 
-    function closeAllLists(elmnt) {
-      const items = document.getElementsByClassName('autocomplete-items');
-      for (let i = 0; i < items.length; i++) {
-        if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
-          items[i].innerHTML = '';
-        }
-      }
-    }
-
-    document.addEventListener('click', function (e) {
-      closeAllLists(e.target);
-    });
-
-    document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
-  </script>
+  document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
+</script>
 </body>
 </html>
