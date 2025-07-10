@@ -409,7 +409,7 @@
                 if (parts.length >= 3 && monthNames[parts[0].toLowerCase()] !== undefined) {
                     date = new Date(parts[2], monthNames[parts[0].toLowerCase()], parts[1]);
                 } else {
-                    return ''; // Still invalid after all attempts
+                    return ''; // Still invalid
                 }
             }
             // Ensure date is valid after parsing attempts, then format to YYYYMMDD
@@ -742,8 +742,13 @@
                             console.log(`  File: ${selectedMeetFileNameFromDropdown}`);
                             console.log("  selectedFileMetaForFiltering.meetName (cleaned):", metaMeetNameClean);
                             console.log("  selectedFileMetaForFiltering.meetDate (cleaned):", metaMeetDateClean);
-                            console.log("  Athlete record meetName (cleaned):", athleteMeetNameClean);
-                            console.log("  Athlete record meetDate (cleaned):", athleteMeetDateClean);
+                            // It's possible currentFilteredData is empty here, check before accessing index 0
+                            if (currentFilteredData.length > 0) {
+                                console.log("  Sample athlete record meetName (cleaned):", cleanStringForComparison(currentFilteredData[0].meetName));
+                                console.log("  Sample athlete record meetDate (cleaned):", cleanDateStringForComparison(currentFilteredData[0].meetDate));
+                            } else {
+                                console.log("  currentFilteredData is empty before specific meet filter.");
+                            }
                             console.log("  Names Match?", athleteMeetNameClean === metaMeetNameClean);
                             console.log("  Dates Match?", athleteMeetDateClean === metaMeetDateClean);
                             console.log("  Overall Match?", isMatch);
@@ -782,17 +787,17 @@
             
 
             // --- Determine Final Header & Render Options ---
-            filteredAthleteData = currentFilteredData; // Set global filteredData for renderTable and summary chart
+            filteredAthleteData = currentFilteredData; // Update global filteredData for renderTable and summary chart
 
             // This logic determines the header based on the final state of filters
-            if (filteredDataForDisplay.length > 0) { // Using filteredDataForDisplay (global var) here
+            if (filteredDataForDisplay.length > 0) { 
                 const allDatesInFinalData = filteredDataForDisplay.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
                 const finalMinDate = allDatesInFinalData[0];
                 const finalMaxDate = allDatesInFinalData[allDatesInFinalData.length - 1];
                 
                 if (isSpecificMeetSelectedFlag && selectedFileMetaForFiltering) { // Specific meet was selected and found
-                    currentMeetTitleForHeader = selectedFileMetaForFiltering.meetNameDisplay; // Use display name for header
-                    currentMeetDateForHeader = selectedFileMetaForFiltering.meetDateDisplay; // Use display date for header
+                    currentMeetTitleForHeader = selectedFileMetaForFiltering.meetNameDisplay; 
+                    currentMeetDateForHeader = selectedFileMetaForFiltering.meetDateDisplay; 
                     currentMeetCourse = selectedFileMetaForFiltering.meetCourse; 
                 } else if (selectedMeetFileNameFromDropdown === "all-results") { // "All Results" option chosen
                     currentMeetTitleForHeader = "All Meets Combined";
@@ -806,29 +811,17 @@
                     currentMeetDateForHeader = `${formatDate(finalMinDate.toISOString().split('T')[0])} - ${formatDate(finalMaxDate.toISOString().split('T')[0])}, ${finalMinDate.getFullYear()}`;
                     currentMeetCourse = 'mixed'; 
                 } else { // Default initial state (last file selected by default) or no filters at all
-                    // For the initial default load, we need to explicitly filter data to the latest file.
-                    // This scenario is when selectedMeetFileNameFromDropdown is the last file, AND all other filters are empty.
                     if (weeklyFileNames.length > 0) {
                         const mostRecentFileName = weeklyFileNames[weeklyFileNames.length - 1];
                         const mostRecentFileMeta = allFileMetadata.find(meta => meta.fileName === mostRecentFileName);
                         if (mostRecentFileMeta) {
-                            currentMeetTitleForHeader = mostRecentFileMeta.meetNameDisplay; // Use display name for header
-                            currentMeetDateForHeader = mostRecentFileMeta.meetDateDisplay; // Use display date for header
+                            currentMeetTitleForHeader = mostRecentFileMeta.meetNameDisplay; 
+                            currentMeetDateForHeader = mostRecentFileMeta.meetDateDisplay; 
                             currentMeetCourse = mostRecentFileMeta.meetCourse; 
-                            isSpecificMeetSelectedFlag = true; // For rendering purposes, treat as specific meet
+                            isSpecificMeetSelectedFlag = true; 
                             
-                            // Ensure filteredDataForDisplay contains ONLY this most recent meet's records if it was the default load
-                            // Only apply this re-filter if it started as the full `allAthleteData` (i.e., no earlier filters were active)
-                            if (currentFilteredData.length === allAthleteData.length) { 
-                                currentFilteredData = currentFilteredData.filter(athlete => {
-                                    const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
-                                    const metaMeetNameClean = cleanStringForComparison(mostRecentFileMeta.meetName); // Use metaname for matching
-                                    const athleteMeetDateClean = cleanDateStringForComparison(athlete.meetDate);
-                                    const metaMeetDateClean = cleanDateStringForComparison(mostRecentFileMeta.meetDate);
-                                    return athleteMeetNameClean === metaMeetNameClean && athleteMeetDateClean === metaMeetDateClean;
-                                });
-                                console.log(`Data filtered for default most recent meet (${mostRecentFileName}):`, currentFilteredData.length, "records.");
-                            }
+                            // This internal re-filter for the default load is only for header display purposes now
+                            // filteredDataForDisplay is already the final set
                         } else {
                             currentMeetTitleForHeader = "No Data Loaded";
                             currentMeetDateForHeader = "";
@@ -843,11 +836,11 @@
                 currentMeetDateForHeader = "";
             }
 
-            filteredAthleteData = currentFilteredData; // Update the global var with the final filtered set
-            console.log("Final filtered data for rendering (after all steps):", filteredAthleteData.length, "records");
+            console.log("Final filtered data for rendering (after all steps):", filteredDataForDisplay.length, "records");
             
-            // Pass the determined flags and course to renderTable
-            renderTable(filteredAthleteData, isSpecificMeetSelectedFlag, currentMeetCourse);
+            let renderTableAsSpecificMeet = isSpecificMeetSelectedFlag; 
+
+            renderTable(filteredDataForDisplay, renderTableAsSpecificMeet, currentMeetCourse);
             updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileNameFromDropdown === "all-results"); 
         }
 
