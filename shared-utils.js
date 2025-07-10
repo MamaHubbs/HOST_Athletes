@@ -1,4 +1,10 @@
 // shared-utils.js
+function cleanStringForComparison(str) {
+    if (typeof str !== 'string') {
+        return ''; // Ensure we're always working with a string
+    }
+    return str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim(); // Remove non-alphanumeric, then lowercase and trim
+}
 
 function timeToSeconds(timeStr) {
     if (!timeStr || typeof timeStr !== 'string' || timeStr.toLowerCase() === 'nt' || timeStr.toLowerCase() === 'dq') {
