@@ -383,13 +383,43 @@
 
         // weeklyFileNames is expected to be defined in shared-utils.js
 
-        // New utility function for robust string comparison
+        // New utility function for robust string comparison (e.g., meet names)
         function cleanStringForComparison(str) {
             if (typeof str !== 'string') {
                 return '';
             }
+            // Remove all non-alphanumeric characters, then lowercase, then trim spaces
             return str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
         }
+
+        // New utility function specifically for date strings to ensure consistent YYYYMMDD format for comparison
+        function cleanDateStringForComparison(dateStr) {
+            if (typeof dateStr !== 'string') {
+                return '';
+            }
+            // Convert to a standard YYYY-MM-DD format (if it's not already) then remove hyphens
+            // This is safer than new Date().toISOString() directly which might shift date by timezone.
+            let date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+                // Fallback for dates like "Jul 02, 2025"
+                const parts = dateStr.split(/[\s,]+/); // Split by space or comma
+                const monthNames = {
+                    "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
+                    "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11
+                };
+                if (parts.length >= 3 && monthNames[parts[0].toLowerCase()] !== undefined) {
+                    date = new Date(parts[2], monthNames[parts[0].toLowerCase()], parts[1]);
+                } else {
+                    return ''; // Still invalid
+                }
+            }
+            // Format to YYYYMMDD for strict comparison
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}${month}${day}`;
+        }
+
 
         function transformRawData(rawValues, fieldNames) {
             const transformed = [];
@@ -445,8 +475,8 @@
                         firstName: row[firstNameIndex],
                         category: row[genderIndex],
                         age: row[ageIndex],
-                        meetDate: row[meetDateIndex], 
-                        meetName: String(row[meetNameIndex] || ''), 
+                        meetDate: String(row[meetDateIndex]), // Ensure meetDate is stored as string for consistent comparison later
+                        meetName: String(row[meetNameIndex] || ''), // Keep raw string from data, to be cleaned at comparison
                         eventSwum: row[eventSwumIndex],
                         originalCourse: originalCourse, 
                         seedTimeOriginal: String(row[seedTimeIndex]), 
@@ -484,12 +514,13 @@
                     }
                     const rawFileData = await response.json();
 
-                    let meetDateForDropdown = 'Unknown Date';
-                    let meetNameForDropdown = 'Unknown Meet'; 
+                    let meetDateForFiltering = 'Unknown Date'; // This will be the key for matching
+                    let meetNameForFiltering = 'Unknown Meet'; // This will be the key for matching
+                    let meetDateForDisplay = 'Unknown Date'; // This is for what appears in dropdown
+                    let meetNameForDisplay = 'Unknown Meet'; // This is for what appears in dropdown
                     let meetCourse = 'N/A'; 
 
-                    // Prioritize getting meet_date, meet_name, and course from the first row of values
-                    // as this is what's consistently stored in `allAthleteData`.
+                    // Prioritize values from the 'values' array for internal filtering consistency
                     if (rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
                         const fields = rawFileData.fields;
                         const firstRow = rawFileData.values[0];
@@ -498,10 +529,12 @@
                         const eventSwumIndex = fields.indexOf('event_swum');
 
                         if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
-                            meetDateForDropdown = String(firstRow[meetDateIndex]); // Use string for consistency
+                            meetDateForFiltering = String(firstRow[meetDateIndex]);
+                            meetDateForDisplay = String(firstRow[meetDateIndex]); // Default display also from here
                         }
                         if (meetNameIndex !== -1 && firstRow[meetNameIndex]) {
-                            meetNameForDropdown = String(firstRow[meetNameIndex]); 
+                            meetNameForFiltering = String(firstRow[meetNameIndex]);
+                            meetNameForDisplay = String(firstRow[meetNameIndex]); // Default display also from here
                         }
                         
                         if (eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
@@ -512,31 +545,38 @@
                             }
                         }
                     } else if (rawFileData["meet date"] || rawFileData["title"]) {
-                        // Fallback to root level properties if no 'values' array exists
+                        // Fallback to root level properties for display if no 'values' array
+                        // NOTE: These might NOT match the values from transformRawData for filtering
                         if (rawFileData["meet date"]) {
-                            meetDateForDropdown = String(rawFileData["meet date"]);
+                            meetDateForDisplay = String(rawFileData["meet date"]);
                         }
                         if (rawFileData["title"]) {
-                            meetNameForDropdown = String(rawFileData["title"]);
+                            meetNameForDisplay = String(rawFileData["title"]);
+                            // Attempt to infer course from root title
                             if (rawFileData["title"].includes('(SCY)') || rawFileData["title"].includes('(Yards)')) {
                                 meetCourse = 'y';
                             } else if (rawFileData["title"].includes('(SCM)') || rawFileData["title"].includes('(Meters)')) {
                                 meetCourse = 'm';
                             }
                         }
+                        // For meetDateForFiltering and meetNameForFiltering, if values array wasn't present,
+                        // they remain 'Unknown Date'/'Unknown Meet', potentially leading to 0 matches.
+                        // This implies that all files *must* have a 'values' array with meet_date/meet_name.
                     }
 
-                    const dateObject = new Date(meetDateForDropdown);
+                    const dateObject = new Date(meetDateForFiltering); // Use the filtering date for sorting
                     if (isNaN(dateObject.getTime())) {
-                        console.warn(`Invalid date format for file ${fileName} for dropdown: '${meetDateForDropdown}'. Skipping this file's metadata.`);
+                        console.warn(`Invalid date format (for filtering) for file ${fileName}: '${meetDateForFiltering}'. Skipping this file's metadata.`);
                         continue; 
                     }
 
                     tempMetadata.push({
                         fileName: fileName,
-                        meetDate: meetDateForDropdown, 
-                        meetName: meetNameForDropdown.replace('2025 ', ''), 
-                        dateObject: dateObject,
+                        meetDate: meetDateForFiltering, // Stored for internal matching
+                        meetName: meetNameForFiltering, // Stored for internal matching
+                        meetDateDisplay: meetDateForDisplay, // For dropdown text (e.g. "Jul 02, 2025")
+                        meetNameDisplay: meetNameForDisplay.replace('2025 ', ''), // For dropdown text (clean '2025 ')
+                        dateObject: dateObject, // For sorting
                         meetCourse: meetCourse 
                     });
 
@@ -602,7 +642,8 @@
             meetsToDisplay.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.fileName;
-                option.textContent = `${formatMMDDYYYY(item.meetDate)} - ${item.meetName}`;
+                // Use meetDateDisplay and meetNameDisplay for the dropdown text
+                option.textContent = `${formatMMDDYYYY(item.meetDateDisplay)} - ${item.meetNameDisplay}`;
                 jsonFileSelector.appendChild(option);
             });
 
@@ -615,25 +656,23 @@
         }
 
         function updateReportHeaderDisplay(title, rawDateOrRange, isAllResults) {
-            const cleanedTitle = String(title || '').replace('2025 ', '');
+            // No longer replace '2025 ' from title here, assume meetNameDisplay is cleaned if needed
+            const cleanedTitle = String(title || ''); 
             let displayDate = "";
 
             if (isAllResults) {
                 displayDate = rawDateOrRange;
             } else {
-                const parsedDate = new Date(rawDateOrRange);
-                if (!isNaN(parsedDate.getTime())) {
-                    displayDate = formatMMDDYYYY(parsedDate.toISOString().split('T')[0]);
-                } else {
-                    displayDate = rawDateOrRange;
-                }
+                // Use formatMMDDYYYY directly on rawDateOrRange for consistent display date
+                displayDate = formatMMDDYYYY(rawDateOrRange);
             }
             
             reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
         }
 
-        async function fetchAndRenderData(selectedMeetFileName) {
-            console.log(`fetchAndRenderData called with selectedMeetFileName: '${selectedMeetFileName}'`);
+
+        async function fetchAndRenderData(selectedMeetFileNameFromDropdown) {
+            console.log(`fetchAndRenderData called with selectedMeetFileNameFromDropdown: '${selectedMeetFileNameFromDropdown}'`);
             console.log(`Current filterSeasonInput.value: '${filterSeasonInput.value}'`);
             console.log(`Current filterNameInput.value: '${filterNameInput.value}'`);
             console.log(`Current filterStrokeInput.value: '${filterStrokeInput.value}'`);
@@ -661,123 +700,157 @@
                 console.log("All athlete data loaded:", allAthleteData.length, "records.");
             }
 
-            let dataToFilter = [...allAthleteData]; // Start with all loaded data
-            let currentMeetTitleForHeader = "All Meets Combined";
+            let dataFilteredByAll = [...allAthleteData]; // Start with all loaded data
+            let currentMeetTitleForHeader = "All Meets Combined"; // Default
             let currentMeetDateForHeader = ""; 
-            let isSpecificMeetSelectedFlag = false;
-            let currentMeetCourse = 'mixed'; 
+            let isSpecificMeetSelectedFlag = false; // Controls age display and column headers
+            let currentMeetCourse = 'mixed'; // Default course for combined views
 
-            // Phase 1: Apply global filters (Season, Name, Stroke) to narrow down `dataToFilter`
             const nameFilter = filterNameInput.value.toLowerCase();
             const strokeFilter = filterStrokeInput.value.toLowerCase();
-            const seasonFilter = filterSeasonInput.value; 
+            const seasonFilter = filterSeasonInput.value;
+            
+            // --- FILTERING ORDER: SEASON -> SPECIFIC MEET -> NAME -> STROKE ---
 
-            dataToFilter = dataToFilter.filter(athlete => {
-                const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
-                const matchesName = nameFilter === '' || fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
-                const matchesStroke = strokeFilter === '' || athlete.eventSwum.toLowerCase().includes(strokeFilter);
-                
-                const meetYear = new Date(athlete.meetDate).getFullYear().toString();
-                const matchesSeason = seasonFilter === '' || meetYear === seasonFilter;
+            // Step 1: Apply Season Filter
+            if (seasonFilter !== '') {
+                dataFilteredByAll = dataFilteredByAll.filter(athlete => {
+                    const meetYear = new Date(athlete.meetDate).getFullYear().toString();
+                    return meetYear === seasonFilter;
+                });
+                console.log(`After Season Filter (${seasonFilter}):`, dataFilteredByAll.length, "records.");
+            }
 
-                return matchesName && matchesStroke && matchesSeason;
-            });
-            console.log(`Data after global filters (Season, Name, Stroke):`, dataToFilter.length, "records.");
+            // Step 2: Apply Specific Meet Filter if one is chosen
+            let selectedFileMetaForFiltering = null; // Store meta for header/course later
+            if (selectedMeetFileNameFromDropdown && selectedMeetFileNameFromDropdown !== "all-results") {
+                isSpecificMeetSelectedFlag = true; // A specific meet is indeed selected
+                selectedFileMetaForFiltering = allFileMetadata.find(meta => meta.fileName === selectedMeetFileNameFromDropdown);
 
-
-            // Phase 2: Apply the specific Meet File Filter if one is chosen
-            if (selectedMeetFileName && selectedMeetFileName !== "all-results") {
-                isSpecificMeetSelectedFlag = true;
-                const selectedFileMeta = allFileMetadata.find(meta => meta.fileName === selectedMeetFileName);
-                if (selectedFileMeta) {
-                    currentMeetTitleForHeader = selectedFileMeta.meetName;
-                    currentMeetDateForHeader = selectedFileMeta.meetDate;
-                    currentMeetCourse = selectedFileMeta.meetCourse; 
-
-                    // Filter dataToFilter (which is already filtered by season/name/stroke)
-                    // This comparison now uses the robust cleaning function
-                    dataToFilter = dataToFilter.filter(athlete => {
+                if (selectedFileMetaForFiltering) {
+                    currentMeetCourse = selectedFileMetaForFiltering.meetCourse; // Set course for headers
+                    
+                    dataFilteredByAll = dataFilteredByAll.filter(athlete => {
                         const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
-                        const metaMeetNameClean = cleanStringForComparison(selectedFileMeta.meetName);
-                        const athleteMeetDateClean = cleanStringForComparison(athlete.meetDate);
-                        const metaMeetDateClean = cleanStringForComparison(selectedFileMeta.meetDate);
+                        const metaMeetNameClean = cleanStringForComparison(selectedFileMetaForFiltering.meetName);
+                        const athleteMeetDateClean = cleanDateStringForComparison(athlete.meetDate); 
+                        const metaMeetDateClean = cleanDateStringForComparison(selectedFileMetaForFiltering.meetDate); 
 
                         const isMatch = athleteMeetNameClean === metaMeetNameClean && athleteMeetDateClean === metaMeetDateClean;
                         
                         console.log("--- DEBUGGING SPECIFIC MEET FILTER ---");
-                        console.log(`  File: ${selectedMeetFileName}`);
-                        console.log("  selectedFileMeta.meetName (cleaned):", metaMeetNameClean);
-                        console.log("  selectedFileMeta.meetDate (cleaned):", metaMeetDateClean);
-                        console.log("  Athlete record meetName (cleaned):", athleteMeetNameClean);
-                        console.log("  Athlete record meetDate (cleaned):", athleteMeetDateClean);
+                        console.log(`  File: ${selectedMeetFileNameFromDropdown}`);
+                        console.log("  selectedFileMetaForFiltering.meetName (cleaned):", metaMeetNameClean);
+                        console.log("  selectedFileMetaForFiltering.meetDate (cleaned):", metaMeetDateClean);
+                        // Log the actual athlete record's values if dataFilteredByAll is not empty
+                        if (dataFilteredByAll.length > 0) {
+                            console.log("  Sample athlete record meetName (cleaned):", cleanStringForComparison(dataFilteredByAll[0].meetName));
+                            console.log("  Sample athlete record meetDate (cleaned):", cleanDateStringForComparison(dataFilteredByAll[0].meetDate));
+                        }
                         console.log("  Names Match?", athleteMeetNameClean === metaMeetNameClean);
                         console.log("  Dates Match?", athleteMeetDateClean === metaMeetDateClean);
                         console.log("  Overall Match?", isMatch);
 
                         return isMatch;
                     });
-                    console.log(`Data filtered for specific meet (${selectedMeetFileName}), course: ${currentMeetCourse}:`, dataToFilter.length, "records.");
+                    console.log(`After Specific Meet Filter (${selectedMeetFileNameFromDropdown}):`, dataFilteredByAll.length, "records.");
                 } else {
-                    console.warn(`Metadata for selected meet file ${selectedMeetFileName} not found.`);
-                    dataToFilter = []; // If specific meet metadata not found, clear data
-                    currentMeetTitleForHeader = "Unknown Meet";
+                    console.warn(`Metadata for selected meet file ${selectedMeetFileNameFromDropdown} not found.`);
+                    dataFilteredByAll = []; // Clear data if metadata is missing
                 }
-            } else if (selectedMeetFileName === "all-results" || (selectedMeetFileName === "" && seasonFilter === "" && nameFilter === "" && strokeFilter === "")) {
-                 // Initial load (all-results) OR no filters at all (default state, should show most recent)
-                // In these cases, dataToFilter already holds the `allAthleteData` (or all data after initial global filters)
-                // The headers will be determined below.
-                if (dataToFilter.length > 0) { // If there's data after global filters
-                    const allDates = dataToFilter.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
-                    const overallMinDate = allDates[0];
-                    const overallMaxDate = allDates[allDates.length - 1];
-                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
-                    if (selectedMeetFileName === "all-results") {
-                        currentMeetTitleForHeader = "All Meets Combined";
-                    } else { // This is the case for the initial default load to most recent file
-                             // Or if all filters are reset to empty
+            } else if (selectedMeetFileNameFromDropdown === "") {
+                // "--- Select a Meet ---" is chosen. `dataFilteredByAll` remains as filtered by season.
+                // `isSpecificMeetSelectedFlag` remains false.
+            }
+            // else if selectedMeetFileNameFromDropdown is "all-results", no file-specific filtering needed
+
+
+            // Step 3: Apply Name Filter
+            if (nameFilter !== '') {
+                dataFilteredByAll = dataFilteredByAll.filter(athlete => {
+                    const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
+                    return fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
+                });
+                console.log(`After Name Filter (${nameFilter}):`, dataFilteredByAll.length, "records.");
+            }
+
+            // Step 4: Apply Stroke Filter
+            if (strokeFilter !== '') {
+                dataFilteredByAll = dataFilteredByAll.filter(athlete => {
+                    return athlete.eventSwum.toLowerCase().includes(strokeFilter);
+                });
+                console.log(`After Stroke Filter (${strokeFilter}):`, dataFilteredByAll.length, "records.");
+            }
+            
+
+            // --- Determine Final Header & Render Options ---
+            filteredAthleteData = dataFilteredByAll; // Set global filteredData for renderTable and summary chart
+
+            // This determines the header based on the final state of filters
+            if (filteredDataForDisplay.length > 0) { // Renamed dataFilteredByAll to filteredDataForDisplay
+                const allDatesInFinalData = filteredDataForDisplay.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
+                const finalMinDate = allDatesInFinalData[0];
+                const finalMaxDate = allDatesInFinalData[allDatesInFinalData.length - 1];
+                
+                if (isSpecificMeetSelectedFlag && selectedFileMetaForFiltering) { // Specific meet was selected and found
+                    currentMeetTitleForHeader = selectedFileMetaForFiltering.meetName;
+                    currentMeetDateForHeader = selectedFileMetaForFiltering.meetDate;
+                    currentMeetCourse = selectedFileMetaForFiltering.meetCourse; 
+                } else if (selectedMeetFileNameFromDropdown === "all-results") { // "All Results" option chosen
+                    currentMeetTitleForHeader = "All Meets Combined";
+                    currentMeetDateForHeader = `${formatDate(finalMinDate.toISOString().split('T')[0])} - ${formatDate(finalMaxDate.toISOString().split('T')[0])}, ${finalMinDate.getFullYear()}`;
+                    currentMeetCourse = 'mixed'; 
+                } else if (seasonFilter !== "" || nameFilter !== "" || strokeFilter !== "") { // Other filters active, not specific meet
+                    currentMeetTitleForHeader = `Filtered Results`;
+                    if (seasonFilter !== "") {
+                        currentMeetTitleForHeader += ` (Season ${seasonFilter})`;
+                    }
+                    currentMeetDateForHeader = `${formatDate(finalMinDate.toISOString().split('T')[0])} - ${formatDate(finalMaxDate.toISOString().split('T')[0])}, ${finalMinDate.getFullYear()}`;
+                    currentMeetCourse = 'mixed'; 
+                } else { // Default initial state (last file selected by default) or no filters at all
+                    // For the initial default load, we need to explicitly filter data to the latest file.
+                    // This scenario is when selectedMeetFileNameFromDropdown is the last file, AND all other filters are empty.
+                    if (weeklyFileNames.length > 0) {
                         const mostRecentFileName = weeklyFileNames[weeklyFileNames.length - 1];
                         const mostRecentFileMeta = allFileMetadata.find(meta => meta.fileName === mostRecentFileName);
                         if (mostRecentFileMeta) {
                             currentMeetTitleForHeader = mostRecentFileMeta.meetName;
                             currentMeetDateForHeader = mostRecentFileMeta.meetDate;
-                            currentMeetCourse = mostRecentFileMeta.meetCourse;
-                            isSpecificMeetSelectedFlag = true; // Treat as specific meet selection for rendering purposes
+                            currentMeetCourse = mostRecentFileMeta.meetCourse; // Set course for rendering
+                            isSpecificMeetSelectedFlag = true; // For rendering purposes, treat as specific meet
                             
-                            // Re-filter dataToFilter to just this most recent meet
-                            dataToFilter = dataToFilter.filter(athlete => {
+                            // Explicitly filter for this most recent file if all filters are empty.
+                            filteredDataForDisplay = allAthleteData.filter(athlete => { // Start from ALL data here
                                 const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
                                 const metaMeetNameClean = cleanStringForComparison(mostRecentFileMeta.meetName);
-                                const athleteMeetDateClean = cleanStringForComparison(athlete.meetDate);
-                                const metaMeetDateClean = cleanStringForComparison(mostRecentFileMeta.meetDate);
+                                const athleteMeetDateClean = cleanDateStringForComparison(athlete.meetDate);
+                                const metaMeetDateClean = cleanDateStringForComparison(mostRecentFileMeta.meetDate);
                                 return athleteMeetNameClean === metaMeetNameClean && athleteMeetDateClean === metaMeetDateClean;
                             });
-                            console.log(`Data filtered for default most recent meet (${mostRecentFileName}):`, dataToFilter.length, "records.");
+                            console.log(`Data filtered for default most recent meet (${mostRecentFileName}):`, filteredDataForDisplay.length, "records.");
 
                         } else {
-                            currentMeetTitleForHeader = "No Data Loaded"; // Fallback if no recent file
+                            currentMeetTitleForHeader = "No Data Loaded";
+                            currentMeetDateForHeader = "";
                         }
+                    } else {
+                        currentMeetTitleForHeader = "No Data Loaded";
+                        currentMeetDateForHeader = "";
                     }
-                } else {
-                    currentMeetTitleForHeader = "No Data Loaded";
                 }
-            } else { // selectedMeetFileName is empty, but season/name/stroke filters ARE active
-                // dataToFilter already holds records filtered by season/name/stroke
-                currentMeetTitleForHeader = `All Meets in Season ${seasonFilter}`; // or "Filtered Results"
-                 if (dataToFilter.length > 0) {
-                    const allDates = dataToFilter.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
-                    const overallMinDate = allDates[0];
-                    const overallMaxDate = allDates[allDates.length - 1];
-                    currentMeetDateForHeader = `${formatDate(overallMinDate.toISOString().split('T')[0])} - ${formatDate(overallMaxDate.toISOString().split('T')[0])}, ${overallMinDate.getFullYear()}`;
-                } else {
-                    currentMeetTitleForHeader = "No Data Loaded for Filters";
-                }
+            } else { // No records found for the final set of filters
+                currentMeetTitleForHeader = "No Data Loaded for Filters";
+                currentMeetDateForHeader = "";
             }
+
+            filteredAthleteData = filteredDataForDisplay; // Update the global var
+            console.log("Final filtered data for rendering (after all steps):", filteredAthleteData.length, "records");
             
-            filteredAthleteData = dataToFilter; // The final `dataToFilter` is what we render
-            console.log("Final filtered data for rendering:", filteredAthleteData.length, "records");
-            
-            renderTable(filteredAthleteData, isSpecificMeetSelectedFlag, currentMeetCourse);
-            updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileName === "all-results"); 
+            // Pass the determined flags and course to renderTable
+            let renderTableAsSpecificMeet = isSpecificMeetSelectedFlag; 
+
+            renderTable(filteredAthleteData, renderTableAsSpecificMeet, currentMeetCourse);
+            updateReportHeaderDisplay(currentMeetTitleForHeader, currentMeetDateForHeader, selectedMeetFileNameFromDropdown === "all-results"); 
         }
 
         function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
@@ -1019,10 +1092,6 @@
             filterStrokeInput.value = ''; 
             
             await populateJsonFileSelector(selectedSeason); 
-            
-            // This is crucial: when season changes, we don't automatically select a meet.
-            // If the meet selector now has "--- Select a Meet ---" selected, that's an empty string.
-            // fetchAndRenderData needs to handle this by filtering by season only.
             fetchAndRenderData(jsonFileSelector.value); 
         });
 
@@ -1066,17 +1135,16 @@
                 console.log("Initial allAthleteData load on DOMContentLoaded:", allAthleteData.length, "records.");
             }
 
-            // Set default selections and trigger initial render based on new requirements
             if (weeklyFileNames.length > 0) {
-                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1]; // Default to most recent file
+                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1]; 
             } else {
-                jsonFileSelector.value = "all-results"; // Fallback if no files defined
+                jsonFileSelector.value = "all-results"; 
             }
-            filterSeasonInput.value = ""; // Always start with "All Seasons"
-            filterNameInput.value = ""; // Clear name filter
-            filterStrokeInput.value = ""; // Clear stroke filter
+            filterSeasonInput.value = ""; 
+            filterNameInput.value = ""; 
+            filterStrokeInput.value = ""; 
             
-            fetchAndRenderData(jsonFileSelector.value); // Trigger display with initial state
+            fetchAndRenderData(jsonFileSelector.value); 
         });
     </script>
 </body>
