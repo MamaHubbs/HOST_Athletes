@@ -4,225 +4,141 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Swimmer Performance Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module">
-    import {
-      timeToSeconds,
-      secondsToTime,
-      formatDate,
-      formatMMDDYYYY,
-      weeklyFileNames
-    } from './dashboard-utils.js';
-
-    window.timeToSeconds = timeToSeconds;
-    window.secondsToTime = secondsToTime;
-    window.formatDate = formatDate;
-    window.formatMMDDYYYY = formatMMDDYYYY;
-    window.weeklyFileNames = weeklyFileNames;
-  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f8f8f8;
-            color: #333;
-        }
-
-        /* Centering and max-width for the entire dashboard */
-        .container {
-            max-width: 875px; /* Adjusted max width */
-            margin: 20px auto; /* Center the container horizontally */
-            background-color: #ffffff; /* Explicitly set background for the container */
-            padding: 20px; /* Add some padding inside the container */
-            border-radius: 8px; /* Rounded corners for the main container */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Subtle shadow for the container */
-        }
-
-        h1 {
-            text-align: center;
-            color: #0156B3;
-            font-size: 2em;
-            margin-bottom: 10px;
-            font-weight: bold;
-            text-shadow: none;
-        }
-
-        .dashboard-intro-text {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #555;
-            font-size: 0.9em;
-            line-height: 1.4;
-        }
-
-        .filter-section {
-            background-color: #f8f8f8;
-            padding: 10px;
-            text-align: center;
-            z-index: 10;
-            border-bottom: 1px solid #ccc;
-            font-size: 0.8em; /* Slightly larger for main filters */
-            border-radius: 8px;
-            margin-bottom: 15px; /* Space between filter section and charts */
-        }
-
-        .filter-box {
-            display: inline-block;
-            margin: 0 4px;
-            vertical-align: bottom; /* Align input with label */
-        }
-
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        select, input[type="text"] {
-            padding: 3px 6px;
-            font-size: 0.8em; /* Adjusted font size for inputs */
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            min-width: 150px; /* Ensure inputs have a decent size */
-        }
-
-        button {
-            padding: 4px 8px;
-            font-size: 0.7em;
-            border-radius: 4px;
-            background-color: #0156B3;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        /* Dashboard Specific Styles */
-        .chart-section {
-            background-color: #e5f1ff; /* Light blue background for the dashboard section */
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border: 1px solid #0156B3; /* Border with theme blue */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .chart-section h2 {
-            color: #0156B3; /* Heading color for dashboard section */
-            text-align: center;
-            font-size: 1.5em; /* Adjust relative to body font size */
-            margin-bottom: 15px;
-        }
-        .chart-section h3 {
-            color: #333; /* Sub-heading color */
-            font-size: 1.1em;
-            margin-bottom: 10px;
-            text-align: center; /* Center chart titles */
-        }
-        .chart-controls-inner { /* New class for specific chart controls */
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .chart-controls-inner .dropdown-box {
-            flex-grow: 0;
-            min-width: unset;
-            width: auto;
-            text-align: center;
-        }
-
-        .chart-display {
-            display: grid;
-            grid-template-columns: 1fr; /* Always stack for small width */
-            gap: 20px;
-        }
-        
-        /* Base chart container for consistent padding and shadow */
-        .chart-canvas-container {
-            background-color: #ffffff;
-            padding: 25px 15px 30px 15px; /* Top, Right/Left, Bottom */
-            border-radius: 8px;
-            border: 1px solid #b3d9ff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            /* No fixed height here, individual heights will be set or default to content */
-            width: 500px; /* Set fixed width for all chart containers */
-            margin: 0 auto; /* Center individual chart containers */
-            position: relative; /* Needed for overlay */
-        }
-
-        /* Specific height for Specialty Chart container */
-        .specialty-chart-container {
-            height: 500px; /* Increased for more pronounced effect */
-        }
-
-        /* Specific height for Progression Chart container */
-        .progression-chart-container {
-            height: 600px; /* Increased for more pronounced effect */
-        }
-
-        /* Ensure canvases maintain their size regardless of container padding */
-        .chart-canvas-container canvas {
-            max-width: 100%;
-            max-height: 384px; /* Set a fixed max height for the canvas itself */
-            width: 100% !important; /* Ensure canvas fills width if smaller */
-            height: 384px !important; /* Force canvas to original intended height */
-        }
-
-        /* Styles for search result dropdown */
-        .autocomplete-container {
-            position: relative;
-            display: inline-block; /* Allows it to be centered like a filter-box */
-            width: auto; /* Adjust as needed */
-        }
-
-        .autocomplete-items {
-            position: absolute;
-            border: 1px solid #d4d4d4;
-            border-bottom: none;
-            border-top: none;
-            z-index: 99;
-            top: 100%;
-            left: 0;
-            right: 0;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: #fff;
-            text-align: left;
-        }
-
-        .autocomplete-items div {
-            padding: 8px;
-            cursor: pointer;
-            background-color: #fff; 
-            border-bottom: 1px solid #d4d4d4; 
-            font-size: 0.8em;
-        }
-
-        .autocomplete-items div:hover {
-            background-color: #e9e9e9;
-        }
-
-        .autocomplete-active {
-            background-color: DodgerBlue !important;
-            color: #ffffff;
-        }
-    </style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f8f8f8;
+      color: #333;
+    }
+    .container {
+      max-width: 875px;
+      margin: 20px auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #0156B3;
+      font-size: 2em;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .dashboard-intro-text {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #555;
+      font-size: 0.9em;
+    }
+    .filter-section {
+      background-color: #f8f8f8;
+      padding: 10px;
+      text-align: center;
+      z-index: 10;
+      border-bottom: 1px solid #ccc;
+      font-size: 0.8em;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .filter-box {
+      display: inline-block;
+      margin: 0 4px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+    select, input[type="text"] {
+      padding: 3px 6px;
+      font-size: 0.8em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      min-width: 150px;
+    }
+    .chart-section {
+      background-color: #e5f1ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      border: 1px solid #0156B3;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .chart-display {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .chart-canvas-container {
+      background-color: #ffffff;
+      padding: 25px 15px 30px 15px;
+      border-radius: 8px;
+      border: 1px solid #b3d9ff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 500px;
+      margin: 0 auto;
+    }
+    .specialty-chart-container {
+      height: 500px;
+    }
+    .progression-chart-container {
+      height: 600px;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 384px;
+      width: 100% !important;
+      height: 384px !important;
+    }
+    .autocomplete-container {
+      position: relative;
+      display: inline-block;
+      width: auto;
+    }
+    .autocomplete-items {
+      position: absolute;
+      border: 1px solid #d4d4d4;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: #fff;
+      text-align: left;
+      z-index: 99;
+    }
+    .autocomplete-items div {
+      padding: 8px;
+      cursor: pointer;
+      background-color: #fff;
+      border-bottom: 1px solid #d4d4d4;
+      font-size: 0.8em;
+    }
+    .autocomplete-items div:hover {
+      background-color: #e9e9e9;
+    }
+    .autocomplete-active {
+      background-color: DodgerBlue !important;
+      color: #ffffff;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>Swimmer Performance Dashboard</h1>
     <p class="dashboard-intro-text">
-      Please select a swimmer to view their overall swim specialty. 
-      You can then use the progression chart to track their performance over time for a specific stroke or event.
+      Please select a swimmer to view their overall swim specialty. You can then use the progression chart to track their performance over time.
     </p>
 
     <div class="filter-section">
-      <div class="filter-box autocomplete-container" style="text-align: center;">
+      <div class="filter-box autocomplete-container">
         <label for="filterSwimmerName">Search Swimmer:</label>
         <input type="text" id="filterSwimmerName" placeholder="Start typing name...">
         <div id="swimmerSearchResults" class="autocomplete-items"></div>
@@ -238,7 +154,7 @@
 
         <div class="chart-canvas-container progression-chart-container">
           <h3>Time Progression (Line Chart)</h3>
-          <div class="chart-controls-inner" style="margin-top: 0; margin-bottom: 10px;">
+          <div class="chart-controls-inner">
             <div class="dropdown-box">
               <label for="selectEventForProgression">Select Event:</label>
               <select id="selectEventForProgression" disabled>
@@ -252,140 +168,186 @@
     </div>
   </div>
 
-<script>
-  let allAthleteData = [];
-  let uniqueSwimmersData = [];
-  let currentSelectedSwimmerId = null;
-  let allUniqueMeets = [];
-  let maxObservedTimesPerStroke = {};
+  <script type="module">
+    import {
+      timeToSeconds,
+      secondsToTime,
+      formatMMDDYYYY,
+      weeklyFileNames
+    } from './dashboard-utils.js';
 
-  const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
-  const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
-  const selectEventForProgression = document.getElementById('selectEventForProgression');
+    let allAthleteData = [];
+    let uniqueSwimmersData = [];
+    let currentSelectedSwimmerId = null;
+    let allUniqueMeets = [];
+    let specialtyChartInstance = null;
+    let progressionChartInstance = null;
 
-  // PATCHED: ID based on name only
-  function transformRawData(rawValues, fieldNames) {
-    const transformed = [];
-    const lastNameIndex = fieldNames.indexOf('last_name');
-    const firstNameIndex = fieldNames.indexOf('first_name');
-    const genderIndex = fieldNames.indexOf('competition_category');
-    const ageIndex = fieldNames.indexOf('age');
-    const meetDateIndex = fieldNames.indexOf('meet_date');
-    const meetNameIndex = fieldNames.indexOf('meet_name');
-    const eventSwumIndex = fieldNames.indexOf('event_swum');
-    const seedTimeIndex = fieldNames.indexOf('seed_time');
-    const resultTimeIndex = fieldNames.indexOf('result_time');
-    const placeIndex = fieldNames.indexOf('place');
-    const pointsIndex = fieldNames.indexOf('points');
+    const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
+    const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
+    const selectEventForProgression = document.getElementById('selectEventForProgression');
 
-    rawValues.forEach((row) => {
-      const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}`.toLowerCase();
+    function transformRawData(rawValues, fieldNames) {
+      const lastNameIndex = fieldNames.indexOf('last_name');
+      const firstNameIndex = fieldNames.indexOf('first_name');
+      const meetDateIndex = fieldNames.indexOf('meet_date');
+      const meetNameIndex = fieldNames.indexOf('meet_name');
+      const eventSwumIndex = fieldNames.indexOf('event_swum');
+      const resultTimeIndex = fieldNames.indexOf('result_time');
 
-      transformed.push({
-        id: athleteId,
-        lastName: row[lastNameIndex],
-        firstName: row[firstNameIndex],
-        category: row[genderIndex],
-        age: row[ageIndex],
-        meetDate: row[meetDateIndex],
-        meetName: String(row[meetNameIndex]).replace('2025 ', ''),
-        eventSwum: row[eventSwumIndex],
-        seedTime: String(row[seedTimeIndex]),
-        resultTime: String(row[resultTimeIndex]),
-        place: row[placeIndex],
-        points: row[pointsIndex]
+      return rawValues.map(row => {
+        const id = `${row[lastNameIndex]}-${row[firstNameIndex]}`.toLowerCase();
+        return {
+          id,
+          lastName: row[lastNameIndex],
+          firstName: row[firstNameIndex],
+          meetDate: row[meetDateIndex],
+          meetName: row[meetNameIndex],
+          eventSwum: row[eventSwumIndex],
+          resultTime: row[resultTimeIndex]
+        };
       });
-    });
-    return transformed;
-  }
+    }
 
-  async function loadAllAthleteDataForDashboard() {
-    const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
-      const filePath = new URL(name, window.location.href).toString();
-      try {
-        const response = await fetch(filePath);
-        if (!response.ok) return [];
-        const rawWeekData = await response.json();
-        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
-          return transformRawData(rawWeekData.values, rawWeekData.fields);
+    async function loadAllAthleteDataForDashboard() {
+      const fetches = weeklyFileNames.map(async name => {
+        try {
+          const res = await fetch(new URL(name, window.location.href));
+          if (!res.ok) return [];
+          const data = await res.json();
+          return transformRawData(data.values, data.fields);
+        } catch {
+          return [];
         }
-        return [];
-      } catch (error) {
-        console.warn(`Error fetching ${filePath}:`, error);
-        return [];
+      });
+      const all = await Promise.all(fetches);
+      allAthleteData = all.flat();
+
+      const swimmerMap = new Map();
+      allAthleteData.forEach(a => {
+        const key = `${a.lastName}-${a.firstName}`.toLowerCase();
+        if (!swimmerMap.has(key)) {
+          swimmerMap.set(key, { id: key, firstName: a.firstName, lastName: a.lastName });
+        }
+      });
+      uniqueSwimmersData = [...swimmerMap.values()];
+
+      const meetMap = new Map();
+      allAthleteData.forEach(d => {
+        const k = `${d.meetDate}-${d.meetName}`;
+        if (!meetMap.has(k)) {
+          meetMap.set(k, { date: d.meetDate, name: d.meetName, display: `${formatMMDDYYYY(d.meetDate)} (${d.meetName})` });
+        }
+      });
+      allUniqueMeets = [...meetMap.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      updateSpecialtyChart(null);
+      updateProgressionChart(null, null);
+    }
+
+    function updateSpecialtyChart(swimmerId) {
+      const ctx = document.getElementById('specialtyChart').getContext('2d');
+      const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+      const strokeScores = strokes.map(stroke => {
+        const data = allAthleteData.filter(d => d.id === swimmerId && d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && !['NT', 'NS', 'DQ'].includes(d.resultTime));
+        if (data.length === 0) return 0;
+        const times = data.map(d => timeToSeconds(d.resultTime));
+        const avg = times.reduce((a, b) => a + b, 0) / times.length;
+        return 100 - avg; // dummy normalized score
+      });
+      const chartData = {
+        labels: strokes,
+        datasets: [{
+          label: swimmerId ? `Specialty` : 'No Swimmer Selected',
+          data: strokeScores,
+          backgroundColor: 'rgba(255, 204, 0, 0.4)',
+          borderColor: 'rgba(255, 204, 0, 1)',
+          borderWidth: 1
+        }]
+      };
+      if (specialtyChartInstance) {
+        specialtyChartInstance.data = chartData;
+        specialtyChartInstance.update();
+      } else {
+        specialtyChartInstance = new Chart(ctx, { type: 'radar', data: chartData });
       }
-    });
+    }
 
-    const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
-    allAthleteData = allWeeksTransformedData.flat();
-
-    const swimmerMap = new Map();
-    allAthleteData.forEach(athlete => {
-      const key = `${athlete.lastName}-${athlete.firstName}`;
-      if (!swimmerMap.has(key)) {
-        swimmerMap.set(key, {
-          id: key.toLowerCase(),
-          firstName: athlete.firstName,
-          lastName: athlete.lastName,
+    function updateProgressionChart(swimmerId, selectedEvent) {
+      const ctx = document.getElementById('progressionChart').getContext('2d');
+      const labels = allUniqueMeets.map(m => m.display);
+      const points = Array(allUniqueMeets.length).fill(null);
+      if (swimmerId && selectedEvent) {
+        const data = allAthleteData.filter(d => d.id === swimmerId && d.eventSwum === selectedEvent && !['NT', 'NS', 'DQ'].includes(d.resultTime));
+        data.forEach(d => {
+          const i = allUniqueMeets.findIndex(m => m.date === d.meetDate && m.name === d.meetName);
+          if (i !== -1) points[i] = timeToSeconds(d.resultTime);
         });
       }
-    });
-    uniqueSwimmersData = Array.from(swimmerMap.values()).sort((a, b) => 
-      a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
-    );
-
-    // Populate charts after data
-    updateSpecialtyChart(null);
-    updateProgressionChart(null, null);
-  }
-
-  // AUTOCOMPLETE UI (no age shown)
-  filterSwimmerNameInput.addEventListener('input', function() {
-    const inputVal = this.value.toLowerCase();
-    closeAllLists();
-    if (!inputVal) {
-      updateChartsAndEventsForSwimmer(null);
-      return false;
-    }
-    const matches = uniqueSwimmersData.filter(swimmer => 
-      `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal) ||
-      `${swimmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal)
-    );
-
-    matches.forEach(swimmer => {
-      const itemDiv = document.createElement("div");
-      itemDiv.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName}`;
-      itemDiv.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
-      itemDiv.addEventListener("click", function() {
-        filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName}`;
-        currentSelectedSwimmerId = swimmer.id;
-        updateChartsAndEventsForSwimmer(currentSelectedSwimmerId);
-        closeAllLists();
-      });
-      swimmerSearchResultsDiv.appendChild(itemDiv);
-    });
-  });
-
-  function closeAllLists(elmnt) {
-    const items = document.getElementsByClassName("autocomplete-items");
-    for (let i = 0; i < items.length; i++) {
-      if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
-        items[i].innerHTML = '';
+      const chartData = {
+        labels,
+        datasets: [{ label: selectedEvent || 'No Event Selected', data: points, borderColor: '#4169E1', fill: false, tension: 0.4 }]
+      };
+      if (progressionChartInstance) {
+        progressionChartInstance.data = chartData;
+        progressionChartInstance.update();
+      } else {
+        progressionChartInstance = new Chart(ctx, { type: 'line', data: chartData });
       }
     }
-  }
 
-  document.addEventListener("click", function (e) {
-    closeAllLists(e.target);
-  });
+    function populateEventSelectForProgression(swimmerId) {
+      selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
+      const events = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))].sort();
+      events.forEach(event => {
+        const opt = document.createElement('option');
+        opt.value = event;
+        opt.textContent = event;
+        selectEventForProgression.appendChild(opt);
+      });
+      selectEventForProgression.disabled = events.length === 0;
+    }
 
-  function updateChartsAndEventsForSwimmer(swimmerId) {
-    currentSelectedSwimmerId = swimmerId;
-    updateSpecialtyChart(swimmerId);
-    populateEventSelectForProgression(swimmerId);
-  }
+    filterSwimmerNameInput.addEventListener('input', () => {
+      const inputVal = filterSwimmerNameInput.value.toLowerCase();
+      closeAllLists();
+      if (!inputVal) return;
+      const matches = uniqueSwimmersData.filter(swimmer =>
+        `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal)
+      );
+      matches.forEach(swimmer => {
+        const div = document.createElement("div");
+        div.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName}`;
+        div.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
+        div.addEventListener("click", function() {
+          filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName}`;
+          currentSelectedSwimmerId = swimmer.id;
+          updateSpecialtyChart(swimmer.id);
+          populateEventSelectForProgression(swimmer.id);
+          closeAllLists();
+        });
+        swimmerSearchResultsDiv.appendChild(div);
+      });
+    });
 
-  document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
-</script>
+    selectEventForProgression.addEventListener('change', (e) => {
+      updateProgressionChart(currentSelectedSwimmerId, e.target.value);
+    });
+
+    function closeAllLists(elmnt) {
+      const items = document.getElementsByClassName("autocomplete-items");
+      for (let i = 0; i < items.length; i++) {
+        if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
+          items[i].innerHTML = '';
+        }
+      }
+    }
+
+    document.addEventListener('click', function (e) {
+      closeAllLists(e.target);
+    });
+
+    document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
+  </script>
 </body>
 </html>
