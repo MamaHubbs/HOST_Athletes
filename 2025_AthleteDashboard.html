@@ -214,706 +214,178 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Swimmer Performance Dashboard</h1>
-        <p class="dashboard-intro-text">
-            Please select a swimmer to view their overall swim specialty. 
-            You can then use the progression chart to track their performance over time for a specific stroke or event.
-        </p>
+  <div class="container">
+    <h1>Swimmer Performance Dashboard</h1>
+    <p class="dashboard-intro-text">
+      Please select a swimmer to view their overall swim specialty. 
+      You can then use the progression chart to track their performance over time for a specific stroke or event.
+    </p>
 
-        <div class="filter-section">
-            <div class="filter-box autocomplete-container" style="text-align: center;">
-                <label for="filterSwimmerName">Search Swimmer:</label>
-                <input type="text" id="filterSwimmerName" placeholder="Start typing name...">
-                <div id="swimmerSearchResults" class="autocomplete-items"></div>
-            </div>
-        </div>
-
-        <div class="chart-section">
-            <div class="chart-display">
-                <div class="chart-canvas-container specialty-chart-container">
-                    <h3>Swimmer Specialty (Radar Chart)</h3>
-                    <canvas id="specialtyChart"></canvas>
-                </div>
-
-                <div class="chart-canvas-container progression-chart-container">
-                    <h3>Time Progression (Line Chart)</h3>
-                    <div class="chart-controls-inner" style="margin-top: 0; margin-bottom: 10px;">
-                        <div class="dropdown-box">
-                            <label for="selectEventForProgression">Select Event:</label>
-                            <select id="selectEventForProgression" disabled>
-                                <option value="">-- Select an Event --</option>
-                                </select>
-                        </div>
-                    </div>
-                    <canvas id="progressionChart"></canvas>
-                    </div>
-            </div>
-        </div>
+    <div class="filter-section">
+      <div class="filter-box autocomplete-container" style="text-align: center;">
+        <label for="filterSwimmerName">Search Swimmer:</label>
+        <input type="text" id="filterSwimmerName" placeholder="Start typing name...">
+        <div id="swimmerSearchResults" class="autocomplete-items"></div>
+      </div>
     </div>
 
-    <script>
-        let allAthleteData = [];
-        let uniqueSwimmersData = []; // Store unique swimmer objects for search functionality
-        let currentSelectedSwimmerId = null;
-        let allUniqueMeets = []; // New array to store all unique meet dates and names
-        let maxObservedTimesPerStroke = {}; // Store max observed time for each stroke
+    <div class="chart-section">
+      <div class="chart-display">
+        <div class="chart-canvas-container specialty-chart-container">
+          <h3>Swimmer Specialty (Radar Chart)</h3>
+          <canvas id="specialtyChart"></canvas>
+        </div>
 
-        const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
-        const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
-        const selectEventForProgression = document.getElementById('selectEventForProgression');
+        <div class="chart-canvas-container progression-chart-container">
+          <h3>Time Progression (Line Chart)</h3>
+          <div class="chart-controls-inner" style="margin-top: 0; margin-bottom: 10px;">
+            <div class="dropdown-box">
+              <label for="selectEventForProgression">Select Event:</label>
+              <select id="selectEventForProgression" disabled>
+                <option value="">-- Select an Event --</option>
+              </select>
+            </div>
+          </div>
+          <canvas id="progressionChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        let specialtyChartInstance = null;
-        let progressionChartInstance = null;
+<script>
+  let allAthleteData = [];
+  let uniqueSwimmersData = [];
+  let currentSelectedSwimmerId = null;
+  let allUniqueMeets = [];
+  let maxObservedTimesPerStroke = {};
 
-        // Using shared-utils.js for helper functions (timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY, weeklyFileNames)
-        // Ensure shared-utils.js is correctly linked in the <head>
+  const filterSwimmerNameInput = document.getElementById('filterSwimmerName');
+  const swimmerSearchResultsDiv = document.getElementById('swimmerSearchResults');
+  const selectEventForProgression = document.getElementById('selectEventForProgression');
 
-        function transformRawData(rawValues, fieldNames) {
-            const transformed = [];
-            const lastNameIndex = fieldNames.indexOf('last_name');
-            const firstNameIndex = fieldNames.indexOf('first_name');
-            const genderIndex = fieldNames.indexOf('competition_category');
-            const ageIndex = fieldNames.indexOf('age');
-            const meetDateIndex = fieldNames.indexOf('meet_date');
-            const meetNameIndex = fieldNames.indexOf('meet_name');
-            const eventSwumIndex = fieldNames.indexOf('event_swum');
-            const seedTimeIndex = fieldNames.indexOf('seed_time');
-            const resultTimeIndex = fieldNames.indexOf('result_time');
-            const placeIndex = fieldNames.indexOf('place');
-            const pointsIndex = fieldNames.indexOf('points');
+  // PATCHED: ID based on name only
+  function transformRawData(rawValues, fieldNames) {
+    const transformed = [];
+    const lastNameIndex = fieldNames.indexOf('last_name');
+    const firstNameIndex = fieldNames.indexOf('first_name');
+    const genderIndex = fieldNames.indexOf('competition_category');
+    const ageIndex = fieldNames.indexOf('age');
+    const meetDateIndex = fieldNames.indexOf('meet_date');
+    const meetNameIndex = fieldNames.indexOf('meet_name');
+    const eventSwumIndex = fieldNames.indexOf('event_swum');
+    const seedTimeIndex = fieldNames.indexOf('seed_time');
+    const resultTimeIndex = fieldNames.indexOf('result_time');
+    const placeIndex = fieldNames.indexOf('place');
+    const pointsIndex = fieldNames.indexOf('points');
 
-            rawValues.forEach((row) => {
-                const athleteId = ${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}.toLowerCase();
-                
-                transformed.push({
-                    id: athleteId,
-                    lastName: row[lastNameIndex],
-                    firstName: row[firstNameIndex],
-                    category: row[genderIndex],
-                    age: row[ageIndex],
-                    meetDate: row[meetDateIndex],
-                    meetName: String(row[meetNameIndex]).replace('2025 ', ''),
-                    eventSwum: row[eventSwumIndex],
-                    seedTime: String(row[seedTimeIndex]),
-                    resultTime: String(row[resultTimeIndex]),
-                    place: row[placeIndex],
-                    points: row[pointsIndex]
-                });
-            });
-            return transformed;
+    rawValues.forEach((row) => {
+      const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}`.toLowerCase();
+
+      transformed.push({
+        id: athleteId,
+        lastName: row[lastNameIndex],
+        firstName: row[firstNameIndex],
+        category: row[genderIndex],
+        age: row[ageIndex],
+        meetDate: row[meetDateIndex],
+        meetName: String(row[meetNameIndex]).replace('2025 ', ''),
+        eventSwum: row[eventSwumIndex],
+        seedTime: String(row[seedTimeIndex]),
+        resultTime: String(row[resultTimeIndex]),
+        place: row[placeIndex],
+        points: row[pointsIndex]
+      });
+    });
+    return transformed;
+  }
+
+  async function loadAllAthleteDataForDashboard() {
+    const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
+      const filePath = new URL(name, window.location.href).toString();
+      try {
+        const response = await fetch(filePath);
+        if (!response.ok) return [];
+        const rawWeekData = await response.json();
+        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
+          return transformRawData(rawWeekData.values, rawWeekData.fields);
         }
+        return [];
+      } catch (error) {
+        console.warn(`Error fetching ${filePath}:`, error);
+        return [];
+      }
+    });
 
-        async function loadAllAthleteDataForDashboard() {
-            const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
-                const filePath = new URL(name, window.location.href).toString();
-                let rawWeekData = null;
-                try {
-                    const response = await fetch(filePath);
-                    if (!response.ok) {
-                        console.warn(Could not fetch ${filePath}. Skipping this week.);
-                        return [];
-                    }
-                    rawWeekData = await response.json();
-                    if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
-                        return transformRawData(rawWeekData.values, rawWeekData.fields);
-                    }
-                    return [];
-                } catch (error) {
-                    console.error(Error fetching ${filePath}:, error);
-                    console.warn(Skipping ${name} due to network error.);
-                    return [];
-                }
-            });
+    const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
+    allAthleteData = allWeeksTransformedData.flat();
 
-            const allWeeksTransformedData = await Promise.all(allFetchedRawDataPromises);
-            allAthleteData = allWeeksTransformedData.flat();
-            console.log("All athlete data loaded:", allAthleteData.length, "records."); 
-
-            // Populate uniqueSwimmersData for search functionality
-            const swimmerMap = new Map();
-            allAthleteData.forEach(athlete => {
-                const key = ${athlete.lastName}-${athlete.firstName}-${athlete.age};
-                if (!swimmerMap.has(key)) {
-                    swimmerMap.set(key, {
-                        id: key,
-                        firstName: athlete.firstName,
-                        lastName: athlete.lastName,
-                        age: athlete.age 
-                    });
-                }
-            });
-            uniqueSwimmersData = Array.from(swimmerMap.values()).sort((a, b) => 
-                a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
-            );
-            console.log("Unique swimmers prepared:", uniqueSwimmersData.length); 
-
-            // Populate allUniqueMeets for consistent X-axis
-            const meetMap = new Map();
-            allAthleteData.forEach(data => {
-                const meetKey = ${data.meetDate}-${data.meetName};
-                if (!meetMap.has(meetKey)) {
-                    meetMap.set(meetKey, {
-                        date: data.meetDate,
-                        name: data.meetName,
-                        display: ${formatMMDDYYYY(data.meetDate)} (${data.meetName})
-                    });
-                }
-            });
-            allUniqueMeets = Array.from(meetMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
-            console.log("All unique meets prepared:", allUniqueMeets.length);
-
-            // Calculate max observed times per stroke for Specialty Chart dynamic scaling
-            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-            const allStrokeTimes = {
-                'Freestyle': [], 'Backstroke': [], 'Breaststroke': [], 'Butterfly': [], 'IM': []
-            };
-
-            allAthleteData.forEach(data => {
-                strokes.forEach(stroke => {
-                    if (data.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && data.resultTime !== 'NT' && data.resultTime !== 'NS' && data.resultTime !== 'DQ') {
-                        allStrokeTimes[stroke].push(timeToSeconds(data.resultTime));
-                    }
-                });
-            });
-
-            strokes.forEach(stroke => {
-                if (allStrokeTimes[stroke].length > 0) {
-                    maxObservedTimesPerStroke[stroke] = Math.max(...allStrokeTimes[stroke]) * 1.1; // 10% buffer
-                } else {
-                    maxObservedTimesPerStroke[stroke] = 120; // Fallback default if no data for stroke
-                }
-                console.log(Max observed time for ${stroke}: ${maxObservedTimesPerStroke[stroke].toFixed(2)}s);
-            });
-
-            // Initialize empty charts on load
-            updateSpecialtyChart(null); 
-            updateProgressionChart(null, null); 
-        }
-
-        function populateEventSelectForProgression(swimmerId) {
-            console.log("populateEventSelectForProgression called for swimmerId:", swimmerId);
-            selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-            selectEventForProgression.disabled = true;
-
-            if (!swimmerId) {
-                updateProgressionChart(null, null); 
-                return;
-            }
-
-            const swimmerEvents = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => d.eventSwum))];
-            
-            console.log("Swimmer events found for progression:", swimmerEvents); 
-
-            if (swimmerEvents.length > 0) {
-                swimmerEvents.sort().forEach(event => {
-                    const option = document.createElement('option');
-                    option.value = event;
-                    option.textContent = event;
-                    selectEventForProgression.appendChild(option);
-                });
-                selectEventForProgression.disabled = false;
-
-                selectEventForProgression.value = swimmerEvents[0]; 
-                console.log("Auto-selecting first event for progression:", selectEventForProgression.value); 
-                updateProgressionChart(swimmerId, selectEventForProgression.value);
-                
-            } else {
-                console.warn("No events found for selected swimmer.");
-                updateProgressionChart(null, null); 
-            }
-        }
-
-        // --- Chart Data & Update Functions ---
-        function getSpecialtyChartData(swimmerId) {
-            if (!swimmerId) {
-                return {
-                    labels: ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'],
-                    datasets: [{
-                        label: 'No Swimmer Selected',
-                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
-                        borderColor: 'rgba(150, 150, 150, 1)',
-                        data: [0, 0, 0, 0, 0], 
-                        borderWidth: 1,
-                        pointBackgroundColor: 'rgba(150, 150, 150, 1)'
-                    }]
-                };
-            }
-
-            const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-            if (swimmerData.length === 0) {
-                console.error("No data found for specialty chart for swimmerId:", swimmerId); 
-                return { 
-                    labels: ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'],
-                    datasets: [{
-                        label: 'No Data for Swimmer',
-                        backgroundColor: 'rgba(200, 200, 200, 0.2)',
-                        borderColor: 'rgba(150, 150, 150, 1)',
-                        data: [0, 0, 0, 0, 0],
-                        borderWidth: 1,
-                        pointBackgroundColor: 'rgba(150, 150, 150, 1)'
-                    }]
-                };
-            }
-
-            const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-            const specialtyScores = {};
-            const pronunciationFactor = 2.0; 
-            const scoreOffset = 50; // Add a base value to push scores outwards
-
-            strokes.forEach(stroke => {
-                const relevantEvents = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ');
-                if (relevantEvents.length > 0) {
-                    const sumTimes = relevantEvents.reduce((sum, d) => sum + timeToSeconds(d.resultTime), 0);
-                    const avgTime = sumTimes / relevantEvents.length;
-
-                    const dynamic_max_expected_avg_time = maxObservedTimesPerStroke[stroke] || 120; 
-                    
-                    let normalizedScore = (dynamic_max_expected_avg_time - avgTime) / dynamic_max_expected_avg_time;
-                    normalizedScore = Math.max(0, Math.min(1, normalizedScore)); 
-
-                    let finalScore = Math.pow(normalizedScore, pronunciationFactor) * 100; 
-
-                    finalScore = Math.max(0, Math.min(100, finalScore)); 
-                    specialtyScores[stroke] = finalScore;
-                } else {
-                    specialtyScores[stroke] = 0;
-                }
-            });
-
-            const swimmerInfo = uniqueSwimmersData.find(s => s.id === swimmerId);
-            const swimmerDisplayName = swimmerInfo ? ${swimmerInfo.lastName}, ${swimmerInfo.firstName} : "Selected Swimmer";
-
-            return {
-                labels: strokes, // Labels (Freestyle, Backstroke, etc.)
-                datasets: [{
-                    label: ${swimmerDisplayName}'s Specialty,
-                    backgroundColor: 'rgba(255, 204, 0, 0.4)',
-                    borderColor: 'rgba(255, 204, 0, 1)',
-                    data: strokes.map(stroke => specialtyScores[stroke] + scoreOffset), // ADDING OFFSET TO DATA
-                    borderWidth: 1,
-                    pointBackgroundColor: 'rgba(255, 204, 0, 1)'
-                }]
-            };
-        }
-
-        function getProgressionChartData(swimmerId, eventSwum) {
-            console.log("getProgressionChartData called with swimmerId:", swimmerId, "eventSwum:", eventSwum);
-
-            const dataPoints = Array(allUniqueMeets.length).fill(null);
-            const labels = allUniqueMeets.map(meet => meet.display); 
-
-            if (!swimmerId || !eventSwum) {
-                return { labels: labels, datasets: [{ label: 'No Event Selected', data: dataPoints, fill: false, borderColor: 'rgba(150, 150, 150, 1)', tension: 0.1, pointBackgroundColor: 'rgba(150, 150, 150, 1)' }] };
-            }
-
-            const swimmerEventData = allAthleteData
-                .filter(d => d.id === swimmerId && d.eventSwum === eventSwum && d.resultTime !== 'NT' && d.resultTime !== 'NS' && d.resultTime !== 'DQ')
-                .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
-
-            console.log("Filtered swimmerEventData for progression:", swimmerEventData); 
-
-            swimmerEventData.forEach(entry => {
-                const entryMeetKey = ${entry.meetDate}-${entry.meetName};
-                const meetIndex = allUniqueMeets.findIndex(meet => ${meet.date}-${meet.name} === entryMeetKey);
-                if (meetIndex !== -1) {
-                    dataPoints[meetIndex] = timeToSeconds(entry.resultTime);
-                }
-            });
-            
-            return {
-                labels: labels, 
-                datasets: [{
-                    label: ${eventSwum}, 
-                    data: dataPoints, 
-                    fill: false, 
-                    borderColor: '#4169E1',
-                    tension: 0.4, 
-                    pointBackgroundColor: '#4169E1',
-                    spanGaps: true 
-                }]
-            };
-        }
-
-        function updateSpecialtyChart(swimmerId) {
-            const chartData = getSpecialtyChartData(swimmerId);
-            const ctx = document.getElementById('specialtyChart').getContext('2d');
-
-            const scoreOffset = 50; // The offset applied to scores in getSpecialtyChartData
-
-            if (specialtyChartInstance) {
-                specialtyChartInstance.data = chartData;
-                specialtyChartInstance.update();
-            } else {
-                specialtyChartInstance = new Chart(ctx, {
-                    type: 'radar',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            r: {
-                                angleLines: {
-                                    color: (context) => {
-                                        // Make every other angle line faint (e.g., 0, 2, 4...)
-                                        return context.index % 2 === 0 ? '#e2e8f0' : 'rgba(0,0,0,0.05)'; 
-                                    }
-                                },
-                                grid: {
-                                    color: (context) => {
-                                        // context.tick.value is the score on the radial scale (e.g., 0, 25, 50, 75, 100, 125, 150)
-                                        // Make lines at multiples of 50 stronger, others very faint.
-                                        if (context.tick.value % 50 === 0) { // Stronger for multiples of 50 (0, 50, 100, 150)
-                                            return '#cbd5e0';
-                                        } else if (context.tick.value % 25 === 0) { // Faint for multiples of 25 (e.g. 25, 75, 125)
-                                            return 'rgba(0,0,0,0.05)'; 
-                                        }
-                                        return 'rgba(0,0,0,0)'; // Transparent for other lines
-                                    },
-                                    lineWidth: (context) => {
-                                        // Make lines at multiples of 50 thicker, others thinner/invisible
-                                        if (context.tick.value % 50 === 0) {
-                                            return 1;
-                                        } else if (context.tick.value % 25 === 0) {
-                                            return 0.5;
-                                        }
-                                        return 0; // Very thin/invisible
-                                    },
-                                    drawTicks: false // Do not draw the small tick marks on the axis
-                                },
-                                pointLabels: {
-                                    font: { size: 10, weight: 'bold' },
-                                    color: '#4a5568'
-                                },
-                                min: 0, // Always start at 0
-                                max: 100 + scoreOffset, // MAX should be 100 + scoreOffset (e.g., 150)
-                                ticks: { 
-                                    display: false, // REMOVE NUMBERS from display
-                                    stepSize: 25,   // Set internal tick step to 25 for grid lines (e.g., 0, 25, 50, ..., 150)
-                                    beginAtZero: true // Ensure the 0 point is always at the center
-                                },
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                                labels: { color: '#4a5568', font: { size: 10 } }
-                            },
-                            title: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        // Subtract the scoreOffset to show the original 0-100 score in tooltip
-                                        return ${context.dataset.label}: ${(context.raw - scoreOffset).toFixed(1)};
-                                    }
-                                },
-                                bodyFont: { size: 10 }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        // Custom Tooltip function for the Progression Chart
-        function customProgressionTooltip(context) {
-            const tooltipModel = context.tooltip;
-            let tooltipEl = document.getElementById('chartjs-tooltip'); 
-
-            if (tooltipModel.opacity === 0) {
-                if (tooltipEl) {
-                    tooltipEl.style.opacity = 0;
-                    tooltipEl.style.left = '-9999px'; 
-                    tooltipEl.style.top = '-9999px';
-                }
-                return;
-            }
-
-            if (!tooltipEl) {
-                tooltipEl = document.createElement('div');
-                tooltipEl.id = 'chartjs-tooltip';
-                tooltipEl.className = 'chartjs-tooltip'; 
-                document.body.appendChild(tooltipEl);
-            }
-
-            if (tooltipModel.body) {
-                const titleLines = tooltipModel.title || []; 
-                const bodyLines = tooltipModel.body.map(b => b.lines); 
-
-                let innerHtml = '<div class="chartjs-tooltip-header">';
-                titleLines.forEach(function(title) {
-                    const fullLabel = title;
-                    const firstParenIndex = fullLabel.indexOf(' (');
-                    let datePart = fullLabel;
-                    let meetNamePart = '';
-
-                    if (firstParenIndex !== -1) {
-                        datePart = fullLabel.substring(0, firstParenIndex);
-                        meetNamePart = fullLabel.substring(firstParenIndex + 2, fullLabel.length - 1); 
-                    }
-                    innerHtml += <div><strong>${datePart}</strong></div>; 
-                    if (meetNamePart) {
-                         innerHtml += <div><strong>${meetNamePart}</strong></div>; 
-                    }
-                });
-                innerHtml += '</div><div class="chartjs-tooltip-body">';
-
-                bodyLines.forEach(function(body, i) {
-                    body.forEach(line => {
-                        innerHtml += <span>${line}</span>;
-                    });
-                });
-                innerHtml += '</div>';
-
-                tooltipEl.innerHTML = innerHtml;
-            }
-
-            const canvasRect = context.chart.canvas.getBoundingClientRect();
-            let tooltipX = canvasRect.left + window.pageXOffset + tooltipModel.caretX;
-            let tooltipY = canvasRect.top + window.pageYOffset + tooltipModel.caretY;
-
-            tooltipEl.style.left = tooltipX + 'px';
-            tooltipEl.style.top = tooltipY + 'px';
-            tooltipEl.style.transform = 'translate(-50%, 0)'; 
-
-            const tooltipWidth = tooltipEl.offsetWidth;
-            const viewportWidth = window.innerWidth;
-            if (tooltipX + tooltipWidth / 2 > viewportWidth) {
-                tooltipEl.style.left = (tooltipX - (tooltipX + tooltipWidth / 2 - viewportWidth) - 10) + 'px'; 
-                tooltipEl.style.transform = 'translate(0, 0)'; 
-            } else if (tooltipX - tooltipWidth / 2 < 0) { 
-                 tooltipEl.style.left = (tooltipX + (0 - (tooltipX - tooltipWidth / 2)) + 10) + 'px'; 
-                 tooltipEl.style.transform = 'translate(0, 0)'; 
-            }
-
-            tooltipEl.style.opacity = 1; 
-            tooltipEl.style.pointerEvents = 'auto'; 
-        }
-
-        function updateProgressionChart(swimmerId, selectedEvent) {
-            console.log("updateProgressionChart called with swimmerId:", swimmerId, "selectedEvent:", selectedEvent); 
-            const chartData = getProgressionChartData(swimmerId, selectedEvent);
-            const ctx = document.getElementById('progressionChart').getContext('2d');
-
-            if (!ctx) {
-                console.error("Canvas context for progressionChart not found.");
-                return;
-            }
-
-            let yAxisMin;
-            let yAxisMax; 
-            let tickStepSize; 
-
-            const dataValues = chartData.datasets[0].data.filter(d => d !== null); 
-            const actualDataPointsCount = dataValues.length; 
-
-            if (actualDataPointsCount === 0) { 
-                yAxisMin = 0; 
-                yAxisMax = 60; 
-                tickStepSize = 10;
-                console.log("No actual data points for progression chart. Using default Y-axis range (0-60s).");
-            } else { 
-                const minData = Math.min(...dataValues);
-                const maxData = Math.max(...dataValues);
-
-                const valueRange = maxData - minData;
-
-                if (valueRange <= 0.2) { 
-                    tickStepSize = 0.05; 
-                } else if (valueRange <= 0.5) { 
-                    tickStepSize = 0.1; 
-                } else if (valueRange <= 1.5) { 
-                    tickStepSize = 0.25; 
-                } else if (valueRange <= 5) { 
-                    tickStepSize = 0.5; 
-                } else { 
-                    tickStepSize = 1.0; 
-                }
-
-                yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
-                if (yAxisMin === minData && minData > 0) { 
-                    yAxisMin = Math.max(0, yAxisMin - tickStepSize);
-                } else if (minData > 0) { 
-                    yAxisMin = Math.floor(minData / tickStepSize) * tickStepSize;
-                } else { 
-                    yAxisMin = 0;
-                }
-
-                const minTicksAboveMax = 5;
-                let targetMax = maxData + (minTicksAboveMax * tickStepSize);
-                yAxisMax = Math.ceil(targetMax / tickStepSize) * tickStepSize;
-
-                if (actualDataPointsCount === 1) {
-                    const desiredRange = tickStepSize * 5; 
-                    let tempMin = dataValues[0] - (desiredRange / 2);
-                    let tempMax = dataValues[0] + (desiredRange / 2);
-
-                    yAxisMin = Math.floor(tempMin / tickStepSize) * tickStepSize;
-                    yAxisMax = Math.ceil(tempMax / tickStepSize) * tickStepSize;
-
-                    if (yAxisMin < 0) yAxisMin = 0;
-
-                    if (yAxisMax - yAxisMin < tickStepSize * 4) { 
-                        const neededIncrease = (tickStepSize * 4) - (yAxisMax - yAxisMin);
-                        yAxisMax += neededIncrease;
-                        yAxisMax = Math.ceil(yAxisMax / tickStepSize) * tickStepSize; 
-                    }
-                }
-
-                if (yAxisMin < 0) yAxisMin = 0; 
-
-                console.log("Progression Y-axis range:", {min: yAxisMin, max: yAxisMax, step: tickStepSize});
-            }
-            
-            const newOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Meet Date (Meet Name)', color: '#4a5568', font: { size: 10 } }, 
-                        labels: chartData.labels, 
-                        ticks: { 
-                            color: '#4a5568', 
-                            font: { size: 9 },
-                            display: true 
-                        },
-                        grid: { color: '#e2e8f0' }
-                    },
-                    y: {
-                        title: { display: true, text: 'Time (MM:SS.ms)', color: '#4a5568', font: { size: 10 } },
-                        ticks: {
-                            color: '#4a5568',
-                            callback: function(value) { return secondsToTime(value); },
-                            font: { size: 9 },
-                            stepSize: tickStepSize 
-                        },
-                        grid: { color: '#e2e8f0' },
-                        reverse: true, 
-                        min: yAxisMin,
-                        max: yAxisMax
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: { color: '#4a5568', font: { size: 10 } }
-                    },
-                    title: { display: false }, 
-                    tooltip: {
-                        enabled: false, 
-                        external: customProgressionTooltip, 
-                    }
-                }
-            };
-
-            if (progressionChartInstance) {
-                console.log("Updating existing progressionChartInstance.");
-                progressionChartInstance.data = chartData;
-                progressionChartInstance.options = newOptions; 
-                progressionChartInstance.update();
-            } else {
-                console.log("Creating new progressionChartInstance.");
-                progressionChartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: chartData,
-                    options: newOptions
-                });
-            }
-        }
-
-        // --- Autocomplete/Search Logic ---
-        filterSwimmerNameInput.addEventListener('input', function() {
-            const inputVal = this.value.toLowerCase();
-            closeAllLists();
-            if (!inputVal) { 
-                updateChartsAndEventsForSwimmer(null); 
-                return false; 
-            }
-            
-            let currentFocus = -1;
-            const matches = uniqueSwimmersData.filter(swimmer => 
-                ${swimmer.firstName} ${swimmer.lastName}.toLowerCase().includes(inputVal) ||
-                ${swimmer.lastName}, ${swimmer.firstName}.toLowerCase().includes(inputVal)
-            );
-
-            matches.forEach((swimmer, i) => {
-                const itemDiv = document.createElement("div");
-                itemDiv.innerHTML = <strong>${swimmer.lastName}</strong>, ${swimmer.firstName};
-                itemDiv.innerHTML += <input type='hidden' value='${swimmer.id}'>;
-                itemDiv.addEventListener("click", function() {
-                    filterSwimmerNameInput.value = ${swimmer.lastName}, ${swimmer.firstName};
-                    currentSelectedSwimmerId = swimmer.id;
-                    updateChartsAndEventsForSwimmer(currentSelectedSwimmerId);
-                    closeAllLists();
-                });
-                swimmerSearchResultsDiv.appendChild(itemDiv);
-            });
+    const swimmerMap = new Map();
+    allAthleteData.forEach(athlete => {
+      const key = `${athlete.lastName}-${athlete.firstName}`;
+      if (!swimmerMap.has(key)) {
+        swimmerMap.set(key, {
+          id: key.toLowerCase(),
+          firstName: athlete.firstName,
+          lastName: athlete.lastName,
         });
+      }
+    });
+    uniqueSwimmersData = Array.from(swimmerMap.values()).sort((a, b) => 
+      a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
+    );
 
-        filterSwimmerNameInput.addEventListener('keydown', function(e) {
-            let x = swimmerSearchResultsDiv.getElementsByTagName("div");
-            if (e.keyCode == 40) { // Arrow Down
-                currentFocus++;
-                addActive(x);
-            } else if (e.keyCode == 38) { // Arrow Up
-                currentFocus--;
-                addActive(x);
-            } else if (e.keyCode == 13) { // Enter
-                e.preventDefault();
-                if (currentFocus > -1) {
-                    if (x && x[currentFocus]) x[currentFocus].click();
-                } else if (swimmerSearchResultsDiv.children.length > 0) {
-                    // If no explicit selection but results exist, auto-select the first
-                    swimmerSearchResultsDiv.children[0].click();
-                }
-            }
-        });
+    // Populate charts after data
+    updateSpecialtyChart(null);
+    updateProgressionChart(null, null);
+  }
 
-        function addActive(x) {
-            if (!x || x.length === 0) return false;
-            removeActive(x);
-            if (currentFocus >= x.length) currentFocus = 0;
-            if (currentFocus < 0) currentFocus = (x.length - 1);
-            x[currentFocus].classList.add("autocomplete-active");
-        }
+  // AUTOCOMPLETE UI (no age shown)
+  filterSwimmerNameInput.addEventListener('input', function() {
+    const inputVal = this.value.toLowerCase();
+    closeAllLists();
+    if (!inputVal) {
+      updateChartsAndEventsForSwimmer(null);
+      return false;
+    }
+    const matches = uniqueSwimmersData.filter(swimmer => 
+      `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal) ||
+      `${swimmer.lastName}, ${swimmer.firstName}`.toLowerCase().includes(inputVal)
+    );
 
-        function removeActive(x) {
-            if (!x) return;
-            for (let i = 0; i < x.length; i++) {
-                x[i].classList.remove("autocomplete-active");
-            }
-        }
+    matches.forEach(swimmer => {
+      const itemDiv = document.createElement("div");
+      itemDiv.innerHTML = `<strong>${swimmer.lastName}</strong>, ${swimmer.firstName}`;
+      itemDiv.innerHTML += `<input type='hidden' value='${swimmer.id}'>`;
+      itemDiv.addEventListener("click", function() {
+        filterSwimmerNameInput.value = `${swimmer.lastName}, ${swimmer.firstName}`;
+        currentSelectedSwimmerId = swimmer.id;
+        updateChartsAndEventsForSwimmer(currentSelectedSwimmerId);
+        closeAllLists();
+      });
+      swimmerSearchResultsDiv.appendChild(itemDiv);
+    });
+  });
 
-        function closeAllLists(elmnt) {
-            const items = document.getElementsByClassName("autocomplete-items");
-            for (let i = 0; i < items.length; i++) {
-                if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
-                    items[i].innerHTML = ''; 
-                }
-            }
-        }
+  function closeAllLists(elmnt) {
+    const items = document.getElementsByClassName("autocomplete-items");
+    for (let i = 0; i < items.length; i++) {
+      if (elmnt != items[i] && elmnt != filterSwimmerNameInput) {
+        items[i].innerHTML = '';
+      }
+    }
+  }
 
-        document.addEventListener("click", function (e) {
-            closeAllLists(e.target);
-        });
+  document.addEventListener("click", function (e) {
+    closeAllLists(e.target);
+  });
 
-        // Function to update charts and event dropdown after swimmer selection
-        function updateChartsAndEventsForSwimmer(swimmerId) {
-            currentSelectedSwimmerId = swimmerId; 
-            updateSpecialtyChart(swimmerId);
-            populateEventSelectForProgression(swimmerId);
-        }
+  function updateChartsAndEventsForSwimmer(swimmerId) {
+    currentSelectedSwimmerId = swimmerId;
+    updateSpecialtyChart(swimmerId);
+    populateEventSelectForProgression(swimmerId);
+  }
 
-        // Event Listeners
-        selectEventForProgression.addEventListener('change', (event) => {
-            const selectedEvent = event.target.value;
-            updateProgressionChart(currentSelectedSwimmerId, selectedEvent);
-        });
-
-        // Initial load for dashboard
-        document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
-    </script>
+  document.addEventListener('DOMContentLoaded', loadAllAthleteDataForDashboard);
+</script>
 </body>
 </html>
