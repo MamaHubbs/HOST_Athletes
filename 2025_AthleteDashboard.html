@@ -425,21 +425,27 @@
         }]
       };
 
-      // ✅ Robust fixed-step Y-axis tick logic
+      // ✅ FINAL Y-AXIS LOGIC — FIXED REVERSED MATH
       const yValues = points.filter(p => p !== null);
       let min = 0, max = 60, step = 0.10;
 
       if (yValues.length) {
-        const slowest = Math.max(...yValues);
         const fastest = Math.min(...yValues);
+        const slowest = Math.max(...yValues);
 
-        min = Math.floor((slowest - step) / step) * step;
-        max = Math.ceil((fastest + step * 3) / step) * step;
+        // REVERSED Y-AXIS: higher = slower = bottom
+        min = Math.ceil((slowest + step) / step) * step; // 1 tick below slowest
+        max = Math.floor((fastest - (step * 3)) / step) * step; // 3 ticks above fastest
+
         if (min < 0) min = 0;
+        if (max < 0) max = 0;
 
-        if ((max - min) < step * 4) {
-          max = min + step * 4;
+        // Ensure a minimum chart range
+        if ((min - max) < step * 4) {
+          max = min - step * 4;
         }
+
+        if (max < 0) max = 0;
       }
 
       const options = {
@@ -453,8 +459,8 @@
           },
           y: {
             reverse: true,
-            min: min,
-            max: max,
+            min: max,
+            max: min,
             ticks: {
               stepSize: step,
               callback: v => secondsToTime(v),
