@@ -461,79 +461,79 @@
         }
 
 
-        function transformRawData(rawValues, fieldNames) {
-            const transformed = [];
-            const lastNameIndex = fieldNames.indexOf('last_name');
-            const firstNameIndex = fieldNames.indexOf('first_name');
-            const genderIndex = fieldNames.indexOf('competition_category');
-            const ageIndex = fieldNames.indexOf('age');
-            const meetDateIndex = fieldNames.indexOf('meet_date');
-            const meetNameIndex = fieldNames.indexOf('meet_name'); 
-            const eventSwumIndex = fieldNames.indexOf('event_swum');
-            const seedTimeIndex = fieldNames.indexOf('seed_time');
-            const resultTimeIndex = fieldNames.indexOf('result_time'); 
-            const seedTimeSCMIndex = fieldNames.indexOf('seed_time_scm'); 
-            const resultTimeSCMIndex = fieldNames.indexOf('result_time_scm'); 
-            const placeIndex = fieldNames.indexOf('place');
-            const pointsIndex = fieldNames.indexOf('points');
+    function transformRawData(rawValues, fieldNames) {
+        const transformed = [];
+        const lastNameIndex = fieldNames.indexOf('last_name');
+        const firstNameIndex = fieldNames.indexOf('first_name');
+        const genderIndex = fieldNames.indexOf('competition_category');
+        const ageIndex = fieldNames.indexOf('age');
+        const meetDateIndex = fieldNames.indexOf('meet_date');
+        const meetNameIndex = fieldNames.indexOf('meet_name'); 
+        const eventSwumIndex = fieldNames.indexOf('event_swum');
+        const seedTimeIndex = fieldNames.indexOf('seed_time');
+        const resultTimeIndex = fieldNames.indexOf('result_time'); 
+        const seedTimeSCMIndex = fieldNames.indexOf('seed_time_scm'); 
+        const resultTimeSCMIndex = fieldNames.indexOf('result_time_scm'); 
+        const placeIndex = fieldNames.indexOf('place');
+        const pointsIndex = fieldNames.indexOf('points');
 
-            rawValues.forEach((row) => {
-                const requiredIndices = [lastNameIndex, firstNameIndex, genderIndex, ageIndex, meetDateIndex, meetNameIndex, eventSwumIndex, seedTimeIndex, resultTimeIndex, seedTimeSCMIndex, resultTimeSCMIndex, placeIndex, pointsIndex];
-                const maxIndex = Math.max(...requiredIndices);
+        rawValues.forEach((row) => {
+            const requiredIndices = [lastNameIndex, firstNameIndex, genderIndex, ageIndex, meetDateIndex, meetNameIndex, eventSwumIndex, seedTimeIndex, resultTimeIndex, seedTimeSCMIndex, resultTimeSCMIndex, placeIndex, pointsIndex];
+            const maxIndex = Math.max(...requiredIndices);
 
-                if (row.length > maxIndex && !requiredIndices.some(idx => idx === -1)) { 
-                    const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`; 
-                    
-                    let originalCourse = 'N/A';
-                    if (row[eventSwumIndex]) {
-                        if (String(row[eventSwumIndex]).includes('y ')) { 
-                            originalCourse = 'y'; 
-                        } else if (String(row[eventSwumIndex]).includes('m ')) { 
-                            originalCourse = 'm'; 
-                        }
+            if (row.length > maxIndex && !requiredIndices.some(idx => idx === -1)) { 
+                const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`; 
+                
+                let originalCourse = 'N/A';
+                if (row[eventSwumIndex]) {
+                    if (String(row[eventSwumIndex]).includes('y ')) { 
+                        originalCourse = 'y'; 
+                    } else if (String(row[eventSwumIndex]).includes('m ')) { 
+                        originalCourse = 'm'; 
                     }
-
-                    let seedConverted = false;
-                    let finalConverted = false;
-
-                    if (originalCourse === 'y') {
-                        const seedStr = String(row[seedTimeIndex]).toLowerCase();
-                        const seedScmStr = String(row[seedTimeSCMIndex]).toLowerCase();
-                        if (seedStr !== 'nt' && seedScmStr !== 'nt' && seedStr !== seedScmStr) {
-                            seedConverted = true;
-                        }
-                        const finalStr = String(row[resultTimeIndex]).toLowerCase();
-                        const finalScmStr = String(row[resultTimeSCMIndex]).toLowerCase();
-                        if (finalStr !== 'nt' && finalScmStr !== 'nt' && finalStr !== finalScmStr) {
-                            finalConverted = true;
-                        }
-                    }
-
-                    transformed.push({
-                        id: athleteId, 
-                        lastName: row[lastNameIndex],
-                        firstName: row[firstNameIndex],
-                        category: row[genderIndex],
-                        age: row[ageIndex],
-                        meetDate: String(row[meetDateIndex]), 
-                        meetName: String(row[meetNameIndex] || ''), 
-                        eventSwum: row[eventSwumIndex],
-                        originalCourse: originalCourse, 
-                        seedTimeOriginal: String(row[seedTimeIndex]), 
-                        resultTimeOriginal: String(row[resultTimeIndex]), 
-                        seedTimeSCM: String(row[seedTimeSCMIndex]), 
-                        resultTimeSCM: String(row[resultTimeSCMIndex]), 
-                        seedConverted: seedConverted, 
-                        finalConverted: finalConverted, 
-                        place: row[placeIndex],
-                        points: row[pointsIndex]
-                    });
-                } else {
-                    console.warn(`Skipping a row due to missing data fields or unfound indices:`, row, `Max index required: ${maxIndex}`, `Indices found: ${fieldNames.map((f,i) => `${f}:${i}`).join(', ')}`);
                 }
-            });
-            return transformed;
-        }
+
+                let seedConverted = false;
+                let finalConverted = false;
+
+                if (originalCourse === 'y') {
+                    const seedStr = String(row[seedTimeIndex]).toLowerCase();
+                    const seedScmStr = String(row[seedTimeSCMIndex]).toLowerCase();
+                    if (seedStr !== 'nt' && seedScmStr !== 'nt' && seedStr !== seedScmStr) {
+                        seedConverted = true;
+                    }
+                    const finalStr = String(row[resultTimeIndex]).toLowerCase();
+                    const finalScmStr = String(row[resultTimeSCMIndex]).toLowerCase();
+                    if (finalStr !== 'nt' && finalScmStr !== 'nt' && finalStr !== finalScmStr) {
+                        finalConverted = true;
+                    }
+                }
+
+                transformed.push({
+                    id: athleteId, 
+                    lastName: row[lastNameIndex],
+                    firstName: row[firstNameIndex],
+                    category: row[genderIndex],
+                    age: row[ageIndex],
+                    meetDate: String(row[meetDateIndex]), 
+                    meetName: String(row[meetNameIndex] || ''), 
+                    eventSwum: row[eventSwumIndex],
+                    originalCourse: originalCourse, 
+                    seedTimeOriginal: String(row[seedTimeIndex]), 
+                    resultTimeOriginal: String(row[resultTimeIndex]), 
+                    seedTimeSCM: String(row[seedTimeSCMIndex]), 
+                    resultTimeSCM: String(row[resultTimeSCMIndex]), 
+                    seedConverted: seedConverted, 
+                    finalConverted: finalConverted, 
+                    place: row[placeIndex],
+                    points: row[pointsIndex]
+                });
+            } else {
+                console.warn(`Skipping a row due to missing data fields or unfound indices:`, row, `Max index required: ${maxIndex}`, `Indices found: ${fieldNames.map((f,i) => `${f}:${i}`).join(', ')}`);
+            }
+        });
+        return transformed;
+    }
 
         let allFileMetadata = []; 
         let uniqueSwimmersForAutocomplete = []; // NEW: To store unique swimmers for autocomplete list
