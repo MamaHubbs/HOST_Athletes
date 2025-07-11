@@ -399,6 +399,7 @@
     }
   }
 
+
     function updateProgressionChart(swimmerId, eventName) {
       const ctx = document.getElementById('progressionChart').getContext('2d');
       const points = Array(allUniqueMeets.length).fill(null);
@@ -424,16 +425,28 @@
         }]
       };
 
-      // ✅ Custom dynamic Y-axis ticks
+      // ✅ Dynamic Y-axis tick calculation
       const yValues = points.filter(p => p !== null);
-      let min = 0, max = 60;
+      let min = 0, max = 60, step = 0.10;
+
       if (yValues.length) {
         const slowest = Math.max(...yValues);
         const fastest = Math.min(...yValues);
-        const tickStep = 0.10;
-        min = Math.floor((slowest - tickStep) / tickStep) * tickStep;
-        max = Math.ceil((fastest + 3 * tickStep) / tickStep) * tickStep;
+
+        // Dynamic step size for broader ranges (optional tuning)
+        const range = slowest - fastest;
+        if (range > 10) step = 0.5;
+        else if (range > 5) step = 0.25;
+        else step = 0.10;
+
+        min = Math.floor((slowest - step) / step) * step;
+        max = Math.ceil((fastest + (3 * step)) / step) * step;
         if (min < 0) min = 0;
+
+        // Ensure enough space for narrow ranges
+        if ((max - min) < step * 4) {
+          max = min + step * 4;
+        }
       }
 
       const options = {
@@ -450,7 +463,7 @@
             min: min,
             max: max,
             ticks: {
-              stepSize: 0.10,
+              stepSize: step,
               callback: v => secondsToTime(v),
               font: { size: 9 },
               color: '#4a5568'
@@ -478,6 +491,7 @@
         progressionChartInstance = new Chart(ctx, { type: 'line', data, options });
       }
     }
+
 
   function updateChartsAndEventsForSwimmer(swimmerId) {
     currentSelectedSwimmerId = swimmerId;
