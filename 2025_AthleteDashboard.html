@@ -399,76 +399,85 @@
     }
   }
 
-  function updateProgressionChart(swimmerId, eventName) {
-    const ctx = document.getElementById('progressionChart').getContext('2d');
-    const points = Array(allUniqueMeets.length).fill(null);
-    const swimmerEventData = allAthleteData
-      .filter(d => d.id.toLowerCase() === swimmerId?.toLowerCase() && d.eventSwum === eventName && !['NT','NS','DQ'].includes(d.resultTime))
-      .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
+    function updateProgressionChart(swimmerId, eventName) {
+      const ctx = document.getElementById('progressionChart').getContext('2d');
+      const points = Array(allUniqueMeets.length).fill(null);
+      const swimmerEventData = allAthleteData
+        .filter(d => d.id.toLowerCase() === swimmerId?.toLowerCase() && d.eventSwum === eventName && !['NT','NS','DQ'].includes(d.resultTime))
+        .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
 
-    swimmerEventData.forEach(d => {
-      const index = allUniqueMeets.findIndex(m => m.date === d.meetDate && m.name === d.meetName);
-      if (index >= 0) points[index] = timeToSeconds(d.resultTime);
-    });
+      swimmerEventData.forEach(d => {
+        const index = allUniqueMeets.findIndex(m => m.date === d.meetDate && m.name === d.meetName);
+        if (index >= 0) points[index] = timeToSeconds(d.resultTime);
+      });
 
-    const data = {
-      labels: allUniqueMeets.map(m => m.display),
-      datasets: [{
-        label: eventName || 'No Event',
-        data: points,
-        fill: false,
-        borderColor: '#4169E1',
-        pointBackgroundColor: '#4169E1',
-        tension: 0.4,
-        spanGaps: true
-      }]
-    };
+      const data = {
+        labels: allUniqueMeets.map(m => m.display),
+        datasets: [{
+          label: eventName || 'No Event',
+          data: points,
+          fill: false,
+          borderColor: '#4169E1',
+          pointBackgroundColor: '#4169E1',
+          tension: 0.4,
+          spanGaps: true
+        }]
+      };
 
-    const yValues = points.filter(p => p !== null);
-    const min = yValues.length ? Math.min(...yValues) : 0;
-    const max = yValues.length ? Math.max(...yValues) : 60;
-
-    const options = {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          ticks: { font: { size: 9 }, color: '#4a5568' },
-          title: { display: true, text: 'Meet Date (Meet Name)', font: { size: 10 }, color: '#4a5568' },
-          grid: { color: '#e2e8f0' }
-        },
-        y: {
-          reverse: true,
-          min: 0,
-          max: max + 5,
-          ticks: {
-            callback: v => secondsToTime(v),
-            font: { size: 9 },
-            color: '#4a5568'
-          },
-          title: { display: true, text: 'Time (MM:SS.ms)', font: { size: 10 }, color: '#4a5568' },
-          grid: { color: '#e2e8f0' }
-        }
-      },
-      plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 10 }, color: '#4a5568' } },
-        tooltip: {
-          callbacks: {
-            label: ctx => secondsToTime(ctx.raw)
-          },
-          bodyFont: { size: 10 }
-        }
+      // ✅ Custom dynamic Y-axis ticks
+      const yValues = points.filter(p => p !== null);
+      let min = 0, max = 60;
+      if (yValues.length) {
+        const slowest = Math.max(...yValues);
+        const fastest = Math.min(...yValues);
+        const tickStep = 0.10;
+        min = Math.floor((slowest - tickStep) / tickStep) * tickStep;
+        max = Math.ceil((fastest + 3 * tickStep) / tickStep) * tickStep;
+        if (min < 0) min = 0;
       }
-    };
 
-    if (progressionChartInstance) {
-      progressionChartInstance.data = data;
-      progressionChartInstance.options = options;
-      progressionChartInstance.update();
-    } else {
-      progressionChartInstance = new Chart(ctx, { type: 'line', data, options });
+      const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            ticks: { font: { size: 9 }, color: '#4a5568' },
+            title: { display: true, text: 'Meet Date (Meet Name)', font: { size: 10 }, color: '#4a5568' },
+            grid: { color: '#e2e8f0' }
+          },
+          y: {
+            reverse: true,
+            min: min,
+            max: max,
+            ticks: {
+              stepSize: 0.10,
+              callback: v => secondsToTime(v),
+              font: { size: 9 },
+              color: '#4a5568'
+            },
+            title: { display: true, text: 'Time (MM:SS.ms)', font: { size: 10 }, color: '#4a5568' },
+            grid: { color: '#e2e8f0' }
+          }
+        },
+        plugins: {
+          legend: { display: true, position: 'top', labels: { font: { size: 10 }, color: '#4a5568' } },
+          tooltip: {
+            callbacks: {
+              label: ctx => secondsToTime(ctx.raw)
+            },
+            bodyFont: { size: 10 }
+          }
+        }
+      };
+
+      if (progressionChartInstance) {
+        progressionChartInstance.data = data;
+        progressionChartInstance.options = options;
+        progressionChartInstance.update();
+      } else {
+        progressionChartInstance = new Chart(ctx, { type: 'line', data, options });
+      }
     }
-  }
 
   function updateChartsAndEventsForSwimmer(swimmerId) {
     currentSelectedSwimmerId = swimmerId;
