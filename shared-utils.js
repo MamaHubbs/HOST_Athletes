@@ -84,6 +84,13 @@ const weeklyFileNames = [
     "20210707results.json",
     "20210714results.json",
     "20210721results.json",
+    "20230607results.json",
+    "20230614results.json",
+    "20230626results.json",
+    "20230628results.json",
+    "20230706results.json",
+    "20230710results.json",
+    "20230722results.json",
     "20220609results.json",
     "20220615results.json",
     "20220623results.json",
@@ -103,6 +110,7 @@ const weeklyFileNames = [
     "20250611results.json",
     "20250618results.json",
     "20250625results.json",
-    "20250702results.json"
+    "20250702results.json",
+    "20250710results.json"
   
 ];
