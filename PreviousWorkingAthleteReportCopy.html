@@ -295,9 +295,10 @@
                         <option value="">-- Choose Season First --</option>
                     </select>
                 </div>
-                <div class="dropdown-box">
+                <div class="dropdown-box autocomplete-container">
                     <label for="filterName">Filter by Athlete Name:</label>
                     <input type="text" id="filterName" placeholder="Enter full name or part">
+                    <div id="filterNameSearchResults" class="autocomplete-items"></div>
                 </div>
                 <div class="dropdown-box">
                     <label for="filterStroke">Filter by Stroke:</label>
@@ -383,6 +384,8 @@
         const individualAthleteSummary = document.getElementById('individualAthleteSummary'); 
         const summaryChartTitle = document.getElementById('summaryChartTitle'); 
         const summaryChartTableBody = individualAthleteSummary.querySelector('tbody'); 
+        const filterNameSearchResultsDiv = document.getElementById('filterNameSearchResults'); // New: Autocomplete results div
+
 
         // weeklyFileNames is expected to be defined in shared-utils.js
 
@@ -447,7 +450,7 @@
                 const maxIndex = Math.max(...requiredIndices);
 
                 if (row.length > maxIndex && !requiredIndices.some(idx => idx === -1)) { 
-                    const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}`; 
+                    const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}-${row[genderIndex]}`; // Use age and gender for unique ID
                     
                     let originalCourse = 'N/A';
                     if (row[eventSwumIndex]) {
@@ -501,6 +504,7 @@
         }
 
         let allFileMetadata = []; 
+        let uniqueSwimmersForAutocomplete = []; // NEW: To store unique swimmers for autocomplete list
 
         async function fetchAllFileMetadata() {
             if (allFileMetadata.length > 0) { 
@@ -585,6 +589,32 @@
             tempMetadata.sort((a, b) => a.dateObject - b.dateObject);
             allFileMetadata = tempMetadata;
             console.log("All File Metadata Loaded:", allFileMetadata); 
+        }
+
+        // NEW: Function to populate uniqueSwimmersForAutocomplete
+        function populateUniqueSwimmersForAutocomplete() {
+            const swimmerMap = new Map();
+            allAthleteData.forEach(athlete => {
+                // Use a truly unique key for each distinct swimmer instance (including age & category)
+                const swimmerKey = `${athlete.lastName}-${athlete.firstName}-${athlete.age}-${athlete.category}`.toLowerCase();
+                // This will be the ID stored in `itemDiv.dataset.id` and used for filtering
+                
+                // The display name can be less specific but include age for distinction in dropdown
+                const displayName = `${athlete.lastName}, ${athlete.firstName} (${athlete.age}) - ${athlete.category}`;
+
+                if (!swimmerMap.has(swimmerKey)) {
+                    swimmerMap.set(swimmerKey, {
+                        id: swimmerKey, 
+                        firstName: athlete.firstName,
+                        lastName: athlete.lastName,
+                        age: athlete.age,
+                        category: athlete.category,
+                        displayName: displayName // Store the full display name
+                    });
+                }
+            });
+            uniqueSwimmersForAutocomplete = Array.from(swimmerMap.values());
+            console.log("Unique Swimmers for Autocomplete Loaded:", uniqueSwimmersForAutocomplete.length);
         }
 
         async function populateSeasonFilter() {
@@ -708,9 +738,10 @@
                 });
                 allAthleteData = (await Promise.all(allFetchedRawDataPromises)).flat();
                 console.log("All athlete data loaded:", allAthleteData.length, "records.");
+                populateUniqueSwimmersForAutocomplete(); // Populate unique swimmers for autocomplete AFTER allAthleteData is loaded
             }
 
-            let dataToProcess = [...allAthleteData]; 
+            let dataToProcess = [...allAthleteData]; // Start with all loaded data for filtering chain
             
             let headerTitle = "All Meets Combined"; 
             let headerDate = ""; 
@@ -721,7 +752,6 @@
             const strokeFilter = filterStrokeInput.value.toLowerCase();
             const seasonFilter = filterSeasonInput.value;
             
-            // Declare isAllResultsSelectedExplicitly and isNoFiltersApplied here
             const isAllResultsSelectedExplicitly = selectedMeetFileNameFromDropdown === "all-results";
             const isSpecificMeetSelectedInDropdown = selectedMeetFileNameFromDropdown && selectedMeetFileNameFromDropdown !== "all-results";
             const isNoFiltersApplied = !isSpecificMeetSelectedInDropdown && seasonFilter === "" && nameFilter === "" && strokeFilter === "";
@@ -747,7 +777,7 @@
                     meetCourseForRendering = mostRecentFileMeta.meetCourse; 
                     headerTitle = mostRecentFileMeta.meetNameDisplay;
                     headerDate = mostRecentFileMeta.meetDateDisplay;
-                    // No need to set jsonFileSelector.value here, it's set in DOMContentLoaded
+                    // jsonFileSelector.value is already set in DOMContentLoaded in this path
                 } else {
                     headerTitle = "No Data Loaded";
                     headerDate = "";
@@ -780,7 +810,7 @@
                 }
             } else if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
                 // Step 2b: "All Results" explicitly selected OR "All Seasons" explicit choice
-                // dataToProcess is already allAthleteData. Header will be "All Meets Combined".
+                // dataToProcess is already allAthleteData. Header set below.
             } else {
                 // Step 2c: `selectedMeetFileNameFromDropdown` is "" (empty, e.g., after season filter pick)
                 // AND it's not the default load state.
@@ -791,21 +821,26 @@
             // --- Apply Remaining GLOBAL filters (Season, Name, Stroke) to `dataToProcess` ---
             
             // Apply Season Filter
-            if (seasonFilter !== '' && seasonFilter !== "all-seasons-explicit") { // Don't filter if "All Seasons" explicit choice
-                dataToProcess = dataToProcess.filter(athlete => {
-                    const meetYear = new Date(athlete.meetDate).getFullYear().toString();
-                    return meetYear === seasonFilter;
-                });
-                console.log(`After Season Filter (${seasonFilter}):`, dataToProcess.length, "records.");
+            if (seasonFilter !== '' && seasonFilter !== "all-seasons-explicit") { 
                 if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly) {
+                    dataToProcess = dataToProcess.filter(athlete => {
+                        const meetYear = new Date(athlete.meetDate).getFullYear().toString();
+                        return meetYear === seasonFilter;
+                    });
+                    console.log(`After secondary Season Filter (${seasonFilter}):`, dataToProcess.length, "records.");
                     headerTitle = `All Meets in Season ${seasonFilter}`;
                     meetCourseForRendering = 'mixed';
                 }
             }
 
-            // Apply Name Filter
+            // Apply Name Filter (will filter based on the ID if selected from autocomplete)
+            const selectedAutocompleteId = filterNameInput.dataset.selectedId; // Get the stored ID
             if (nameFilter !== '') {
                 dataToProcess = dataToProcess.filter(athlete => {
+                    if (selectedAutocompleteId && athlete.id === selectedAutocompleteId) {
+                        return true; // Exact match on selected autocomplete ID
+                    }
+                    // Fallback to text search (allows partial name matches)
                     const fullName = `${athlete.firstName} ${athlete.lastName}`.toLowerCase();
                     return fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
                 });
@@ -815,6 +850,7 @@
                 }
             }
 
+            // Apply Stroke Filter
             if (strokeFilter !== '') {
                 dataToProcess = dataToProcess.filter(athlete => {
                     return athlete.eventSwum.toLowerCase().includes(strokeFilter);
@@ -834,10 +870,10 @@
                 const finalMinDate = allDatesInFinalData[0];
                 const finalMaxDate = allDatesInFinalData[allDatesInFinalData.length - 1];
                 
-                if (!isSpecificMeetSelectedFlag) { // If not a specific meet file view
+                if (!isSpecificMeetSelectedFlag) { 
                     if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
                         headerTitle = "All Meets Combined";
-                    } else if (seasonFilter !== "" || nameFilter !== "" || strokeFilter !== "") {
+                    } else if (isSeasonFilterActive || nameFilter !== "" || strokeFilter !== "") { // Check the original filter variable
                         headerTitle = `Filtered Results`;
                         if (seasonFilter !== "") {
                             headerTitle += ` (Season ${seasonFilter})`;
@@ -943,7 +979,7 @@
 
                 headerHtml += `
                     <th>Place</th>
-                    <th><th>Points</th>
+                    <th>Points</th>
                     <th>% Improvement</th>
                 `;
                 eventSubHeaderRow.innerHTML = headerHtml;
@@ -1071,7 +1107,7 @@
             filterSeasonInput.value = ''; 
             
             populateJsonFileSelector(""); // Resets meet selector to disabled "-- Choose Season First --"
-            jsonFileSelector.value = ""; // Ensure value is explicitly empty
+            jsonFileSelector.value = ""; // Ensure it's explicitly set to its default empty value
 
             fetchAndRenderData(); // This will trigger the default most recent file load logic
         }
@@ -1095,13 +1131,12 @@
             filterNameInput.value = ''; 
             filterStrokeInput.value = ''; 
             
-            await populateJsonFileSelector(selectedSeason); // Updates meet dropdown options and enabled state
+            await populateJsonFileSelector(selectedSeason); 
             
-            // Set jsonFileSelector value based on season selection
             if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit') {
-                jsonFileSelector.value = "all-results"; // When "All Seasons" is chosen, implicitly select "All Results"
+                jsonFileSelector.value = "all-results"; 
             } else {
-                jsonFileSelector.value = ""; // When specific year chosen, default to "--- Select a Meet ---"
+                jsonFileSelector.value = ""; 
             }
             fetchAndRenderData(); 
         });
@@ -1110,9 +1145,55 @@
             fetchAndRenderData(); 
         });
         
-        filterNameInput.addEventListener('input', (event) => {
-            applyFilters(); 
+        // Autocomplete for filterNameInput
+        filterNameInput.addEventListener('input', function() {
+            const inputVal = this.value.toLowerCase();
+            filterNameSearchResultsDiv.innerHTML = ''; // Clear previous suggestions
+            
+            delete this.dataset.selectedId; // Clear any previously stored selected ID
+            
+            if (!inputVal) {
+                applyFilters(); // Apply filters immediately if input is cleared
+                return;
+            }
+
+            const matches = uniqueSwimmersForAutocomplete.filter(swimmer => 
+                swimmer.displayName.toLowerCase().includes(inputVal) ||
+                `${swimmer.firstName} ${swimmer.lastName}`.toLowerCase().includes(inputVal) ||
+                `${swimmer.lastName} ${swimmer.firstName}`.toLowerCase().includes(inputVal)
+            );
+
+            matches.forEach(swimmer => {
+                const itemDiv = document.createElement('div');
+                itemDiv.textContent = swimmer.displayName; // Use the full display name
+                
+                itemDiv.addEventListener('click', function() {
+                    filterNameInput.value = swimmer.displayName; 
+                    filterNameInput.dataset.selectedId = swimmer.id; 
+                    filterNameSearchResultsDiv.innerHTML = ''; // Close suggestions
+                    applyFilters(); 
+                });
+                filterNameSearchResultsDiv.appendChild(itemDiv);
+            });
+             if (matches.length === 1 && matches[0].displayName.toLowerCase() === inputVal) {
+                filterNameInput.value = matches[0].displayName;
+                filterNameInput.dataset.selectedId = matches[0].id;
+                filterNameSearchResultsDiv.innerHTML = '';
+                applyFilters();
+            } else if (matches.length > 0) { // If there are matches but not exactly one auto-selected, re-apply for text search
+                 applyFilters(); 
+            } else { // No matches
+                 applyFilters(); // Apply filters to clear table if no matches
+            }
         });
+
+        // Close autocomplete results when clicking outside, excluding the input and results div itself
+        document.addEventListener('click', function(e) {
+            if (e.target !== filterNameInput && e.target.parentNode !== filterNameSearchResultsDiv && e.target.closest('#filterNameSearchResults') === null) {
+                filterNameSearchResultsDiv.innerHTML = '';
+            }
+        });
+
 
         filterStrokeInput.addEventListener('change', (event) => {
             applyFilters(); 
@@ -1144,6 +1225,7 @@
                 });
                 allAthleteData = (await Promise.all(allFetchedRawDataPromises)).flat();
                 console.log("Initial allAthleteData load on DOMContentLoaded:", allAthleteData.length, "records.");
+                populateUniqueSwimmersForAutocomplete(); 
             }
 
             // Set initial state of filter dropdowns for the very first load
@@ -1153,10 +1235,12 @@
             
             await populateJsonFileSelector(filterSeasonInput.value); // Populate meet selector in its initial disabled state
 
-            // IMPORTANT: Do NOT set jsonFileSelector.value here.
-            // The fetchAndRenderData function's 'isNoFiltersApplied' branch will handle setting
+            // IMPORTANT: fetchAndRenderData's `isNoFiltersApplied` path now handles setting
             // jsonFileSelector.value to the most recent file's name and initiating the render.
-            fetchAndRenderData(); 
+            // So, do NOT set jsonFileSelector.value here again.
+            // jsonFileSelector.value = ""; // Ensure value is explicitly empty for default state
+
+            fetchAndRenderData(); // Trigger the very first data load and display based on default state
         });
     </script>
 </body>
