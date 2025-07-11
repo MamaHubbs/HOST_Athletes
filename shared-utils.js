@@ -77,6 +77,13 @@ function formatMMDDYYYY(dateString) {
 }
 
 const weeklyFileNames = [
+    "20210609results.json",
+    "20210616results.json",
+    "20210623results.json",
+    "20210630results.json",
+    "20210707results.json",
+    "20210714results.json",
+    "20210721results.json",
     "20240605results.json",
     "20240612results.json",
     "20240619results.json",
