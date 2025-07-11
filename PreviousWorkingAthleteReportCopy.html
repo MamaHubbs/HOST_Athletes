@@ -286,7 +286,7 @@
                 <div class="dropdown-box">
                     <label for="filterSeason">Filter by Season:</label>
                     <select id="filterSeason">
-                        <option value="">All Seasons</option>
+                        <option value="">-- Select Season --</option>
                     </select>
                 </div>
                 <div class="dropdown-box">
@@ -601,7 +601,13 @@
                 }
             });
 
-            filterSeasonInput.innerHTML = '<option value="">All Seasons</option>';
+            filterSeasonInput.innerHTML = '<option value="">-- Select Season --</option>'; 
+            
+            const allSeasonsOption = document.createElement('option');
+            allSeasonsOption.value = "all-seasons-explicit"; 
+            allSeasonsOption.textContent = "All Seasons";
+            filterSeasonInput.appendChild(allSeasonsOption);
+
             Array.from(seasons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(season => {
                 const option = document.createElement('option');
                 option.value = season;
@@ -620,7 +626,7 @@
             console.log(`Populating meet selector for season: '${selectedSeason}'`);
 
             const meetsToDisplay = allFileMetadata.filter(meta => {
-                if (selectedSeason === '') {
+                if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit') {
                     return true; 
                 }
                 const metaYear = meta.dateObject.getFullYear().toString();
@@ -630,18 +636,18 @@
 
             console.log("Meets filtered for display:", meetsToDisplay);
 
-            if (selectedSeason === '') { // If "All Seasons" is selected initially or reset
+            if (selectedSeason === '') { 
                 const defaultOption = document.createElement('option');
                 defaultOption.value = ""; 
                 defaultOption.textContent = "-- Choose Season First --"; 
                 jsonFileSelector.appendChild(defaultOption);
-                jsonFileSelector.disabled = true; // Disable until a season is chosen
-            } else { // A specific season is selected
+                jsonFileSelector.disabled = true; 
+            } else { 
                 const defaultOption = document.createElement('option');
                 defaultOption.value = ""; 
                 defaultOption.textContent = "--- Select a Meet ---"; 
                 jsonFileSelector.appendChild(defaultOption);
-                jsonFileSelector.disabled = false; // Enable for meet selection
+                jsonFileSelector.disabled = false; 
             }
 
 
@@ -652,7 +658,7 @@
                 jsonFileSelector.appendChild(option);
             });
 
-            if (selectedSeason === '') { // Add "All Results" only if no specific season is picked
+            if (selectedSeason === 'all-seasons-explicit') { 
                 const allResultsOption = document.createElement('option');
                 allResultsOption.value = "all-results";
                 allResultsOption.textContent = "All Results (All Weeks)";
@@ -704,7 +710,7 @@
                 console.log("All athlete data loaded:", allAthleteData.length, "records.");
             }
 
-            let dataToProcess = [...allAthleteData]; // Use this for the filtering chain
+            let dataToProcess = [...allAthleteData]; 
             
             let headerTitle = "All Meets Combined"; 
             let headerDate = ""; 
@@ -715,22 +721,19 @@
             const strokeFilter = filterStrokeInput.value.toLowerCase();
             const seasonFilter = filterSeasonInput.value;
             
-            // --- FILTERING LOGIC: Sequential application of filters ---
-
-            // Step 0: Determine the initial context (Default Load, All Results, Specific Meet, or Season-only)
+            // Declare isAllResultsSelectedExplicitly and isNoFiltersApplied here
             const isAllResultsSelectedExplicitly = selectedMeetFileNameFromDropdown === "all-results";
             const isSpecificMeetSelectedInDropdown = selectedMeetFileNameFromDropdown && selectedMeetFileNameFromDropdown !== "all-results";
-            const isNoFiltersApplied = !isSpecificMeetSelectedInDropdown && !seasonFilter && !nameFilter && !strokeFilter;
+            const isNoFiltersApplied = !isSpecificMeetSelectedInDropdown && seasonFilter === "" && nameFilter === "" && strokeFilter === "";
 
+            // --- FILTERING LOGIC: Sequential application of filters ---
 
+            // Step 0: Handle initial default load (most recent file)
             if (isNoFiltersApplied && weeklyFileNames.length > 0) {
-                // Scenario A: Initial page load / reset filters scenario (no explicit filters set).
-                // We default to displaying the most recent file.
                 const mostRecentFileName = weeklyFileNames[weeklyFileNames.length - 1];
                 const mostRecentFileMeta = allFileMetadata.find(meta => meta.fileName === mostRecentFileName);
                 
                 if (mostRecentFileMeta) {
-                    // Filter dataToProcess to ONLY records for this most recent file
                     dataToProcess = allAthleteData.filter(athlete => { 
                         const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
                         const metaMeetNameClean = cleanStringForComparison(mostRecentFileMeta.meetName); 
@@ -740,18 +743,18 @@
                     });
                     console.log(`Data filtered for default most recent meet (${mostRecentFileName}):`, dataToProcess.length, "records.");
 
-                    isSpecificMeetSelectedFlag = true; // Treat as specific meet view for rendering
-                    meetCourseForRendering = mostRecentFileMeta.meetCourse; // Set course for rendering
+                    isSpecificMeetSelectedFlag = true; 
+                    meetCourseForRendering = mostRecentFileMeta.meetCourse; 
                     headerTitle = mostRecentFileMeta.meetNameDisplay;
                     headerDate = mostRecentFileMeta.meetDateDisplay;
-                    jsonFileSelector.value = mostRecentFileName; // Ensure the dropdown matches
+                    // No need to set jsonFileSelector.value here, it's set in DOMContentLoaded
                 } else {
-                    headerTitle = "No Data Loaded"; // Fallback if no recent file
+                    headerTitle = "No Data Loaded";
                     headerDate = "";
                     dataToProcess = []; 
                 }
             } else if (isSpecificMeetSelectedInDropdown) {
-                // Scenario B: A specific meet file is explicitly selected from the dropdown.
+                // Step 2a: A specific meet file is explicitly selected from dropdown.
                 isSpecificMeetSelectedFlag = true; 
                 const selectedFileMeta = allFileMetadata.find(meta => meta.fileName === selectedMeetFileNameFromDropdown);
 
@@ -760,27 +763,13 @@
                     headerDate = selectedFileMeta.meetDateDisplay;
                     meetCourseForRendering = selectedFileMeta.meetCourse; 
                     
-                    dataToProcess = allAthleteData.filter(athlete => { // Start filtering from allAthleteData
+                    dataToProcess = allAthleteData.filter(athlete => { 
                         const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
                         const metaMeetNameClean = cleanStringForComparison(selectedFileMeta.meetName); 
                         const athleteMeetDateClean = cleanDateStringForComparison(athlete.meetDate); 
                         const metaMeetDateClean = cleanDateStringForComparison(selectedFileMeta.meetDate); 
 
                         const isMatch = athleteMeetNameClean === metaMeetNameClean && athleteMeetDateClean === metaMeetDateClean;
-                        
-                        // Debugging logs
-                        if (!isMatch) {
-                            console.log("--- DEBUGGING SPECIFIC MEET FILTER (Explicit Selection) ---");
-                            console.log(`  File: ${selectedMeetFileNameFromDropdown}`);
-                            console.log("  selectedFileMeta.meetName (cleaned):", metaMeetNameClean);
-                            console.log("  selectedFileMeta.meetDate (cleaned):", metaMeetDateClean);
-                            if (allAthleteData.length > 0) {
-                                console.log("  Sample athlete record from allAthleteData (cleaned):", cleanStringForComparison(allAthleteData[0].meetName), cleanDateStringForComparison(allAthleteData[0].meetDate));
-                            }
-                            console.log("  Names Match?", athleteMeetNameClean === metaMeetNameClean);
-                            console.log("  Dates Match?", athleteMeetDateClean === metaMeetDateClean);
-                            console.log("  Overall Match?", isMatch);
-                        }
                         return isMatch;
                     });
                     console.log(`After Specific Meet Filter (${selectedMeetFileNameFromDropdown}):`, dataToProcess.length, "records.");
@@ -789,22 +778,20 @@
                     console.warn(`Metadata for selected meet file ${selectedMeetFileNameFromDropdown} not found.`);
                     dataToProcess = []; 
                 }
-            } else if (isAllResultsSelectedExplicitly) {
-                // Scenario C: "All Results" option selected explicitly. `dataToProcess` is already `allAthleteData`.
-                // Header will be "All Meets Combined".
+            } else if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
+                // Step 2b: "All Results" explicitly selected OR "All Seasons" explicit choice
+                // dataToProcess is already allAthleteData. Header will be "All Meets Combined".
             } else {
-                // Scenario D: `selectedMeetFileNameFromDropdown` is "" (empty, e.g., after season filter pick)
+                // Step 2c: `selectedMeetFileNameFromDropdown` is "" (empty, e.g., after season filter pick)
                 // AND it's not the default load state.
                 // `dataToProcess` starts as `allAthleteData` and will be filtered by season/name/stroke below.
-                // `isSpecificMeetSelectedFlag` remains false.
             }
 
 
             // --- Apply Remaining GLOBAL filters (Season, Name, Stroke) to `dataToProcess` ---
-            // These filters apply to whatever `dataToProcess` became after the above steps.
             
             // Apply Season Filter
-            if (seasonFilter !== '') {
+            if (seasonFilter !== '' && seasonFilter !== "all-seasons-explicit") { // Don't filter if "All Seasons" explicit choice
                 dataToProcess = dataToProcess.filter(athlete => {
                     const meetYear = new Date(athlete.meetDate).getFullYear().toString();
                     return meetYear === seasonFilter;
@@ -840,7 +827,7 @@
             
 
             // --- Final Header Determination and Render Call ---
-            filteredDataForDisplay = dataToProcess; // Assign the final filtered data to the global variable
+            filteredDataForDisplay = dataToProcess; 
             
             if (filteredDataForDisplay.length > 0) { 
                 const allDatesInFinalData = filteredDataForDisplay.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
@@ -848,7 +835,7 @@
                 const finalMaxDate = allDatesInFinalData[allDatesInFinalData.length - 1];
                 
                 if (!isSpecificMeetSelectedFlag) { // If not a specific meet file view
-                    if (isAllResultsSelectedExplicitly && !seasonFilter && !nameFilter && !strokeFilter) {
+                    if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
                         headerTitle = "All Meets Combined";
                     } else if (seasonFilter !== "" || nameFilter !== "" || strokeFilter !== "") {
                         headerTitle = `Filtered Results`;
@@ -873,6 +860,7 @@
         }
 
         function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
+            console.log(`RENDER TABLE DEBUG: isSpecificMeetSelected=${isSpecificMeetSelected}, meetCourse=${meetCourse}`); 
             reportTableBody.innerHTML = '';
             summaryChartTableBody.innerHTML = ''; 
             individualAthleteSummary.style.display = 'none'; 
@@ -950,12 +938,12 @@
                 if (isSpecificMeetSelected && meetCourse === 'y') {
                     headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; 
                 } else {
-                    headerHtml += `<th>Seed (SCM)</th><th>Final (SCM)</th>`; // Added (SCM) here
+                    headerHtml += `<th>Seed (SCM)</th><th>Final (SCM)</th>`; 
                 }
 
                 headerHtml += `
                     <th>Place</th>
-                    <th>Points</th>
+                    <th><th>Points</th>
                     <th>% Improvement</th>
                 `;
                 eventSubHeaderRow.innerHTML = headerHtml;
@@ -1082,11 +1070,10 @@
             filterStrokeInput.value = '';
             filterSeasonInput.value = ''; 
             
-            // Set jsonFileSelector to the --Choose Season First-- state
-            populateJsonFileSelector(""); // This will also disable it and set the right text
-            jsonFileSelector.value = ""; // Ensure it's explicitly set to its default empty value
+            populateJsonFileSelector(""); // Resets meet selector to disabled "-- Choose Season First --"
+            jsonFileSelector.value = ""; // Ensure value is explicitly empty
 
-            fetchAndRenderData(); // Trigger display based on reset state
+            fetchAndRenderData(); // This will trigger the default most recent file load logic
         }
 
         // Event Listeners
@@ -1108,9 +1095,14 @@
             filterNameInput.value = ''; 
             filterStrokeInput.value = ''; 
             
-            await populateJsonFileSelector(selectedSeason); 
-            // If season is changed to "All Seasons", jsonFileSelector will default to "all-results"
-            // If a specific season is selected, jsonFileSelector will default to "--- Select a Meet ---" (empty string)
+            await populateJsonFileSelector(selectedSeason); // Updates meet dropdown options and enabled state
+            
+            // Set jsonFileSelector value based on season selection
+            if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit') {
+                jsonFileSelector.value = "all-results"; // When "All Seasons" is chosen, implicitly select "All Results"
+            } else {
+                jsonFileSelector.value = ""; // When specific year chosen, default to "--- Select a Meet ---"
+            }
             fetchAndRenderData(); 
         });
 
@@ -1154,14 +1146,17 @@
                 console.log("Initial allAthleteData load on DOMContentLoaded:", allAthleteData.length, "records.");
             }
 
-            // Set initial state of dropdowns before first fetchAndRenderData call
-            // Default to "Choose Season First" for meet selector
-            populateJsonFileSelector(""); // Sets default state for jsonFileSelector (disabled + text)
-            filterSeasonInput.value = ""; // Ensures Season is "All Seasons" initially
+            // Set initial state of filter dropdowns for the very first load
+            filterSeasonInput.value = ""; // Ensures Season defaults to "-- Select Season --"
             filterNameInput.value = ""; 
             filterStrokeInput.value = ""; 
             
-            fetchAndRenderData(); // Trigger the very first data load and display based on default state
+            await populateJsonFileSelector(filterSeasonInput.value); // Populate meet selector in its initial disabled state
+
+            // IMPORTANT: Do NOT set jsonFileSelector.value here.
+            // The fetchAndRenderData function's 'isNoFiltersApplied' branch will handle setting
+            // jsonFileSelector.value to the most recent file's name and initiating the render.
+            fetchAndRenderData(); 
         });
     </script>
 </body>
