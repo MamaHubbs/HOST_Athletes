@@ -25,8 +25,8 @@
     <div class="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       <div>
         <label for="selectSwimmer" class="block text-sm font-medium text-gray-700 mb-1">Select Swimmer:</label>
-        <select id="selectSwimmer" class="w-full p-2 border border-gray-300 rounded-md">
-          <option value="">-- Choose --</option>
+<input id="searchSwimmer" list="swimmerList" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Type a swimmer name..." />
+<datalist id="swimmerList"></datalist>
         </select>
       </div>
       <div>
@@ -78,7 +78,8 @@
       let specialtyChart = null;
       let progressionChart = null;
 
-      const selectSwimmer = document.getElementById('selectSwimmer');
+const searchSwimmer = document.getElementById('searchSwimmer');
+const swimmerList = document.getElementById('swimmerList');
       const selectEvent = document.getElementById('selectEvent');
       const selectStroke = document.getElementById('strokeFilter');
       const selectSeason = document.getElementById('seasonFilter');
@@ -154,9 +155,7 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
           if (row.eventSwum) strokeSet.add(row.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0]);
           if (row.meetDate) seasonSet.add(new Date(row.meetDate).getFullYear());
         });
-
-        [selectSwimmer, selectEvent, selectStroke, selectSeason].forEach(sel => sel.innerHTML = '<option value="">All</option>');
-
+        
         [...swimmerMap.entries()].sort().forEach(([id, name]) => {
           const opt = document.createElement('option'); opt.value = id; opt.textContent = name;
           selectSwimmer.appendChild(opt);
@@ -182,7 +181,9 @@ const seen = new Set();
       }
 
 function handleFilters() {
-  const swimmerId = selectSwimmer.value;
+const inputName = searchSwimmer.value.trim().toLowerCase();
+const swimmerEntry = [...swimmerMap.entries()].find(([id, name]) => name.toLowerCase() === inputName);
+const swimmerId = swimmerEntry?.[0] || '';
   const normEventLabel = normalizeEventName(selectEvent.value);
   const selectedSeason = selectSeason.value;
   const selectedStroke = selectStroke.value;
