@@ -125,7 +125,15 @@ options: {
 
       function updateProgressionChart(swimmerId, eventLabel) {
         const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-        const allDates = [...new Set(swimmerData.map(d => d.meetDate))].sort((a, b) => new Date(a) - new Date(b));
+        const meetScope = toggleMeetScope.value;
+
+let allDates = swimmerData.map(d => d.meetDate);
+if (meetScope === 'has-times') {
+  allDates = swimmerData
+    .filter(d => normalizeEventName(d.eventSwum) === normEventLabel && isFinite(timeToSeconds(d.resultTime)))
+    .map(d => d.meetDate);
+}
+allDates = [...new Set(allDates)].sort((a, b) => new Date(a) - new Date(b));
         const timesByDate = {};
         const normEventLabel = normalizeEventName(eventLabel);
 swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && isFinite(timeToSeconds(d.resultTime)))
@@ -145,7 +153,7 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
             datasets: [{ label: eventLabel, data, fill: false, borderColor: 'teal', tension: 0.2 }]
           },
           options: {
-            spanGaps: false,
+            spanGaps: true,
             scales: {
               y: {
                 reverse: true,
