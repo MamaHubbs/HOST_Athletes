@@ -181,35 +181,51 @@ const seen = new Set();
         });
       }
 
-      function handleFilters() {
-const swimmerId = selectSwimmer.value;
-const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-        const eventLabel = selectEvent.value;
-        if (swimmerId) updateSpecialtyChart(swimmerId);
-        if (swimmerId && eventLabel) updateProgressionChart(swimmerId, eventLabel);
-      }
+function handleFilters() {
+  const swimmerId = selectSwimmer.value;
+  const normEventLabel = normalizeEventName(selectEvent.value);
+  const selectedSeason = selectSeason.value;
+  const selectedStroke = selectStroke.value;
 
-// Clear and repopulate event and stroke dropdowns
-selectEvent.innerHTML = '<option value="">All</option>';
-selectStroke.innerHTML = '<option value="">All</option>';
+  const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
 
-const localEventSet = new Set();
-const localStrokeSet = new Set();
+  // === Update Event and Stroke dropdowns based on swimmer
+  if (swimmerId) {
+    selectEvent.innerHTML = '<option value="">All</option>';
+    selectStroke.innerHTML = '<option value="">All</option>';
 
-swimmerData.forEach(row => {
-  localEventSet.add(normalizeEventName(row.eventSwum));
-  const stroke = row.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0];
-  if (stroke) localStrokeSet.add(stroke);
-});
+    const eventSet = new Set();
+    const strokeSet = new Set();
 
-[...localEventSet].sort().forEach(e => {
-  const opt = document.createElement('option'); opt.value = e; opt.textContent = e;
-  selectEvent.appendChild(opt);
-});
-[...localStrokeSet].sort().forEach(s => {
-  const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
-  selectStroke.appendChild(opt);
-});
+    swimmerData.forEach(d => {
+      const eventName = normalizeEventName(d.eventSwum);
+      eventSet.add(eventName);
+
+      const stroke = d.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0];
+      if (stroke) strokeSet.add(stroke);
+    });
+
+    [...eventSet].sort().forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e;
+      opt.textContent = e;
+      selectEvent.appendChild(opt);
+    });
+
+    [...strokeSet].sort().forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      selectStroke.appendChild(opt);
+    });
+
+    selectEvent.disabled = false;
+  }
+
+  // === Update charts
+  if (swimmerId) updateSpecialtyChart(swimmerId);
+  if (swimmerId && normEventLabel) updateProgressionChart(swimmerId, normEventLabel);
+}
 
       async function fetchAllData() {
         const allData = await Promise.all(
