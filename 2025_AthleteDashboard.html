@@ -124,8 +124,9 @@ options: {
       }
 
       function updateProgressionChart(swimmerId, eventLabel) {
-        const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-        const meetScope = toggleMeetScope.value;
+const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+const normEventLabel = normalizeEventName(eventLabel);
+const meetScope = toggleMeetScope.value;
 
 let allDates = swimmerData.map(d => d.meetDate);
 if (meetScope === 'has-times') {
