@@ -79,8 +79,8 @@
             color: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             transition: background-color 0.3s ease;
-            padding-left: 20px; /* Increased padding */
-            padding-right: 20px; /* Increased padding */
+            padding-left: 20px;
+            padding-right: 20px;
         }
         #resetFilters:hover {
             background-color: #c82333;
@@ -599,7 +599,7 @@
                 
                 const displayName = `${athlete.lastName}, ${athlete.firstName} (${athlete.age}) - ${athlete.category}`;
 
-                if (!swimmerMap.has(swmerKey)) { // Fix: Typo `swmerKey` -> `swimmerKey`
+                if (!swimmerMap.has(swimmerKey)) { 
                     swimmerMap.set(swimmerKey, {
                         id: swimmerKey, 
                         firstName: athlete.firstName,
@@ -677,6 +677,14 @@
                 jsonFileSelector.disabled = false; 
             }
 
+            // NEW: Add "All Meets (This Season)" option when a specific year is selected
+            if (selectedSeason !== '' && selectedSeason !== 'all-seasons-explicit') { // If a specific year is chosen
+                const allMeetsForSeasonOption = document.createElement('option');
+                allMeetsForSeasonOption.value = `all-meets-for-season-${selectedSeason}`; // Unique value
+                allMeetsForSeasonOption.textContent = `All Meets (${selectedSeason})`;
+                jsonFileSelector.appendChild(allMeetsForSeasonOption);
+            }
+
 
             meetsToDisplay.forEach(item => {
                 const option = document.createElement('option');
@@ -697,9 +705,9 @@
             const cleanedTitle = String(title || ''); 
             let displayDate = "";
 
-            if (isAllResults) {
-                displayDate = rawDateOrRange;
-            } else {
+            if (isAllResults) { // isAllResults means it's the "All Meets Combined" header (or range)
+                displayDate = rawDateOrRange; // rawDateOrRange is already a formatted range string here
+            } else { // Specific meet or filtered results for a season
                 displayDate = formatMMDDYYYY(rawDateOrRange); 
             }
             
@@ -749,11 +757,12 @@
             const strokeFilter = filterStrokeInput.value.toLowerCase();
             const seasonFilter = filterSeasonInput.value;
             
-            // Declare variables at the top of the function
             const isAllResultsSelectedExplicitly = selectedMeetFileNameFromDropdown === "all-results";
-            const isSpecificMeetSelectedInDropdown = selectedMeetFileNameFromDropdown && selectedMeetFileNameFromDropdown !== "all-results";
-            const isNoFiltersApplied = !isSpecificMeetSelectedInDropdown && seasonFilter === "" && nameFilter === "" && strokeFilter === "";
-            const isSeasonFilterActive = seasonFilter !== ''; // Declare this variable here
+            const isSpecificMeetSelectedInDropdown = selectedMeetFileNameFromDropdown && selectedMeetFileNameFromDropdown !== "all-results" && !selectedMeetFileNameFromDropdown.startsWith('all-meets-for-season-'); // Added check for new option
+            const isAllMeetsForSeasonSelected = selectedMeetFileNameFromDropdown.startsWith('all-meets-for-season-'); // New flag
+            const isSeasonFilterActive = seasonFilter !== ''; 
+            const isAnyNameOrStrokeFilterActive = nameFilter !== '' || strokeFilter !== '';
+            const isNoFiltersApplied = !isSpecificMeetSelectedInDropdown && !isAllResultsSelectedExplicitly && !isSeasonFilterActive && !isAnyNameOrStrokeFilterActive;
             
             // --- FILTERING LOGIC: Sequential application of filters ---
 
@@ -806,31 +815,33 @@
                     console.warn(`Metadata for selected meet file ${selectedMeetFileNameFromDropdown} not found.`);
                     dataToProcess = []; 
                 }
-            } else if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
-                // Step 2b: "All Results" explicitly selected OR "All Seasons" explicit choice
-                // dataToProcess is already allAthleteData. Header set below.
+            } else if (isAllResultsSelectedExplicitly) {
+                // Step 2b: "All Results" explicitly selected. dataToProcess remains allAthleteData.
+            } else if (isAllMeetsForSeasonSelected) {
+                // Step 2c: "All Meets (This Season)" selected. Filter dataToProcess by the active season.
+                dataToProcess = allAthleteData.filter(athlete => {
+                    const meetYear = new Date(athlete.meetDate).getFullYear().toString();
+                    return meetYear === seasonFilter; // Season filter *must* be active here
+                });
+                headerTitle = `All Meets in Season ${seasonFilter}`;
+                meetCourseForRendering = 'mixed';
+                console.log(`After "All Meets for Season" Filter (${seasonFilter}):`, dataToProcess.length, "records.");
             } else {
-                // Step 2c: `selectedMeetFileNameFromDropdown` is "" (empty, e.g., after season filter pick)
-                // AND it's not the default load state.
-                // `dataToProcess` starts as `allAthleteData` and will be filtered by season/name/stroke below.
+                // Step 2d: `selectedMeetFileNameFromDropdown` is "" (empty), and not default load.
+                // This means dataToProcess starts as allAthleteData to be filtered by season/name/stroke.
             }
 
 
             // --- Apply Remaining GLOBAL filters (Season, Name, Stroke) to `dataToProcess` ---
-            
-            // Apply Season Filter
-            if (isSeasonFilterActive && seasonFilter !== "all-seasons-explicit") { 
-                // Only apply if it's not a specific meet view AND not "all results" explicit
-                // Otherwise, season filter is already implicitly handled or we're in specific meet view.
-                if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly) {
-                    dataToProcess = dataToProcess.filter(athlete => {
-                        const meetYear = new Date(athlete.meetDate).getFullYear().toString();
-                        return meetYear === seasonFilter;
-                    });
-                    console.log(`After secondary Season Filter (${seasonFilter}):`, dataToProcess.length, "records.");
-                    headerTitle = `All Meets in Season ${seasonFilter}`;
-                    meetCourseForRendering = 'mixed';
-                }
+            // Season filter is applied here again only if not handled by earlier explicit meet/all-meets-for-season.
+            if (isSeasonFilterActive && seasonFilter !== "all-seasons-explicit" && !isSpecificMeetSelectedInDropdown && !isAllMeetsForSeasonSelected) { 
+                dataToProcess = dataToProcess.filter(athlete => {
+                    const meetYear = new Date(athlete.meetDate).getFullYear().toString();
+                    return meetYear === seasonFilter;
+                });
+                console.log(`After secondary Season Filter (${seasonFilter}):`, dataToProcess.length, "records.");
+                headerTitle = `All Meets in Season ${seasonFilter}`;
+                meetCourseForRendering = 'mixed';
             }
 
             // Apply Name Filter (will filter based on the ID if selected from autocomplete)
@@ -844,7 +855,7 @@
                     return fullName.includes(nameFilter) || athlete.lastName.toLowerCase().includes(nameFilter) || athlete.firstName.toLowerCase().includes(nameFilter);
                 });
                 console.log(`After Name Filter (${nameFilter}):`, dataToProcess.length, "records.");
-                if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly && (nameFilter !== '' || strokeFilter !== '')) {
+                if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly && !isAllMeetsForSeasonSelected && (nameFilter !== '' || strokeFilter !== '')) {
                     headerTitle = `Filtered Results`;
                 }
             }
@@ -854,7 +865,7 @@
                     return athlete.eventSwum.toLowerCase().includes(strokeFilter);
                 });
                 console.log(`After Stroke Filter (${strokeFilter}):`, dataToProcess.length, "records.");
-                 if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly && (nameFilter !== '' || strokeFilter !== '')) {
+                 if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly && !isAllMeetsForSeasonSelected && (nameFilter !== '' || strokeFilter !== '')) {
                     headerTitle = `Filtered Results`;
                 }
             }
@@ -868,7 +879,7 @@
                 const finalMinDate = allDatesInFinalData[0];
                 const finalMaxDate = allDatesInFinalData[allDatesInFinalData.length - 1];
                 
-                if (!isSpecificMeetSelectedFlag) { 
+                if (!isSpecificMeetSelectedFlag) { // If not a specific meet file view
                     if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
                         headerTitle = "All Meets Combined";
                     } else if (isSeasonFilterActive || nameFilter !== "" || strokeFilter !== "") {
@@ -890,7 +901,7 @@
             console.log("Final filtered data for rendering (after all steps):", filteredDataForDisplay.length, "records");
             
             renderTable(filteredDataForDisplay, isSpecificMeetSelectedFlag, meetCourseForRendering);
-            updateReportHeaderDisplay(headerTitle, headerDate, isAllResultsSelectedExplicitly); 
+            updateReportHeaderDisplay(headerTitle, headerDate, isAllResultsSelectedExplicitly || isAllMeetsForSeasonSelected); // Pass true if "All Results" or "All Meets for Season"
         }
 
         function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
@@ -1104,10 +1115,10 @@
             filterStrokeInput.value = '';
             filterSeasonInput.value = ''; 
             
-            populateJsonFileSelector(""); // Resets meet selector to disabled "-- Choose Season First --"
-            jsonFileSelector.value = ""; // Ensure it's explicitly set to its default empty value
+            populateJsonFileSelector(""); 
+            jsonFileSelector.value = ""; 
 
-            fetchAndRenderData(); // This will trigger the default most recent file load logic
+            fetchAndRenderData(); 
         }
 
         // Event Listeners
@@ -1133,8 +1144,8 @@
             
             if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit') {
                 jsonFileSelector.value = "all-results"; 
-            } else {
-                jsonFileSelector.value = ""; 
+            } else { // Specific year selected
+                jsonFileSelector.value = `all-meets-for-season-${selectedSeason}`; // Automatically select "All Meets (This Season)"
             }
             fetchAndRenderData(); 
         });
@@ -1146,12 +1157,12 @@
         // Autocomplete for filterNameInput
         filterNameInput.addEventListener('input', function() {
             const inputVal = this.value.toLowerCase();
-            filterNameSearchResultsDiv.innerHTML = ''; // Clear previous suggestions
+            filterNameSearchResultsDiv.innerHTML = ''; 
             
-            delete this.dataset.selectedId; // Clear any previously stored selected ID
+            delete this.dataset.selectedId; 
             
             if (!inputVal) {
-                applyFilters(); // Apply filters immediately if input is cleared
+                applyFilters(); 
                 return;
             }
 
@@ -1231,7 +1242,12 @@
             filterStrokeInput.value = ""; 
             
             await populateJsonFileSelector(filterSeasonInput.value); 
-            jsonFileSelector.value = ""; 
+            // Now, set the jsonFileSelector.value to the most recent file for the default view
+            if (weeklyFileNames.length > 0) {
+                jsonFileSelector.value = weeklyFileNames[weeklyFileNames.length - 1]; 
+            } else {
+                jsonFileSelector.value = "all-results"; 
+            }
 
             fetchAndRenderData(); 
         });
