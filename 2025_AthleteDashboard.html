@@ -98,10 +98,10 @@ let specialtyChart = null;
 let progressionChart = null;
 
 const selectSwimmer = document.getElementById('selectSwimmer');
-const selectEvent = document.getElementById('selectEventForProgression');
-const selectStroke = document.getElementById('filterStroke');
-const selectSeason = document.getElementById('filterSeason');
-const toggleMeetScope = document.getElementById('toggleMeetScope');
+const selectEvent = document.getElementById('selectEvent');
+const selectStroke = document.getElementById('strokeFilter');
+const selectSeason = document.getElementById('seasonFilter');
+const toggleMeetScope = document.getElementById('meetScopeToggle');
 
 // === Chart Setup ===
 function updateSpecialtyChart(swimmerId) {
@@ -187,13 +187,34 @@ function populateFilters() {
 function handleFilters() {
   const swimmerId = selectSwimmer.value;
   const eventLabel = selectEvent.value;
-  if (swimmerId) updateSpecialtyChart(swimmerId);
-  if (swimmerId && eventLabel) updateProgressionChart(swimmerId, eventLabel);
+  const stroke = selectStroke.value;
+  const season = selectSeason.value;
+  const meetScope = toggleMeetScope.value;
+
+  let swimmerData = allAthleteData;
+
+  if (stroke) {
+    swimmerData = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()));
+  }
+
+  if (season) {
+    swimmerData = swimmerData.filter(d => new Date(d.meetDate).getFullYear().toString() === season);
+  }
+
+  if (swimmerId) {
+    updateSpecialtyChart(swimmerId);
+  }
+
+  if (swimmerId && eventLabel) {
+    updateProgressionChart(swimmerId, eventLabel);
+  }
+
+  // Save preferences
   localStorage.setItem('selectedSwimmer', swimmerId);
   localStorage.setItem('selectedEvent', eventLabel);
-  localStorage.setItem('selectedStroke', selectStroke.value);
-  localStorage.setItem('selectedSeason', selectSeason.value);
-  localStorage.setItem('toggleMeetScope', toggleMeetScope.checked);
+  localStorage.setItem('selectedStroke', stroke);
+  localStorage.setItem('selectedSeason', season);
+  localStorage.setItem('toggleMeetScope', meetScope);
 }
 
 [selectSwimmer, selectEvent, selectStroke, selectSeason, toggleMeetScope].forEach(el => {
