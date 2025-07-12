@@ -99,28 +99,28 @@ function normalizeEventName(name) {
         });
         const ctx = document.getElementById('specialtyChart').getContext('2d');
         if (specialtyChart) specialtyChart.destroy();
-        specialtyChart = new Chart(ctx, {
-          type: 'radar',
-          data: { labels: strokes, datasets: [{ label: 'Specialty', data: scores }] },
-options: {
-  scales: {
-    r: {
-      min: 0,
-      max: 100,
-      ticks: {
-        display: false // ✅ Hide tick numbers
-      },
-      pointLabels: {
-        display: true,
-        callback: (val, index) => index % 2 === 0 ? val : '' // ✅ Every other stroke label
-      },
-      grid: {
-        circular: true
+specialtyChart = new Chart(document.getElementById('specialtyChart').getContext('2d'), {
+  type: 'radar',
+  data: {
+    labels: ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'],
+    datasets: [{ label: 'Specialty', data: [0, 0, 0, 0, 0] }]
+  },
+  options: {
+    scales: {
+      r: {
+        min: 0,
+        max: 100,
+        ticks: { display: false },
+        pointLabels: {
+          display: true,
+          callback: (val, i) => i % 2 === 0 ? val : ''
+        },
+        grid: { circular: true }
       }
     }
   }
-}
-        });
+});
+
       }
 
       function updateProgressionChart(swimmerId, eventLabel) {
@@ -147,6 +147,26 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
 
         const ctx = document.getElementById('progressionChart').getContext('2d');
         if (progressionChart) progressionChart.destroy();
+
+                progressionChart = new Chart(document.getElementById('progressionChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{ label: 'Time Progression', data: [], fill: false, borderColor: 'teal', tension: 0.2 }]
+  },
+  options: {
+    spanGaps: true,
+    scales: {
+      y: {
+        reverse: true,
+        ticks: {
+          callback: val => secondsToTime(val)
+        }
+      }
+    }
+  }
+});
+        
         progressionChart = new Chart(ctx, {
           type: 'line',
           data: {
@@ -212,7 +232,9 @@ const seen = new Set();
 
 function handleFilters() {
 const inputName = searchSwimmer.value.trim().toLowerCase();
-const swimmerEntry = [...swimmerMap.entries()].find(([id, name]) => name.toLowerCase() === inputName);
+const swimmerEntry = [...swimmerMap.entries()].find(([id, name]) =>
+  name.toLowerCase().includes(inputName)
+);
 const swimmerId = swimmerEntry?.[0] || '';
   const normEventLabel = normalizeEventName(selectEvent.value);
   const selectedSeason = selectSeason.value;
@@ -294,6 +316,7 @@ handleFilters();
         searchSwimmer.addEventListener('input', handleFilters);
         searchSwimmer.addEventListener('change', handleFilters);
         selectEvent.addEventListener('change', handleFilters);
+        toggleMeetScope.addEventListener('change', handleFilters);
       });
     </script>
   </div>
