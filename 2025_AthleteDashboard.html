@@ -1,15 +1,19 @@
 <head>
   <meta charset="UTF-8" />
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Swimmer Performance Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="dashboard-utils.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
       background-color: #f3f4f6;
     }
-
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; margin: 0.5cm; font-size: 0.75rem; }
@@ -17,12 +21,9 @@
     }
   </style>
 </head>
-
 <body class="text-gray-800 p-6 sm:p-10 min-h-screen">
   <div class="max-w-7xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
     <h1 class="text-3xl sm:text-4xl font-extrabold text-center mb-8">Swimmer Performance Dashboard</h1>
-
-    <!-- FILTER CONTROLS -->
     <div class="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       <div>
         <label for="selectSwimmer" class="block text-sm font-medium text-gray-700 mb-1">Select Swimmer:</label>
@@ -61,8 +62,6 @@
         </select>
       </div>
     </div>
-
-    <!-- CHART DISPLAY -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-purple-50 p-4 rounded-lg shadow">
         <h2 class="text-lg font-bold mb-3 text-center">Specialty (Radar Chart)</h2>
@@ -73,232 +72,147 @@
         <canvas id="progressionChart" height="300"></canvas>
       </div>
     </div>
-  </div>
 
-  <script>
-// === Helper Functions ===
-function timeToSeconds(timeStr) {
-  if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return null;
-  const parts = String(timeStr).split(':');
-  return parts.length === 2
-    ? parseInt(parts[0]) * 60 + parseFloat(parts[1])
-    : parseFloat(parts[0]);
-}
+ <script type="module">
+      import { timeToSeconds, secondsToTime, formatDate, formatMMDDYYYY, weeklyFileNames } from './dashboard-utils.js';
 
-function secondsToTime(sec) {
-  if (!isFinite(sec)) return 'N/A';
-  const min = Math.floor(sec / 60);
-  const rem = (sec % 60).toFixed(2).padStart(5, '0');
-  return `${min}:${rem}`;
-}
+      let allAthleteData = [];
+      let specialtyChart = null;
+      let progressionChart = null;
 
-function normalizeEventName(eventStr) {
-  return eventStr.replace(/\d{2}-\d{2}\s*/g, '').trim();
-}
+      const selectSwimmer = document.getElementById('selectSwimmer');
+      const selectEvent = document.getElementById('selectEvent');
+      const selectStroke = document.getElementById('strokeFilter');
+      const selectSeason = document.getElementById('seasonFilter');
+      const toggleMeetScope = document.getElementById('meetScopeToggle');
 
-function getSeasonFromDate(dateStr) {
-  const year = new Date(dateStr).getFullYear();
-  return year.toString();
-}
-
-// === Chart Instances ===
-let specialtyChart = null;
-let progressionChart = null;
-
-// === DOM Elements ===
-const selectSwimmer = document.getElementById('selectSwimmer');
-const selectEvent = document.getElementById('selectEvent');
-const strokeFilter = document.getElementById('strokeFilter');
-const seasonFilter = document.getElementById('seasonFilter');
-const meetScopeToggle = document.getElementById('meetScopeToggle');
-
-let allAthleteData = [];
-
-function updateSpecialtyChart(swimmerId) {
-  const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-  const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
-  const scores = strokes.map(stroke => {
-    const events = swimmerData.filter(d =>
-      d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) &&
-      timeToSeconds(d.resultTime) !== null
-    );
-    const avg = events.length ? events.reduce((a, b) => a + timeToSeconds(b.resultTime), 0) / events.length : Infinity;
-    return avg === Infinity ? 0 : Math.max(0, (120 - avg) / 120 * 100);
-  });
-
-  const ctx = document.getElementById('specialtyChart').getContext('2d');
-  if (specialtyChart) specialtyChart.destroy();
-  specialtyChart = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: strokes,
-      datasets: [{
-        label: 'Specialty',
-        data: scores,
-        backgroundColor: 'rgba(153, 102, 255, 0.4)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgba(153, 102, 255, 1)'
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        r: {
-          min: 0,
-          max: 100,
-          ticks: { stepSize: 20 }
-        }
+      function normalizeEventName(name) {
+        return name.replace(/\d{2}-\d{2}\s*/g, '').trim();
       }
-    }
-  });
-}
-</script>
 
-<script>
-// === Chart Drawing: Time Progression ===
-function updateProgressionChart(swimmerId, eventLabel) {
-  const scope = meetScopeToggle.value;
-  const allDates = [...new Set(allAthleteData.map(d => d.meetDate))].sort((a, b) => new Date(a) - new Date(b));
+      function updateSpecialtyChart(swimmerId) {
+        const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+        const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+        const scores = strokes.map(stroke => {
+          const events = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && isFinite(timeToSeconds(d.resultTime)));
+          const avg = events.length ? events.reduce((a, b) => a + timeToSeconds(b.resultTime), 0) / events.length : Infinity;
+          return avg === Infinity ? 0 : Math.max(0, (120 - avg) / 120 * 100);
+        });
+        const ctx = document.getElementById('specialtyChart').getContext('2d');
+        if (specialtyChart) specialtyChart.destroy();
+        specialtyChart = new Chart(ctx, {
+          type: 'radar',
+          data: { labels: strokes, datasets: [{ label: 'Specialty', data: scores }] },
+          options: { scales: { r: { min: 0, max: 100 } } }
+        });
+      }
 
-  const swimmerEvents = allAthleteData.filter(d =>
-    d.id === swimmerId &&
-    normalizeEventName(d.eventSwum) === eventLabel
-  );
+      function updateProgressionChart(swimmerId, eventLabel) {
+        const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+        const allDates = [...new Set(swimmerData.map(d => d.meetDate))].sort((a, b) => new Date(a) - new Date(b));
+        const timesByDate = {};
+        swimmerData.filter(d => normalizeEventName(d.eventSwum) === eventLabel && isFinite(timeToSeconds(d.resultTime)))
+          .forEach(d => {
+            timesByDate[d.meetDate] = timeToSeconds(d.resultTime);
+          });
 
-  const dateToTime = {};
-  swimmerEvents.forEach(d => {
-    const time = timeToSeconds(d.resultTime);
-    if (time !== null) dateToTime[d.meetDate] = time;
-  });
+        const labels = allDates.map(d => formatMMDDYYYY(d));
+        const data = allDates.map(d => timesByDate[d] !== undefined ? timesByDate[d] : null);
 
-  const labels = (scope === 'all') ? allDates : Object.keys(dateToTime).sort((a, b) => new Date(a) - new Date(b));
-  const dataPoints = labels.map(date => dateToTime[date] ?? null);
-
-  const ctx = document.getElementById('progressionChart').getContext('2d');
-  if (progressionChart) progressionChart.destroy();
-  progressionChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels.map(d => new Date(d).toLocaleDateString()),
-      datasets: [{
-        label: eventLabel,
-        data: dataPoints,
-        borderColor: 'teal',
-        backgroundColor: 'rgba(0,128,128,0.2)',
-        tension: 0.2,
-        spanGaps: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          reverse: true,
-          ticks: {
-            callback: val => secondsToTime(val)
+        const ctx = document.getElementById('progressionChart').getContext('2d');
+        if (progressionChart) progressionChart.destroy();
+        progressionChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{ label: eventLabel, data, fill: false, borderColor: 'teal', tension: 0.2 }]
+          },
+          options: {
+            spanGaps: false,
+            scales: {
+              y: {
+                reverse: true,
+                ticks: {
+                  callback: val => secondsToTime(val)
+                }
+              }
+            }
           }
-        }
+        });
       }
-    }
-  });
-}
 
-// === Filter Setup ===
-function populateFilters() {
-  const swimmerMap = new Map();
-  const eventSet = new Set();
-  const seasonSet = new Set();
+      function populateFilters() {
+        const swimmerMap = new Map();
+        const eventSet = new Set();
+        const strokeSet = new Set();
+        const seasonSet = new Set();
 
-  allAthleteData.forEach(row => {
-    const swimmerId = `${row.lastName}-${row.firstName}`.toLowerCase();
-    swimmerMap.set(swimmerId, `${row.firstName} ${row.lastName}`);
-    eventSet.add(normalizeEventName(row.eventSwum));
-    seasonSet.add(getSeasonFromDate(row.meetDate));
-  });
+        allAthleteData.forEach(row => {
+          const id = `${row.lastName}-${row.firstName}`.toLowerCase();
+          swimmerMap.set(id, `${row.firstName} ${row.lastName}`);
+          eventSet.add(normalizeEventName(row.eventSwum));
+          if (row.eventSwum) strokeSet.add(row.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0]);
+          if (row.meetDate) seasonSet.add(new Date(row.meetDate).getFullYear());
+        });
 
-  selectSwimmer.innerHTML = '<option value="">-- Choose --</option>';
-  selectEvent.innerHTML = '<option value="">-- Choose --</option>';
-  seasonFilter.innerHTML = '<option value="">All Seasons</option>';
+        [selectSwimmer, selectEvent, selectStroke, selectSeason].forEach(sel => sel.innerHTML = '<option value="">All</option>');
 
-  [...swimmerMap.entries()].sort().forEach(([id, name]) => {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = name;
-    selectSwimmer.appendChild(opt);
-  });
+        [...swimmerMap.entries()].sort().forEach(([id, name]) => {
+          const opt = document.createElement('option'); opt.value = id; opt.textContent = name;
+          selectSwimmer.appendChild(opt);
+        });
+        [...eventSet].sort().forEach(e => {
+          const opt = document.createElement('option'); opt.value = e; opt.textContent = e;
+          selectEvent.appendChild(opt);
+        });
+        [...strokeSet].sort().forEach(s => {
+          const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
+          selectStroke.appendChild(opt);
+        });
+        [...seasonSet].sort().forEach(s => {
+          const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
+          selectSeason.appendChild(opt);
+        });
+      }
 
-  [...eventSet].sort().forEach(event => {
-    const opt = document.createElement('option');
-    opt.value = event;
-    opt.textContent = event;
-    selectEvent.appendChild(opt);
-  });
+      function handleFilters() {
+        const swimmerId = selectSwimmer.value;
+        const eventLabel = selectEvent.value;
+        if (swimmerId) updateSpecialtyChart(swimmerId);
+        if (swimmerId && eventLabel) updateProgressionChart(swimmerId, eventLabel);
+      }
 
-  [...seasonSet].sort().forEach(year => {
-    const opt = document.createElement('option');
-    opt.value = year;
-    opt.textContent = year;
-    seasonFilter.appendChild(opt);
-  });
-}
+      [selectSwimmer, selectEvent, selectStroke, selectSeason, toggleMeetScope].forEach(el => {
+        el.addEventListener('change', handleFilters);
+      });
 
-// === Apply Filters and Render Charts ===
-function applyFilters() {
-  const swimmerId = selectSwimmer.value;
-  const eventLabel = selectEvent.value;
-  if (!swimmerId) return;
+      async function fetchAllData() {
+        const allData = await Promise.all(
+          weeklyFileNames.map(async path => {
+            try {
+              const res = await fetch(path);
+              const json = await res.json();
+              const f = json.fields;
+              return json.values.map(row => ({
+                id: `${row[f.indexOf('last_name')]}-${row[f.indexOf('first_name')]}`.toLowerCase(),
+                firstName: row[f.indexOf('first_name')],
+                lastName: row[f.indexOf('last_name')],
+                eventSwum: row[f.indexOf('event_swum')],
+                resultTime: String(row[f.indexOf('result_time')]),
+                meetDate: row[f.indexOf('meet_date')]
+              }));
+            } catch {
+              return [];
+            }
+          })
+        );
+        allAthleteData = allData.flat();
+        populateFilters();
+        handleFilters();
+      }
 
-  updateSpecialtyChart(swimmerId);
-  if (eventLabel) updateProgressionChart(swimmerId, eventLabel);
-
-  // Persist state
-  localStorage.setItem('selectedSwimmer', swimmerId);
-  localStorage.setItem('selectedEvent', eventLabel);
-  localStorage.setItem('strokeFilter', strokeFilter.value);
-  localStorage.setItem('seasonFilter', seasonFilter.value);
-  localStorage.setItem('meetScopeToggle', meetScopeToggle.value);
-}
-
-// === Bind Events ===
-[selectSwimmer, selectEvent, strokeFilter, seasonFilter, meetScopeToggle].forEach(el =>
-  el.addEventListener('change', applyFilters)
-);
-
-// === Fetch and Init ===
-async function fetchData() {
-  try {
-    const res = await fetch('2025resultsweek01.json');
-    const json = await res.json();
-    const f = json.fields;
-
-    allAthleteData = json.values.map(row => ({
-      id: `${row[f.indexOf('last_name')]}-${row[f.indexOf('first_name')]}`.toLowerCase(),
-      firstName: row[f.indexOf('first_name')],
-      lastName: row[f.indexOf('last_name')],
-      eventSwum: row[f.indexOf('event_swum')],
-      resultTime: String(row[f.indexOf('result_time')]),
-      meetDate: row[f.indexOf('meet_date')]
-    }));
-
-    populateFilters();
-
-    // Restore state
-    selectSwimmer.value = localStorage.getItem('selectedSwimmer') || '';
-    selectEvent.value = localStorage.getItem('selectedEvent') || '';
-    strokeFilter.value = localStorage.getItem('strokeFilter') || '';
-    seasonFilter.value = localStorage.getItem('seasonFilter') || '';
-    meetScopeToggle.value = localStorage.getItem('meetScopeToggle') || 'has-times';
-
-    applyFilters();
-  } catch (err) {
-    console.error('Failed to load data:', err);
-  }
-}
-
-window.addEventListener('DOMContentLoaded', fetchData);
-</script>
-
+      window.addEventListener('DOMContentLoaded', fetchAllData);
+    </script>
+  </div>
 </body>
 </html>
