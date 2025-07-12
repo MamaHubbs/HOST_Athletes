@@ -653,7 +653,7 @@
             console.log(`Populating meet selector for season: '${selectedSeason}'`);
 
             const meetsToDisplay = allFileMetadata.filter(meta => {
-                if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit') {
+                if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit' || selectedSeason.startsWith('all-meets-for-season-')) { 
                     return true; 
                 }
                 const metaYear = meta.dateObject.getFullYear().toString();
@@ -819,6 +819,7 @@
                     dataToProcess = []; 
                 }
             } else if (isSpecificMeetSelectedInDropdown) {
+                // Step 2a: A specific meet file is explicitly selected from dropdown.
                 isSpecificMeetSelectedFlag = true; 
                 const selectedFileMeta = allFileMetadata.find(meta => meta.fileName === selectedMeetFileNameFromDropdown);
 
@@ -843,8 +844,10 @@
                     dataToProcess = []; 
                 }
             } else if (isAllResultsSelectedExplicitly) {
-                // `dataToProcess` is already allAthleteData. Header set below.
+                // Step 2b: "All Results" explicitly selected. `dataToProcess` is already `allAthleteData`.
+                // Header set below.
             } else if (isAllMeetsForSeasonSelected) {
+                // Step 2c: "All Meets (This Season)" selected. Filter dataToProcess by the active season.
                 dataToProcess = allAthleteData.filter(athlete => {
                     const meetYear = new Date(athlete.meetDate).getFullYear().toString();
                     return meetYear === seasonFilter; 
@@ -853,13 +856,14 @@
                 meetCourseForRendering = 'mixed';
                 console.log(`After "All Meets for Season" Filter (${seasonFilter}):`, dataToProcess.length, "records.");
             } else {
+                // Step 2d: `selectedMeetFileNameFromDropdown` is "" (empty), and not default load or explicit all-results/all-season.
                 // `dataToProcess` starts as `allAthleteData` and will be filtered by season/name/stroke below.
             }
 
 
             // --- Apply Remaining GLOBAL filters (Season, Name, Stroke) to `dataToProcess` ---
             
-            // Apply Season Filter (if not handled by earlier explicit meet/all-meets-for-season)
+            // Apply Season Filter (only if it hasn't been handled by earlier explicit meet/all-meets-for-season)
             if (isSeasonFilterActive && seasonFilter !== "all-seasons-explicit" && !isSpecificMeetSelectedInDropdown && !isAllMeetsForSeasonSelected) { 
                 dataToProcess = dataToProcess.filter(athlete => {
                     const meetYear = new Date(athlete.meetDate).getFullYear().toString();
@@ -942,6 +946,7 @@
             individualAthleteSummary.style.display = 'none'; 
 
             const athletesGrouped = data.reduce((acc, current) => {
+                // THIS IS THE CRUCIAL LINE FOR GROUPING: EXCLUDES AGE
                 const uniqueAthleteGroupId = `${current.lastName}-${current.firstName}-${current.category}`; 
                 
                 if (!acc[uniqueAthleteGroupId]) {
@@ -954,6 +959,7 @@
                     };
                 }
                 acc[uniqueAthleteGroupId].events.push(current);
+                console.log(`DEBUG: Grouping athlete: ${current.lastName}, ${current.firstName} (${current.age}) - ${current.category} under ID: ${uniqueAthleteGroupId}`); // NEW DEBUG LOG
                 return acc;
             }, {});
 
@@ -964,6 +970,9 @@
                 }
                 return a.firstName.localeCompare(b.firstName);
             });
+
+            console.log("DEBUG: Number of athlete groups:", athleteGroups.length); // NEW DEBUG LOG
+            athleteGroups.forEach(group => console.log("DEBUG: Group ID:", group.id)); // NEW DEBUG LOG
 
             let colspan = 9; 
             if (isSpecificMeetSelected && meetCourse === 'y') {
