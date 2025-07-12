@@ -102,7 +102,24 @@ function normalizeEventName(name) {
         specialtyChart = new Chart(ctx, {
           type: 'radar',
           data: { labels: strokes, datasets: [{ label: 'Specialty', data: scores }] },
-          options: { scales: { r: { min: 0, max: 100 } } }
+options: {
+  scales: {
+    r: {
+      min: 0,
+      max: 100,
+      ticks: {
+        display: false // ✅ Hide tick numbers
+      },
+      pointLabels: {
+        display: true,
+        callback: (val, index) => index % 2 === 0 ? val : '' // ✅ Every other stroke label
+      },
+      grid: {
+        circular: true
+      }
+    }
+  }
+}
         });
       }
 
@@ -252,10 +269,15 @@ const swimmerId = swimmerEntry?.[0] || '';
             }
           })
         );
-        allAthleteData = allData.flat();
-        
-        populateFilters();
-        handleFilters();
+allAthleteData = allData.flat();
+populateFilters();
+
+// ✅ Render blank charts at load before swimmer is selected
+updateSpecialtyChart('');
+updateProgressionChart('', '');
+
+// Then process any default filters
+handleFilters();
       }
 
       window.addEventListener('DOMContentLoaded', () => {
