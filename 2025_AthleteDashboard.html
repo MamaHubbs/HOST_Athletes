@@ -258,10 +258,12 @@ const swimmerId = swimmerEntry?.[0] || '';
         handleFilters();
       }
 
-window.addEventListener('DOMContentLoaded', () => {
-  fetchAllData();
-  searchSwimmer.addEventListener('input', handleFilters);
-});
+      window.addEventListener('DOMContentLoaded', () => {
+        fetchAllData();
+        searchSwimmer.addEventListener('input', handleFilters);
+        searchSwimmer.addEventListener('change', handleFilters);
+        selectEvent.addEventListener('change', handleFilters);
+      });
     </script>
   </div>
 </body>
