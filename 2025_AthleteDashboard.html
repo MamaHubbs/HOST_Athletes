@@ -141,12 +141,12 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
         });
       }
 
-      function populateFilters() {
-        const swimmerMap = new Map();
-        const eventSet = new Set();
-        const strokeSet = new Set();
-        const seasonSet = new Set();
-        selectEvent.disabled = false;
+function populateFilters() {
+  swimmerMap.clear();
+  const eventSet = new Set();
+  const strokeSet = new Set();
+  const seasonSet = new Set();
+  selectEvent.disabled = false;
 
         allAthleteData.forEach(row => {
           const id = `${row.lastName}-${row.firstName}`.toLowerCase();
@@ -155,11 +155,15 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
           if (row.eventSwum) strokeSet.add(row.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0]);
           if (row.meetDate) seasonSet.add(new Date(row.meetDate).getFullYear());
         });
+
+        swimmerList.innerHTML = ''; // Clear previous options
+[...swimmerMap.values()].sort().forEach(name => {
+  const opt = document.createElement('option');
+  opt.value = name;
+  swimmerList.appendChild(opt);
+});
         
-        [...swimmerMap.entries()].sort().forEach(([id, name]) => {
-          const opt = document.createElement('option'); opt.value = id; opt.textContent = name;
-          selectSwimmer.appendChild(opt);
-        });
+
 const seen = new Set();
 [...eventSet].sort().forEach(e => {
   if (!seen.has(e)) {
@@ -249,11 +253,15 @@ const swimmerId = swimmerEntry?.[0] || '';
           })
         );
         allAthleteData = allData.flat();
+        
         populateFilters();
         handleFilters();
       }
 
-      window.addEventListener('DOMContentLoaded', fetchAllData);
+window.addEventListener('DOMContentLoaded', () => {
+  fetchAllData();
+  searchSwimmer.addEventListener('input', handleFilters);
+});
     </script>
   </div>
 </body>
