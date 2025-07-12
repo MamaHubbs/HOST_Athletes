@@ -99,21 +99,23 @@ function normalizeEventName(name) {
         });
         const ctx = document.getElementById('specialtyChart').getContext('2d');
         if (specialtyChart) specialtyChart.destroy();
-specialtyChart = new Chart(document.getElementById('specialtyChart').getContext('2d'), {
+specialtyChart = new Chart(ctx, {
   type: 'radar',
   data: {
-    labels: ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'],
-    datasets: [{ label: 'Specialty', data: [0, 0, 0, 0, 0] }]
+    labels: strokes,
+    datasets: [{ label: 'Specialty', data: scores }]
   },
   options: {
     scales: {
       r: {
         min: 0,
         max: 100,
-        ticks: { display: false },
+        ticks: {
+          display: false
+        },
         pointLabels: {
           display: true,
-          callback: (val, i) => i % 2 === 0 ? val : ''
+          callback: (val, index) => index % 2 === 0 ? val : ''
         },
         grid: { circular: true }
       }
@@ -123,14 +125,15 @@ specialtyChart = new Chart(document.getElementById('specialtyChart').getContext(
 
       }
 
-      function updateProgressionChart(swimmerId, eventLabel) {
-const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
-const normEventLabel = normalizeEventName(eventLabel);
-const meetScope = toggleMeetScope.value;
+function updateProgressionChart(swimmerId, eventLabel) {
+  const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+  const normEventLabel = normalizeEventName(eventLabel); // ✅ moved up
+  const meetScope = toggleMeetScope.value;
 
-let allDates = swimmerData.map(d => d.meetDate);
-if (meetScope === 'has-times') {
-  allDates = swimmerData
+  let allDates = swimmerData.map(d => d.meetDate);
+  if (meetScope === 'has-times') {
+    allDates = swimmerData
+     
     .filter(d => normalizeEventName(d.eventSwum) === normEventLabel && isFinite(timeToSeconds(d.resultTime)))
     .map(d => d.meetDate);
 }
@@ -312,7 +315,49 @@ handleFilters();
       }
 
       window.addEventListener('DOMContentLoaded', () => {
-        fetchAllData();
+        // ✅ Placeholder radar chart
+specialtyChart = new Chart(document.getElementById('specialtyChart').getContext('2d'), {
+  type: 'radar',
+  data: {
+    labels: ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'],
+    datasets: [{ label: 'Specialty', data: [0, 0, 0, 0, 0] }]
+  },
+  options: {
+    scales: {
+      r: {
+        min: 0,
+        max: 100,
+        ticks: { display: false },
+        pointLabels: {
+          display: true,
+          callback: (val, i) => i % 2 === 0 ? val : ''
+        },
+        grid: { circular: true }
+      }
+    }
+  }
+});
+
+// ✅ Placeholder progression chart
+progressionChart = new Chart(document.getElementById('progressionChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{ label: 'Time Progression', data: [], fill: false, borderColor: 'teal', tension: 0.2 }]
+  },
+  options: {
+    spanGaps: true,
+    scales: {
+      y: {
+        reverse: true,
+        ticks: {
+          callback: val => secondsToTime(val)
+        }
+      }
+    }
+  }
+});
+        fetchAllData()
         searchSwimmer.addEventListener('input', handleFilters);
         searchSwimmer.addEventListener('change', handleFilters);
         selectEvent.addEventListener('change', handleFilters);
