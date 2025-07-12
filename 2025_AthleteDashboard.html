@@ -2,279 +2,235 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Swimmer Performance Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
     }
+
     @media print {
       .no-print { display: none !important; }
-      .print\:block { display: block !important; }
+      body { background: white !important; margin: 0.5cm; font-size: 0.75rem; }
+      canvas { display: block !important; page-break-inside: avoid; }
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800 p-6">
-  <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-6">
-    <h1 class="text-3xl font-bold text-center mb-6">Swimmer Performance Dashboard</h1>
+<body class="text-gray-800 p-6 sm:p-10 min-h-screen">
+  <div class="max-w-7xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-center mb-8">Swimmer Performance Dashboard</h1>
 
-    <!-- Filter Controls -->
-    <div class="no-print bg-gray-50 p-4 rounded-md shadow mb-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <label for="filterName" class="block font-medium text-sm mb-1">Swimmer Name</label>
-          <input type="text" id="filterName" class="w-full p-2 border border-gray-300 rounded" />
-        </div>
-        <div>
-          <label for="filterStroke" class="block font-medium text-sm mb-1">Stroke</label>
-          <select id="filterStroke" class="w-full p-2 border border-gray-300 rounded">
-            <option value="">All</option>
-            <option>Freestyle</option>
-            <option>Backstroke</option>
-            <option>Breaststroke</option>
-            <option>Butterfly</option>
-            <option>IM</option>
-          </select>
-        </div>
-        <div>
-          <label for="seasonFilter" class="block font-medium text-sm mb-1">Season (Year)</label>
-          <select id="seasonFilter" class="w-full p-2 border border-gray-300 rounded">
-            <option value="">All</option>
-            <option>2021</option>
-            <option>2022</option>
-            <option>2023</option>
-            <option>2024</option>
-            <option>2025</option>
-          </select>
-        </div>
-        <div>
-          <label for="toggleMeetScope" class="block font-medium text-sm mb-1">Meets Display</label>
-          <select id="toggleMeetScope" class="w-full p-2 border border-gray-300 rounded">
-            <option value="timesOnly">Meets With Results</option>
-            <option value="allMeets">All Meets</option>
-          </select>
-        </div>
-      </div>
-      <div class="mt-4 flex flex-wrap gap-4">
-        <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow">
-          Apply Filters
-        </button>
-        <button id="resetFilters" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md shadow">
-          Reset Filters
-        </button>
-        <button id="printReport" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow ml-auto">
-          Print
-        </button>
-      </div>
-    </div>
-
-    <!-- Chart Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-      <div class="bg-white p-4 shadow rounded-lg">
-        <h2 class="text-lg font-bold mb-2">Specialty Radar</h2>
-        <canvas id="specialtyChart"></canvas>
-      </div>
-      <div class="bg-white p-4 shadow rounded-lg">
-        <h2 class="text-lg font-bold mb-2">Progression Chart</h2>
-        <canvas id="progressionChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Select Event and Swimmer -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <!-- FILTER CONTROLS -->
+    <div class="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       <div>
-        <label for="selectSwimmer" class="block font-medium text-sm mb-1">Select Swimmer</label>
-        <select id="selectSwimmer" class="w-full p-2 border border-gray-300 rounded">
+        <label for="selectSwimmer" class="block text-sm font-medium text-gray-700 mb-1">Select Swimmer:</label>
+        <select id="selectSwimmer" class="w-full p-2 border border-gray-300 rounded-md">
           <option value="">-- Choose --</option>
         </select>
       </div>
       <div>
-        <label for="selectEventForProgression" class="block font-medium text-sm mb-1">Select Event</label>
-        <select id="selectEventForProgression" class="w-full p-2 border border-gray-300 rounded" disabled>
+        <label for="selectEvent" class="block text-sm font-medium text-gray-700 mb-1">Select Event:</label>
+        <select id="selectEvent" class="w-full p-2 border border-gray-300 rounded-md" disabled>
           <option value="">-- Choose --</option>
+        </select>
+      </div>
+      <div>
+        <label for="strokeFilter" class="block text-sm font-medium text-gray-700 mb-1">Stroke Filter:</label>
+        <select id="strokeFilter" class="w-full p-2 border border-gray-300 rounded-md">
+          <option value="">All</option>
+          <option value="Freestyle">Freestyle</option>
+          <option value="Backstroke">Backstroke</option>
+          <option value="Breaststroke">Breaststroke</option>
+          <option value="Butterfly">Butterfly</option>
+          <option value="IM">IM</option>
+        </select>
+      </div>
+      <div>
+        <label for="seasonFilter" class="block text-sm font-medium text-gray-700 mb-1">Season Filter:</label>
+        <select id="seasonFilter" class="w-full p-2 border border-gray-300 rounded-md">
+          <option value="">All Seasons</option>
+        </select>
+      </div>
+      <div>
+        <label for="meetScopeToggle" class="block text-sm font-medium text-gray-700 mb-1">Show Meets:</label>
+        <select id="meetScopeToggle" class="w-full p-2 border border-gray-300 rounded-md">
+          <option value="has-times">Only With Times</option>
+          <option value="all">All Meets</option>
         </select>
       </div>
     </div>
 
-    <!-- Table Placeholder -->
-    <table id="reportTable" class="w-full text-sm border border-gray-200">
-      <thead>
-        <tr class="bg-gray-100 text-left">
-          <th class="p-2">Meet Date</th>
-          <th class="p-2">Meet</th>
-          <th class="p-2">Event</th>
-          <th class="p-2">Seed</th>
-          <th class="p-2">Final</th>
-          <th class="p-2">Place</th>
-          <th class="p-2">Points</th>
-        </tr>
-      </thead>
-      <tbody id="reportTableBody">
-        <!-- Populated by JS -->
-      </tbody>
-    </table>
-  </div>
+    <!-- CHART DISPLAY -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-purple-50 p-4 rounded-lg shadow">
+        <h2 class="text-lg font-bold mb-3 text-center">Specialty (Radar Chart)</h2>
+        <canvas id="specialtyChart" height="300"></canvas>
+      </div>
+      <div class="bg-purple-50 p-4 rounded-lg shadow">
+        <h2 class="text-lg font-bold mb-3 text-center">Time Progression (Line Chart)</h2>
+        <canvas id="progressionChart" height="300"></canvas>
+      </div>
+    </div>
 
-<script>
-// ==== NEW CONFIGURATIONS ====
-let progressionToggle = localStorage.getItem('showAllMeets') === 'true';
-let selectedSeason = localStorage.getItem('selectedSeason') || 'All';
-
-// === Event Name Normalization ===
-function normalizeEventName(rawName) {
-  const regex = /\d{2}-\d{2}\s|\d{2}\s|\d{1,2}-\d{1,2}\s|\d{4}\s|\d+\s*yrs?\s*/gi;
-  return rawName.replace(regex, '').trim();
+    <script>
+// === Chart Helper Functions ===
+function timeToSeconds(timeStr) {
+  if (!timeStr || timeStr === 'NT' || timeStr === 'NS' || timeStr === 'DQ') return Infinity;
+  const parts = String(timeStr).split(':');
+  return parts.length === 2
+    ? parseInt(parts[0]) * 60 + parseFloat(parts[1])
+    : parseFloat(parts[0]);
 }
 
-// === Season Filter ===
-function populateSeasonFilter(years) {
-  const filter = document.getElementById('filterSeason');
-  filter.innerHTML = '<option value="All">All Seasons</option>' +
-    years.map(year => `<option value="${year}">${year}</option>`).join('');
-  filter.value = selectedSeason;
+function secondsToTime(sec) {
+  if (!isFinite(sec)) return 'N/A';
+  const min = Math.floor(sec / 60);
+  const rem = (sec % 60).toFixed(2).padStart(5, '0');
+  return `${min}:${rem}`;
 }
 
-function applySeasonFilter(data) {
-  if (selectedSeason === 'All') return data;
-  return data.filter(d => new Date(d.meetDate).getFullYear().toString() === selectedSeason);
+// === State ===
+let allAthleteData = [];
+let specialtyChart = null;
+let progressionChart = null;
+
+const selectSwimmer = document.getElementById('selectSwimmer');
+const selectEvent = document.getElementById('selectEventForProgression');
+const selectStroke = document.getElementById('filterStroke');
+const selectSeason = document.getElementById('filterSeason');
+const toggleMeetScope = document.getElementById('toggleMeetScope');
+
+// === Chart Setup ===
+function updateSpecialtyChart(swimmerId) {
+  const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+  const strokes = ['Freestyle', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+  const scores = strokes.map(stroke => {
+    const events = swimmerData.filter(d => d.eventSwum.toLowerCase().includes(stroke.toLowerCase()) && isFinite(timeToSeconds(d.resultTime)));
+    const avg = events.length ? events.reduce((a, b) => a + timeToSeconds(b.resultTime), 0) / events.length : Infinity;
+    return avg === Infinity ? 0 : Math.max(0, (120 - avg) / 120 * 100);
+  });
+  const ctx = document.getElementById('specialtyChart').getContext('2d');
+  if (specialtyChart) specialtyChart.destroy();
+  specialtyChart = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: strokes, datasets: [{ label: 'Specialty', data: scores }] },
+    options: { scales: { r: { min: 0, max: 100 } } }
+  });
 }
 
-// === Toggle Button Handling ===
-function setupProgressionToggle() {
-  const toggle = document.getElementById('toggleMeetScope');
-  toggle.checked = progressionToggle;
-  toggle.addEventListener('change', () => {
-    progressionToggle = toggle.checked;
-    localStorage.setItem('showAllMeets', progressionToggle);
-    if (selectSwimmer.value && selectEventForProgression.value) {
-      updateProgressionChart(selectSwimmer.value, selectEventForProgression.value);
+function updateProgressionChart(swimmerId, eventLabel) {
+  const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
+  const dataPoints = swimmerData.filter(d => normalizeEventName(d.eventSwum) === eventLabel && isFinite(timeToSeconds(d.resultTime)))
+    .sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
+  const times = dataPoints.map(d => timeToSeconds(d.resultTime));
+  const labels = dataPoints.map(d => new Date(d.meetDate).toLocaleDateString());
+  const ctx = document.getElementById('progressionChart').getContext('2d');
+  if (progressionChart) progressionChart.destroy();
+  progressionChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: eventLabel, data: times, fill: false, borderColor: 'teal', tension: 0.2 }] },
+    options: {
+      scales: {
+        y: {
+          reverse: true,
+          ticks: {
+            callback: val => secondsToTime(val)
+          }
+        }
+      }
     }
   });
 }
 
-// === Override existing chart data logic ===
-function getProgressionChartData(swimmerId, selectedEvent) {
-  const normalizedEvent = normalizeEventName(selectedEvent);
-  const data = allAthleteData.filter(d =>
-    d.id === swimmerId && normalizeEventName(d.eventSwum) === normalizedEvent &&
-    !['NT', 'NS', 'DQ'].includes(d.resultTime)
-  ).sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
-
-  const labels = data.map(d => formatMMDDYYYY(d.meetDate));
-  const times = data.map(d => timeToSeconds(d.resultTime));
-
-  return {
-    labels,
-    datasets: [{
-      label: `${normalizedEvent} Progression`,
-      data: times,
-      fill: false,
-      borderColor: 'rgb(75, 192, 192)',
-      tension: 0.1,
-      pointBackgroundColor: 'rgb(75, 192, 192)'
-    }]
-  };
+// === Helpers ===
+function normalizeEventName(name) {
+  return name.replace(/\d{2}-\d{2}\s*/g, '').trim();
 }
+function populateFilters() {
+  const swimmerMap = new Map();
+  const eventSet = new Set();
+  const strokeSet = new Set();
+  const seasonSet = new Set();
 
-function populateEventSelectForProgression(swimmerId) {
-  selectEventForProgression.innerHTML = '<option value="">-- Select an Event --</option>';
-  const events = [...new Set(allAthleteData.filter(d => d.id === swimmerId).map(d => normalizeEventName(d.eventSwum)))];
-  events.sort().forEach(event => {
-    const opt = document.createElement('option');
-    opt.value = event;
-    opt.textContent = event;
-    selectEventForProgression.appendChild(opt);
+  allAthleteData.forEach(row => {
+    const id = `${row.lastName}-${row.firstName}`.toLowerCase();
+    swimmerMap.set(id, `${row.firstName} ${row.lastName}`);
+    eventSet.add(normalizeEventName(row.eventSwum));
+    if (row.eventSwum) strokeSet.add(row.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0]);
+    if (row.meetDate) seasonSet.add(new Date(row.meetDate).getFullYear());
   });
-  selectEventForProgression.disabled = events.length === 0;
+
+  [selectSwimmer, selectEvent, selectStroke, selectSeason].forEach(sel => sel.innerHTML = '<option value="">All</option>');
+
+  [...swimmerMap.entries()].sort().forEach(([id, name]) => {
+    const opt = document.createElement('option'); opt.value = id; opt.textContent = name;
+    selectSwimmer.appendChild(opt);
+  });
+  [...eventSet].sort().forEach(e => {
+    const opt = document.createElement('option'); opt.value = e; opt.textContent = e;
+    selectEvent.appendChild(opt);
+  });
+  [...strokeSet].sort().forEach(s => {
+    const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
+    selectStroke.appendChild(opt);
+  });
+  [...seasonSet].sort().forEach(s => {
+    const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
+    selectSeason.appendChild(opt);
+  });
 }
 
-// === Hook into existing fetchAndRenderData ===
-function fetchAndRenderData(filename) {
-  // ... (keep all existing logic) ...
-  // After setting allAthleteData:
-  allAthleteData = applySeasonFilter(allAthleteData);
-  populateSeasonFilter([...new Set(allAthleteData.map(d => new Date(d.meetDate).getFullYear()))].sort());
-  setupProgressionToggle();
+// === Event Binding ===
+function handleFilters() {
+  const swimmerId = selectSwimmer.value;
+  const eventLabel = selectEvent.value;
+  if (swimmerId) updateSpecialtyChart(swimmerId);
+  if (swimmerId && eventLabel) updateProgressionChart(swimmerId, eventLabel);
+  localStorage.setItem('selectedSwimmer', swimmerId);
+  localStorage.setItem('selectedEvent', eventLabel);
+  localStorage.setItem('selectedStroke', selectStroke.value);
+  localStorage.setItem('selectedSeason', selectSeason.value);
+  localStorage.setItem('toggleMeetScope', toggleMeetScope.checked);
 }
 
-// === Save season filter selection ===
-document.getElementById('filterSeason').addEventListener('change', (e) => {
-  selectedSeason = e.target.value;
-  localStorage.setItem('selectedSeason', selectedSeason);
-  fetchAndRenderData(jsonFileSelector.value);
+[selectSwimmer, selectEvent, selectStroke, selectSeason, toggleMeetScope].forEach(el => {
+  el.addEventListener('change', handleFilters);
 });
+
+// === Load and Init ===
+async function fetchData() {
+  try {
+    const res = await fetch('2025resultsweek01.json');
+    const json = await res.json();
+    const f = json.fields;
+    allAthleteData = json.values.map(row => ({
+      id: `${row[f.indexOf('last_name')]}-${row[f.indexOf('first_name')]}`.toLowerCase(),
+      firstName: row[f.indexOf('first_name')],
+      lastName: row[f.indexOf('last_name')],
+      eventSwum: row[f.indexOf('event_swum')],
+      resultTime: String(row[f.indexOf('result_time')]),
+      meetDate: row[f.indexOf('meet_date')]
+    }));
+    populateFilters();
+
+    // Restore saved state
+    selectSwimmer.value = localStorage.getItem('selectedSwimmer') || '';
+    selectEvent.value = localStorage.getItem('selectedEvent') || '';
+    selectStroke.value = localStorage.getItem('selectedStroke') || '';
+    selectSeason.value = localStorage.getItem('selectedSeason') || '';
+    toggleMeetScope.checked = localStorage.getItem('toggleMeetScope') === 'true';
+    handleFilters();
+  } catch (err) {
+    console.error('Error loading data:', err);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', fetchData);
 </script>
 
-<style>
-  @media print {
-    .no-print {
-      display: none !important;
-    }
-    .print-label {
-      font-weight: bold;
-      color: #000;
-      display: block;
-      margin-bottom: 4px;
-    }
-    .print-value {
-      margin-bottom: 10px;
-    }
-  }
-</style>
-
-<!-- Replace this inside your filter container -->
-<div class="no-print mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
-  <h2 class="text-xl font-semibold text-gray-800 mb-4">Report Filters</h2>
-  <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
-    <div class="flex-1 min-w-[200px]">
-      <label for="jsonFileSelector" class="block text-sm font-medium text-gray-700 mb-1 print-label">Load Results File:</label>
-      <select id="jsonFileSelector" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 print-value">
-        <!-- JS will populate -->
-      </select>
-    </div>
-    <div class="flex-1 min-w-[150px]">
-      <label for="filterName" class="block text-sm font-medium text-gray-700 mb-1 print-label">Filter by Athlete Name:</label>
-      <input type="text" id="filterName" placeholder="Enter full name or part" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 print-value">
-    </div>
-    <div class="flex-1 min-w-[150px]">
-      <label for="filterStroke" class="block text-sm font-medium text-gray-700 mb-1 print-label">Filter by Stroke:</label>
-      <select id="filterStroke" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 print-value">
-        <option value="">All Strokes</option>
-        <option value="Freestyle">Freestyle</option>
-        <option value="Backstroke">Backstroke</option>
-        <option value="Butterfly">Butterfly</option>
-        <option value="Breaststroke">Breaststroke</option>
-        <option value="IM">IM</option>
-      </select>
-    </div>
-    <div class="flex-1 min-w-[150px]">
-      <label for="seasonFilter" class="block text-sm font-medium text-gray-700 mb-1 print-label">Season:</label>
-      <select id="seasonFilter" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 print-value">
-        <option value="">All Years</option>
-        <option value="2021">2021</option>
-        <option value="2022">2022</option>
-        <option value="2023">2023</option>
-        <option value="2024">2024</option>
-        <option value="2025">2025</option>
-      </select>
-    </div>
-    <div class="flex-1 min-w-[150px]">
-      <label for="toggleMeetScope" class="block text-sm font-medium text-gray-700 mb-1 print-label">Show:</label>
-      <select id="toggleMeetScope" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 print-value">
-        <option value="with-times">Only Meets with Results</option>
-        <option value="all-meets">All Meets</option>
-      </select>
-    </div>
-    <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
-      Apply Filters
-    </button>
-    <button id="resetFilters" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
-      Reset Filters
-    </button>
-  </div>
-</div>
 
     
 </body>
