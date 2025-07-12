@@ -1,1148 +1,205 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Athlete Meet Summary Report</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="shared-utils.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f8f8f8;
-            color: #333;
-        }
+function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
+        console.log(`RENDER TABLE DEBUG: isSpecificMeetSelected=${isSpecificMeetSelected}, meetCourse=${meetCourse}`); 
+        reportTableBody.innerHTML = '';
+        summaryChartTableBody.innerHTML = ''; 
+        individualAthleteSummary.style.display = 'none'; 
 
-        /* Centering and max-width for the entire dashboard */
-        .container {
-            max-width: 900px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            text-align: center;
-            color: #0156B3;
-            font-size: 2em;
-            margin-bottom: 10px;
-            font-weight: bold;
-            text-shadow: none;
-        }
-
-        .dropdown-container {
-            position: sticky;
-            top: 0;
-            background-color: #f8f8f8;
-            padding: 10px;
-            text-align: center;
-            z-index: 10;
-            border-bottom: 1px solid #ccc;
-            font-size: 0.7em;
-            border-radius: 8px;
-        }
-
-        .dropdown-box {
-            display: inline-block;
-            margin: 0 4px;
-        }
-
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        select, input[type="text"] {
-            padding: 3px 6px;
-            font-size: 0.7em;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            padding: 4px 8px;
-            font-size: 0.7em;
-            border-radius: 4px;
-            background-color: #0156B3;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        /* Reset Filters Button specific style */
-        #resetFilters {
-            background-color: #dc3545;
-            color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
-            padding-left: 20px; /* Increased padding */
-            padding-right: 20px; /* Increased padding */
-        }
-        #resetFilters:hover {
-            background-color: #c82333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.68em;
-            margin-top: 10px;
-        }
-
-        th, td {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            text-align: left;
-            vertical-align: top;
-        }
-
-        th {
-            background-color: #e5f1ff;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            cursor: pointer;
-        }
-
-        th.sortable::after {
-            content: ' ⇅';
-            font-size: 0.68em;
-            color: #666;
-        }
-
-        th.sorted-asc::after {
-            content: ' ↑';
-            color: #333;
-        }
-
-        th.sorted-desc::after {
-            content: ' ↓';
-            color: #333;
-        }
-
-        .row-group-even {
-            background-color: #ffffff;
-        }
-
-        .row-group-odd {
-            background-color: #f4f4f4;
-        }
-
-        .error {
-            color: red;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        td {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Print Button and Report Header Info Container */
-        .print-header-container {
-            text-align: center;
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-
-        .print-header-container #printReport {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 6px 15px;
-            font-size: 0.9em;
-            border-radius: 6px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            width: auto;
-            max-width: none;
-            margin: 0 auto;
-        }
-        .print-header-container #printReport:hover {
-            background-color: #45a049;
-            transform: translateY(-1px);
-        }
-
-        #reportHeaderInfo {
-            font-weight: bold;
-            margin-top: 10px;
-            color: #0156B3;
-            text-align: center;
-        }
-
-        /* Styles for the new Individual Athlete Summary Chart */
-        #individualAthleteSummary {
-            margin-top: 30px;
-            padding: 15px;
-            background-color: #e5f1ff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: none;
-        }
-        #individualAthleteSummary h3 {
-            color: #0156B3;
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-        #individualAthleteSummary table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75em;
-        }
-        #individualAthleteSummary th, #individualAthleteSummary td {
-            border: 1px solid #cce5ff;
-            padding: 8px;
-            text-align: left;
-        }
-        #individualAthleteSummary th {
-            background-color: #cce5ff;
-            font-weight: bold;
-        }
-        #individualAthleteSummary tr:nth-child(even) {
-            background-color: #f0f8ff;
-        }
-
-        /* Print-specific styles from original, adjusted for new base styles */
-        @media print {
-            body {
-                font-size: 0.75rem !important;
-                margin: 0.5cm !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            table {
-                font-size: 0.8em !important;
-            }
-            th, td {
-                padding: 3px 5px !important;
-            }
-            .athlete-header-row {
-                font-size: 0.9em !important;
-            }
-            .event-subheader-row th {
-                padding-left: 10px !important;
-                font-size: 0.75em !important;
-                background-color: transparent !important;
-            }
-            .event-data-row td {
-                padding-left: 15px !important;
-                font-size: 0.75em !important;
-            }
-            #reportHeaderInfo {
-                font-size: 0.9em !important;
-                margin-bottom: 5px !important;
-            }
-            #individualAthleteSummary {
-                display: block !important;
-                margin-top: 15px !important;
-                padding: 0 !important;
-                box-shadow: none !important;
-                background-color: transparent !important;
-                border: none !important;
-            }
-            #individualAthleteSummary h3 {
-                font-size: 1.1em !important;
-                text-align: left !important;
-                margin-bottom: 5px !important;
-            }
-            #individualAthleteSummary table {
-                font-size: 0.75em !important;
-                border: 1px solid #ccc !important;
-            }
-            #individualAthleteSummary th, #individualAthleteSummary td {
-                border: 1px solid #ccc !important;
-                padding: 3px 5px !important;
-            }
-            .print-header-container {
-                text-align: center !important;
-                margin-top: 0 !important;
-                margin-bottom: 0 !important;
-            }
-            .print-header-container #printReport {
-                display: none !important;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="no-print dropdown-container">
-            <h2 style="color: #0156B3;">Athlete Meet Summary Report Filters</h2>
-            <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; justify-content: center;">
-                <div class="dropdown-box">
-                    <label for="filterSeason">Filter by Season:</label>
-                    <select id="filterSeason">
-                        <option value="">-- Select Season --</option>
-                    </select>
-                </div>
-                <div class="dropdown-box">
-                    <label for="jsonFileSelector">Select Meet:</label>
-                    <select id="jsonFileSelector" disabled>
-                        <option value="">-- Choose Season First --</option>
-                    </select>
-                </div>
-                <div class="dropdown-box autocomplete-container">
-                    <label for="filterName">Filter by Athlete Name:</label>
-                    <input type="text" id="filterName" placeholder="Enter full name or part">
-                    <div id="filterNameSearchResults" class="autocomplete-items"></div>
-                </div>
-                <div class="dropdown-box">
-                    <label for="filterStroke">Filter by Stroke:</label>
-                    <select id="filterStroke">
-                        <option value="">All Strokes</option>
-                        <option value="Freestyle">Freestyle</option>
-                        <option value="Backstroke">Backstroke</option>
-                        <option value="Butterfly">Butterfly</option>
-                        <option value="Breaststroke">Breaststroke</option>
-                        <option value="IM">IM</option>
-                    </select>
-                </div>
-                <div class="dropdown-box">
-                    <button id="resetFilters">Clear All Filters</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="print-header-container no-print">
-            <button id="printReport">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-printer">
-                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                    <rect x="6" y="14" width="12" height="8"></rect>
-                </svg>
-                <span>Print Report</span>
-            </button>
-            <div id="reportHeaderInfo">
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr class="sr-only"> <th>Athlete Details</th>
-                        <th>Meet Date</th>
-                        <th>Meet Name</th>
-                        <th>Event</th>
-                        <th>Seed</th>
-                        <th>Final</th>
-                        <th>Place</th>
-                        <th>Points</th>
-                        <th>% Improvement</th>
-                    </tr>
-                </thead>
-                <tbody id="reportTableBody">
-                    </tbody>
-            </table>
-        </div>
-
-        <div id="individualAthleteSummary" class="no-print">
-            <h3 id="summaryChartTitle"></h3>
-            <table id="summaryChartTable">
-                <thead>
-                    <tr>
-                        <th>Event</th>
-                        <th>First Time</th>
-                        <th>Last Time</th>
-                        <th>Overall % Improvement</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-        </div>
-
-    </div>
-
-    <script>
-        let allAthleteData = []; 
-        let filteredAthleteData = []; 
-        let currentLoadedMeetInfo = { title: '', dateRange: '' }; 
-
-        const reportTableBody = document.getElementById('reportTableBody');
-        const filterNameInput = document.getElementById('filterName');
-        const filterStrokeInput = document.getElementById('filterStroke');
-        const filterSeasonInput = document.getElementById('filterSeason');
-        const applyFiltersButton = document.getElementById('applyFilters'); 
-        const resetFiltersButton = document.getElementById('resetFilters');
-        const printReportButton = document.getElementById('printReport');
-        const jsonFileSelector = document.getElementById('jsonFileSelector');
-        const reportHeaderInfoDiv = document.getElementById('reportHeaderInfo');
-        const individualAthleteSummary = document.getElementById('individualAthleteSummary'); 
-        const summaryChartTitle = document.getElementById('summaryChartTitle'); 
-        const summaryChartTableBody = individualAthleteSummary.querySelector('tbody'); 
-        const filterNameSearchResultsDiv = document.getElementById('filterNameSearchResults');
-
-
-        // weeklyFileNames is expected to be defined in shared-utils.js
-
-        // New utility function for robust string comparison (e.g., meet names)
-        function cleanStringForComparison(str) {
-            if (typeof str !== 'string') {
-                return '';
-            }
-            // Remove all non-alphanumeric, then lowercase, then trim spaces
-            return str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
-        }
-
-        // New utility function specifically for date strings to ensure consistent YYYYMMDD format for comparison
-        function cleanDateStringForComparison(dateStr) {
-            if (typeof dateStr !== 'string') {
-                return '';
-            }
-            // Attempt to parse dateStr into a Date object first
-            let date = new Date(dateStr);
-            if (isNaN(date.getTime())) {
-                // If standard parsing fails, try specific formats (like "Jul 02, 2025")
-                const parts = dateStr.split(/[\s,]+/); 
-                const monthNames = {
-                    "jan": 0, "feb": 1, "mar": 2, "apr": 3, "may": 4, "jun": 5,
-                    "jul": 6, "aug": 7, "sep": 8, "oct": 9, "nov": 10, "dec": 11
+        const athletesGrouped = data.reduce((acc, current) => {
+            // THIS IS THE CRUCIAL LINE FOR GROUPING: EXCLUDES AGE
+            const uniqueAthleteGroupId = `${current.lastName}-${current.firstName}-${current.category}`; 
+            
+            if (!acc[uniqueAthleteGroupId]) {
+                acc[uniqueAthleteGroupId] = {
+                    id: uniqueAthleteGroupId, // This ID is now LastName-FirstName-Category
+                    lastName: current.lastName, 
+                    firstName: current.firstName, 
+                    category: current.category, 
+                    events: []
                 };
-                if (parts.length >= 3 && monthNames[parts[0].toLowerCase()] !== undefined) {
-                    date = new Date(parseInt(parts[2]), monthNames[parts[0].toLowerCase()], parseInt(parts[1]));
-                } else {
-                    return ''; 
-                }
             }
-            // Ensure date is valid after parsing attempts, then format to YYYYMMDD
-            if (isNaN(date.getTime())) {
-                return '';
+            acc[uniqueAthleteGroupId].events.push(current);
+            return acc;
+        }, {});
+
+        const athleteGroups = Object.values(athletesGrouped).sort((a, b) => {
+            const lastNameCompare = a.lastName.localeCompare(b.lastName);
+            if (lastNameCompare !== 0) {
+                return lastNameCompare;
             }
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            return `${year}${month}${day}`;
+            return a.firstName.localeCompare(b.firstName);
+        });
+
+        let colspan = 9; 
+        if (isSpecificMeetSelected && meetCourse === 'y') {
+            colspan = 10; 
         }
 
-
-        function transformRawData(rawValues, fieldNames) {
-            const transformed = [];
-            const lastNameIndex = fieldNames.indexOf('last_name');
-            const firstNameIndex = fieldNames.indexOf('first_name');
-            const genderIndex = fieldNames.indexOf('competition_category');
-            const ageIndex = fieldNames.indexOf('age');
-            const meetDateIndex = fieldNames.indexOf('meet_date');
-            const meetNameIndex = fieldNames.indexOf('meet_name'); 
-            const eventSwumIndex = fieldNames.indexOf('event_swum');
-            const seedTimeIndex = fieldNames.indexOf('seed_time');
-            const resultTimeIndex = fieldNames.indexOf('result_time'); 
-            const seedTimeSCMIndex = fieldNames.indexOf('seed_time_scm'); 
-            const resultTimeSCMIndex = fieldNames.indexOf('result_time_scm'); 
-            const placeIndex = fieldNames.indexOf('place');
-            const pointsIndex = fieldNames.indexOf('points');
-
-            rawValues.forEach((row) => {
-                const requiredIndices = [lastNameIndex, firstNameIndex, genderIndex, ageIndex, meetDateIndex, meetNameIndex, eventSwumIndex, seedTimeIndex, resultTimeIndex, seedTimeSCMIndex, resultTimeSCMIndex, placeIndex, pointsIndex];
-                const maxIndex = Math.max(...requiredIndices);
-
-                if (row.length > maxIndex && !requiredIndices.some(idx => idx === -1)) { 
-                    const athleteId = `${row[lastNameIndex]}-${row[firstNameIndex]}-${row[ageIndex]}-${row[genderIndex]}`; 
-                    
-                    let originalCourse = 'N/A';
-                    if (row[eventSwumIndex]) {
-                        if (String(row[eventSwumIndex]).includes('y ')) { 
-                            originalCourse = 'y'; 
-                        } else if (String(row[eventSwumIndex]).includes('m ')) { 
-                            originalCourse = 'm'; 
-                        }
-                    }
-
-                    let seedConverted = false;
-                    let finalConverted = false;
-
-                    if (originalCourse === 'y') {
-                        const seedStr = String(row[seedTimeIndex]).toLowerCase();
-                        const seedScmStr = String(row[seedTimeSCMIndex]).toLowerCase();
-                        if (seedStr !== 'nt' && seedScmStr !== 'nt' && seedStr !== seedScmStr) {
-                            seedConverted = true;
-                        }
-                        const finalStr = String(row[resultTimeIndex]).toLowerCase();
-                        const finalScmStr = String(row[resultTimeSCMIndex]).toLowerCase();
-                        if (finalStr !== 'nt' && finalScmStr !== 'nt' && finalStr !== finalScmStr) {
-                            finalConverted = true;
-                        }
-                    }
-
-                    transformed.push({
-                        id: athleteId, 
-                        lastName: row[lastNameIndex],
-                        firstName: row[firstNameIndex],
-                        category: row[genderIndex],
-                        age: row[ageIndex],
-                        meetDate: String(row[meetDateIndex]), 
-                        meetName: String(row[meetNameIndex] || ''), 
-                        eventSwum: row[eventSwumIndex],
-                        originalCourse: originalCourse, 
-                        seedTimeOriginal: String(row[seedTimeIndex]), 
-                        resultTimeOriginal: String(row[resultTimeIndex]), 
-                        seedTimeSCM: String(row[seedTimeSCMIndex]), 
-                        resultTimeSCM: String(row[resultTimeSCMIndex]), 
-                        seedConverted: seedConverted, 
-                        finalConverted: finalConverted, 
-                        place: row[placeIndex],
-                        points: row[pointsIndex]
-                    });
-                } else {
-                    console.warn(`Skipping a row due to missing data fields or unfound indices:`, row, `Max index required: ${maxIndex}`, `Indices found: ${fieldNames.map((f,i) => `${f}:${i}`).join(', ')}`);
-                }
-            });
-            return transformed;
+        if (athleteGroups.length === 0) {
+            const noResultsRow = document.createElement('tr');
+            noResultsRow.innerHTML = `
+                <td colspan="${colspan}" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    No results found matching your filters.
+                </td>
+            `;
+            reportTableBody.appendChild(noResultsRow);
+            return;
         }
 
-        let allFileMetadata = []; 
-        let uniqueSwimmersForAutocomplete = []; 
+        // isSingleAthleteView still checks for only one unique ID, which now means one unique LastName-FirstName-Category
+        const isSingleAthleteView = athleteGroups.length === 1 && filterNameInput.value.trim() !== '';
+        let singleAthleteDisplayName = '';
 
-        async function fetchAllFileMetadata() {
-            if (allFileMetadata.length > 0) { 
-                return; 
+        athleteGroups.forEach(athleteGroup => {
+            let athleteDisplayName = `${athleteGroup.lastName}, ${athleteGroup.firstName}`;
+            // Age is only added to the display name if a specific meet is selected
+            if (isSpecificMeetSelected && athleteGroup.events.length > 0) {
+                athleteDisplayName += ` (${athleteGroup.events[0].age})`; 
             }
-            console.log("Fetching all file metadata...");
+            athleteDisplayName += ` - ${athleteGroup.category}`;
 
-            const tempMetadata = [];
-            for (const fileName of weeklyFileNames) { 
-                const filePath = new URL(fileName, window.location.href).toString();
-                try {
-                    const response = await fetch(filePath);
-                    if (!response.ok) {
-                        console.warn(`Could not fetch ${filePath}. Skipping for metadata collection.`);
-                        continue;
-                    }
-                    const rawFileData = await response.json();
-
-                    let meetDateForFiltering = 'Unknown Date'; 
-                    let meetNameForFiltering = 'Unknown Meet'; 
-                    let meetDateForDisplay = 'Unknown Date'; 
-                    let meetNameForDisplay = 'Unknown Meet'; 
-                    let meetCourse = 'N/A'; 
-
-                    if (rawFileData.values && rawFileData.values.length > 0 && rawFileData.fields) {
-                        const fields = rawFileData.fields;
-                        const firstRow = rawFileData.values[0];
-                        const meetDateIndex = fields.indexOf('meet_date');
-                        const meetNameIndex = fields.indexOf('meet_name');
-                        const eventSwumIndex = fields.indexOf('event_swum');
-
-                        if (meetDateIndex !== -1 && firstRow[meetDateIndex]) {
-                            meetDateForFiltering = String(firstRow[meetDateIndex]);
-                            meetDateForDisplay = String(firstRow[meetDateIndex]); 
-                        }
-                        if (meetNameIndex !== -1 && firstRow[meetNameIndex]) {
-                            meetNameForFiltering = String(firstRow[meetNameIndex]);
-                            meetNameForDisplay = String(firstRow[meetNameIndex]); 
-                        }
-                        
-                        if (eventSwumIndex !== -1 && firstRow[eventSwumIndex]) {
-                            if (String(firstRow[eventSwumIndex]).includes('y ')) {
-                                meetCourse = 'y';
-                            } else if (String(firstRow[eventSwumIndex]).includes('m ')) {
-                                meetCourse = 'm';
-                            }
-                        }
-                    } else if (rawFileData["meet date"] || rawFileData["title"]) {
-                        if (rawFileData["meet date"]) {
-                            meetDateForDisplay = String(rawFileData["meet date"]);
-                        }
-                        if (rawFileData["title"]) {
-                            meetNameForDisplay = String(rawFileData["title"]);
-                            if (rawFileData["title"].includes('(SCY)') || rawFileData["title"].includes('(Yards)')) {
-                                meetCourse = 'y';
-                            } else if (rawFileData["title"].includes('(SCM)') || rawFileData["title"].includes('(Meters)')) {
-                                meetCourse = 'm';
-                            }
-                        }
-                    }
-
-                    const dateObject = new Date(meetDateForFiltering); 
-                    if (isNaN(dateObject.getTime())) {
-                        console.warn(`Invalid date format (for filtering) for file ${fileName}: '${meetDateForFiltering}'. Skipping this file's metadata.`);
-                        continue; 
-                    }
-
-                    tempMetadata.push({
-                        fileName: fileName,
-                        meetDate: meetDateForFiltering, 
-                        meetName: meetNameForFiltering, 
-                        meetDateDisplay: meetDateForDisplay, 
-                        meetNameDisplay: meetNameForDisplay.replace('2025 ', ''), 
-                        dateObject: dateObject, 
-                        meetCourse: meetCourse 
-                    });
-
-                } catch (error) {
-                    console.error(`Error processing file ${fileName} for metadata:`, error);
-                }
-            }
-            tempMetadata.sort((a, b) => a.dateObject - b.dateObject);
-            allFileMetadata = tempMetadata;
-            console.log("All File Metadata Loaded:", allFileMetadata); 
-        }
-
-        // NEW: Function to populate uniqueSwimmersForAutocomplete
-        function populateUniqueSwimmersForAutocomplete() {
-            const swimmerMap = new Map();
-            allAthleteData.forEach(athlete => {
-                const swimmerKey = `${athlete.lastName}-${athlete.firstName}-${athlete.age}-${athlete.category}`.toLowerCase();
-                
-                const displayName = `${athlete.lastName}, ${athlete.firstName} (${athlete.age}) - ${athlete.category}`;
-
-                if (!swimmerMap.has(swimmerKey)) { 
-                    swimmerMap.set(swimmerKey, {
-                        id: swimmerKey, 
-                        firstName: athlete.firstName,
-                        lastName: athlete.lastName,
-                        age: athlete.age,
-                        category: athlete.category,
-                        displayName: displayName 
-                    });
-                }
-            });
-            uniqueSwimmersForAutocomplete = Array.from(swimmerMap.values());
-            console.log("Unique Swimmers for Autocomplete Loaded:", uniqueSwimmersForAutocomplete.length);
-        }
-
-        async function populateSeasonFilter() {
-            if (allFileMetadata.length === 0) {
-                await fetchAllFileMetadata();
+            if (isSingleAthleteView) {
+                singleAthleteDisplayName = athleteDisplayName;
             }
 
-            console.log("Populating season filter...");
-            const seasons = new Set();
-            allFileMetadata.forEach(meta => {
-                const meetYear = meta.dateObject.getFullYear();
-                if (!isNaN(meetYear)) {
-                    seasons.add(meetYear.toString());
-                }
-            });
+            const athleteHeaderRow = document.createElement('tr');
+            athleteHeaderRow.className = 'athlete-header-row';
+            athleteHeaderRow.innerHTML = `
+                <td colspan="${colspan}" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athleteDisplayName}</td>
+            `;
+            reportTableBody.appendChild(athleteHeaderRow);
 
-            filterSeasonInput.innerHTML = '<option value="">-- Select Season --</option>'; 
-            
-            const allSeasonsOption = document.createElement('option');
-            allSeasonsOption.value = "all-seasons-explicit"; 
-            allSeasonsOption.textContent = "All Seasons";
-            filterSeasonInput.appendChild(allSeasonsOption);
+            const eventSubHeaderRow = document.createElement('tr');
+            eventSubHeaderRow.className = 'event-subheader-row';
 
-            Array.from(seasons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(season => {
-                const option = document.createElement('option');
-                option.value = season;
-                option.textContent = season; 
-                filterSeasonInput.appendChild(option);
-            });
-            console.log("Available seasons:", Array.from(seasons).sort((a, b) => parseInt(a) - parseInt(b)));
-        }
+            let headerHtml = `
+                <th style="width: 1%;"></th> <th>Meet Date</th>
+                <th>Meet Name</th>
+                <th>Event</th>
+            `;
 
-        async function populateJsonFileSelector(selectedSeason = '') {
-            jsonFileSelector.innerHTML = '';
-
-            if (allFileMetadata.length === 0) {
-                await fetchAllFileMetadata();
-            }
-            console.log(`Populating meet selector for season: '${selectedSeason}'`);
-
-            const meetsToDisplay = allFileMetadata.filter(meta => {
-                if (selectedSeason === '' || selectedSeason === 'all-seasons-explicit') {
-                    return true; 
-                }
-                const metaYear = meta.dateObject.getFullYear().toString();
-                const isMatch = metaYear === selectedSeason;
-                return isMatch;
-            });
-
-            console.log("Meets filtered for display:", meetsToDisplay);
-
-            if (selectedSeason === '') { 
-                const defaultOption = document.createElement('option');
-                defaultOption.value = ""; 
-                defaultOption.textContent = "-- Choose Season First --"; 
-                jsonFileSelector.appendChild(defaultOption);
-                jsonFileSelector.disabled = true; 
-            } else { 
-                const defaultOption = document.createElement('option');
-                defaultOption.value = ""; 
-                defaultOption.textContent = "--- Select a Meet ---"; 
-                jsonFileSelector.appendChild(defaultOption);
-                jsonFileSelector.disabled = false; 
-            }
-
-            if (selectedSeason !== '' && selectedSeason !== 'all-seasons-explicit') { 
-                const allMeetsForSeasonOption = document.createElement('option');
-                allMeetsForSeasonOption.value = `all-meets-for-season-${selectedSeason}`; 
-                allMeetsForSeasonOption.textContent = `All Meets (${selectedSeason})`;
-                jsonFileSelector.appendChild(allMeetsForSeasonOption);
-            }
-
-
-            meetsToDisplay.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.fileName;
-                option.textContent = `${formatMMDDYYYY(item.meetDateDisplay)} - ${item.meetNameDisplay}`;
-                jsonFileSelector.appendChild(option);
-            });
-
-            if (selectedSeason === 'all-seasons-explicit') { 
-                const allResultsOption = document.createElement('option');
-                allResultsOption.value = "all-results";
-                allResultsOption.textContent = "All Results (All Weeks)";
-                jsonFileSelector.appendChild(allResultsOption);
-            }
-        }
-
-        // New function to format date ranges for headers
-        function formatHeaderDateRange(minDateObj, maxDateObj) {
-            if (!minDateObj || !maxDateObj || isNaN(minDateObj.getTime()) || isNaN(maxDateObj.getTime())) {
-                return "N/A Date Range";
-            }
-            const minMonth = minDateObj.toLocaleDateString('en-US', { month: 'short' });
-            const minDay = minDateObj.getDate();
-            const maxMonth = maxDateObj.toLocaleDateString('en-US', { month: 'short' });
-            const maxDay = maxDateObj.getDate();
-            const year = minDateObj.getFullYear(); 
-
-            if (minDateObj.getTime() === maxDateObj.getTime()) {
-                return formatMMDDYYYY(minDateObj.toISOString().split('T')[0]); 
-            } else if (minMonth === maxMonth) {
-                return `${minMonth} ${minDay} - ${maxDay}, ${year}`;
+            if (isSpecificMeetSelected && meetCourse === 'y') {
+                headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; 
             } else {
-                return `${minMonth} ${minDay} - ${maxMonth} ${maxDay}, ${year}`;
-            }
-        }
-
-
-        function updateReportHeaderDisplay(title, rawDateOrRange, isAllResults) {
-            const cleanedTitle = String(title || ''); 
-            let displayDate = "";
-
-            if (isAllResults) { 
-                // rawDateOrRange is already a formatted range string from fetchAndRenderData
-                displayDate = rawDateOrRange; 
-            } else { 
-                // Only format if rawDateOrRange is a single date string, otherwise use as is (for ranges)
-                // This logic is simplified; fetchAndRenderData should pass the correct format already.
-                if (typeof rawDateOrRange === 'string' && rawDateOrRange.match(/^\d{4}-\d{2}-\d{2}$/)) { // Checks for YYYY-MM-DD
-                    displayDate = formatMMDDYYYY(rawDateOrRange);
-                } else if (rawDateOrRange instanceof Date && !isNaN(rawDateOrRange.getTime())) { // If it's a Date object
-                    displayDate = formatMMDDYYYY(rawDateOrRange.toISOString().split('T')[0]);
-                }
-                else {
-                    displayDate = rawDateOrRange; // Assume it's already formatted or N/A
-                }
-            }
-            
-            reportHeaderInfoDiv.textContent = `${cleanedTitle} - ${displayDate}`;
-        }
-
-
-        async function fetchAndRenderData() {
-            const selectedMeetFileNameFromDropdown = jsonFileSelector.value; 
-            console.log(`fetchAndRenderData called with selectedMeetFileNameFromDropdown: '${selectedMeetFileNameFromDropdown}'`);
-            console.log(`Current filterSeasonInput.value: '${filterSeasonInput.value}'`);
-            console.log(`Current filterNameInput.value: '${filterNameInput.value}'`);
-            console.log(`Current filterStrokeInput.value: '${filterStrokeInput.value}'`);
-            
-            if (allAthleteData.length === 0) {
-                 const allFetchedRawDataPromises = weeklyFileNames.map(async (name) => {
-                    const filePath = new URL(name, window.location.href).toString();
-                    try {
-                        const response = await fetch(filePath);
-                        if (!response.ok) {
-                            console.warn(`Could not fetch ${filePath}. Skipping data load.`);
-                            return [];
-                        }
-                        const rawWeekData = await response.json();
-                        if (rawWeekData && rawWeekData.values && rawWeekData.fields) {
-                            return transformRawData(rawWeekData.values, rawWeekData.fields);
-                        }
-                        return [];
-                    } catch (error) {
-                        console.error(`Error fetching ${filePath}:`, error);
-                        return [];
-                    }
-                });
-                allAthleteData = (await Promise.all(allFetchedRawDataPromises)).flat();
-                console.log("All athlete data loaded:", allAthleteData.length, "records.");
-                populateUniqueSwimmersForAutocomplete(); 
+                headerHtml += `<th>Seed (SCM)</th><th>Final (SCM)</th>`; 
             }
 
-            let dataToProcess = [...allAthleteData]; 
-            
-            let headerTitle = "All Meets Combined"; 
-            let headerDate = ""; 
-            let isSpecificMeetSelectedFlag = false; 
-            let meetCourseForRendering = 'mixed'; 
+            headerHtml += `
+                <th>Place</th>
+                <th>Points</th>
+                <th>% Improvement</th>
+            `;
+            eventSubHeaderRow.innerHTML = headerHtml;
+            reportTableBody.appendChild(eventSubHeaderRow);
 
-            const nameFilter = filterNameInput.value.toLowerCase();
-            const strokeFilter = filterStrokeInput.value.toLowerCase();
-            const seasonFilter = filterSeasonInput.value;
-            
-            const isAllResultsSelectedExplicitly = selectedMeetFileNameFromDropdown === "all-results";
-            const isSpecificMeetSelectedInDropdown = selectedMeetFileNameFromDropdown && selectedMeetFileNameFromDropdown !== "all-results" && !selectedMeetFileNameFromDropdown.startsWith('all-meets-for-season-'); 
-            const isAllMeetsForSeasonSelected = selectedMeetFileNameFromDropdown.startsWith('all-meets-for-season-'); 
-            const isSeasonFilterActive = seasonFilter !== ''; 
-            const isAnyNameOrStrokeFilterActive = nameFilter !== '' || strokeFilter !== '';
-            const isNoFiltersApplied = !isSpecificMeetSelectedInDropdown && !isAllResultsSelectedExplicitly && !isAllMeetsForSeasonSelected && !isSeasonFilterActive && !isAnyNameOrStrokeFilterActive;
-            
-
-            // --- FILTERING LOGIC: Sequential application of filters ---
-
-            // Step 1: Handle initial default load (most recent file) OR explicit "all-results" OR specific meet selection
-            if (isNoFiltersApplied && weeklyFileNames.length > 0) {
-                // Scenario A: Initial page load / reset filters scenario (no explicit filters set).
-                const mostRecentFileName = weeklyFileNames[weeklyFileNames.length - 1];
-                const mostRecentFileMeta = allFileMetadata.find(meta => meta.fileName === mostRecentFileName);
-                
-                if (mostRecentFileMeta) {
-                    dataToProcess = allAthleteData.filter(athlete => { 
-                        const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
-                        const metaMeetNameClean = cleanStringForComparison(mostRecentFileMeta.meetName); 
-                        const athleteMeetDateClean = cleanDateStringForComparison(athlete.meetDate); 
-                        const metaMeetDateClean = cleanDateStringForComparison(mostRecentFileMeta.meetDate); 
-                        return athleteMeetNameClean === metaMeetNameClean && athleteMeetDateClean === metaMeetDateClean;
-                    });
-                    console.log(`Data filtered for default most recent meet (${mostRecentFileName}):`, dataToProcess.length, "records.");
-
-                    isSpecificMeetSelectedFlag = true; 
-                    meetCourseForRendering = mostRecentFileMeta.meetCourse; 
-                    headerTitle = mostRecentFileMeta.meetNameDisplay;
-                    headerDate = mostRecentFileMeta.meetDateDisplay;
-                } else {
-                    headerTitle = "No Data Loaded";
-                    headerDate = "";
-                    dataToProcess = []; 
+            const eventsByEventSwum = athleteGroup.events.reduce((acc, current) => {
+                if (!acc[current.eventSwum]) {
+                    acc[current.eventSwum] = [];
                 }
-            } else if (isSpecificMeetSelectedInDropdown) {
-                // Scenario B: A specific meet file is explicitly selected from dropdown.
-                isSpecificMeetSelectedFlag = true; 
-                const selectedFileMeta = allFileMetadata.find(meta => meta.fileName === selectedMeetFileNameFromDropdown);
-
-                if (selectedFileMeta) {
-                    headerTitle = selectedFileMeta.meetNameDisplay;
-                    headerDate = selectedFileMeta.meetDateDisplay;
-                    meetCourseForRendering = selectedFileMeta.meetCourse; 
-                    
-                    dataToProcess = allAthleteData.filter(athlete => { 
-                        const athleteMeetNameClean = cleanStringForComparison(athlete.meetName);
-                        const metaMeetNameClean = cleanStringForComparison(selectedFileMeta.meetName); 
-                        const athleteMeetDateClean = cleanDateStringForComparison(athlete.meetDate); 
-                        const metaMeetDateClean = cleanDateStringForComparison(selectedFileMeta.meetDate); 
-
-                        const isMatch = athleteMeetNameClean === metaMeetNameClean && athleteMeetDateClean === metaMeetDateClean;
-                        return isMatch;
-                    });
-                    console.log(`After Specific Meet Filter (${selectedMeetFileNameFromDropdown}):`, dataToProcess.length, "records.");
-
-                } else {
-                    console.warn(`Metadata for selected meet file ${selectedMeetFileNameFromDropdown} not found.`);
-                    dataToProcess = []; 
-                }
-            } else if (isAllResultsSelectedExplicitly) {
-                // Scenario C: "All Results" explicitly selected. `dataToProcess` is already `allAthleteData`.
-                // Header set below.
-            } else if (isAllMeetsForSeasonSelected) {
-                // Scenario D: "All Meets (This Season)" selected. Filter `dataToProcess` by the active season.
-                dataToProcess = allAthleteData.filter(athlete => {
-                    const meetYear = new Date(athlete.meetDate).getFullYear().toString();
-                    return meetYear === seasonFilter; 
-                });
-                headerTitle = `All Meets in Season ${seasonFilter}`;
-                meetCourseForRendering = 'mixed';
-                console.log(`After "All Meets for Season" Filter (${seasonFilter}):`, dataToProcess.length, "records.");
-            } else {
-                // Scenario E: `selectedMeetFileNameFromDropdown` is "" (empty), and not default load or explicit all-results/all-season.
-                // `dataToProcess` starts as `allAthleteData` and will be filtered by season/name/stroke below.
-            }
-
-
-            // --- Apply Remaining GLOBAL filters (Season, Name, Stroke) to `dataToProcess` ---
-            
-            // Apply Season Filter (only if it hasn't been handled by earlier explicit meet/all-meets-for-season)
-            if (isSeasonFilterActive && seasonFilter !== "all-seasons-explicit" && !isSpecificMeetSelectedInDropdown && !isAllMeetsForSeasonSelected) { 
-                dataToProcess = dataToProcess.filter(athlete => {
-                    const meetYear = new Date(athlete.meetDate).getFullYear().toString();
-                    return meetYear === seasonFilter;
-                });
-                console.log(`After secondary Season Filter (${seasonFilter}):`, dataToProcess.length, "records.");
-                headerTitle = `All Meets in Season ${seasonFilter}`;
-                meetCourseForRendering = 'mixed';
-            }
-
-            // Apply Name Filter (will filter based on the ID if selected from autocomplete)
-            const selectedAutocompleteId = filterNameInput.dataset.selectedId; 
-            if (nameFilter !== '') {
-                dataToProcess = dataToProcess.filter(athlete => {
-                    if (selectedAutocompleteId && athlete.id === selectedAutocompleteId) {
-                        return true; 
-                    }
-                    // Fallback to text search: clean both the input and the athlete's full name for robust comparison
-                    const cleanedNameFilter = cleanStringForComparison(nameFilter); // Clean the user's input
-                    const athleteFullNameCleaned = cleanStringForComparison(`${athlete.firstName} ${athlete.lastName} ${athlete.age} ${athlete.category}`); // Clean athlete's full ID for comparison
-                    
-                    return athleteFullNameCleaned.includes(cleanedNameFilter); // Check if cleaned athlete info contains cleaned input
-                });
-                console.log(`After Name Filter (${nameFilter}):`, dataToProcess.length, "records.");
-                if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly && !isAllMeetsForSeasonSelected && (nameFilter !== '' || strokeFilter !== '')) {
-                    headerTitle = `Filtered Results`;
-                }
-            }
-
-            if (strokeFilter !== '') {
-                dataToProcess = dataToProcess.filter(athlete => {
-                    return athlete.eventSwum.toLowerCase().includes(strokeFilter);
-                });
-                console.log(`After Stroke Filter (${strokeFilter}):`, dataToProcess.length, "records.");
-                 if (!isSpecificMeetSelectedFlag && !isAllResultsSelectedExplicitly && !isAllMeetsForSeasonSelected && (nameFilter !== '' || strokeFilter !== '')) {
-                    headerTitle = `Filtered Results`;
-                }
-            }
-            
-
-            // --- Final Header Determination and Render Call ---
-            filteredDataForDisplay = dataToProcess; 
-            
-            if (filteredDataForDisplay.length > 0) { 
-                const allDatesInFinalData = filteredDataForDisplay.map(d => new Date(d.meetDate)).sort((a,b) => a - b);
-                const finalMinDate = allDatesInFinalData[0];
-                const finalMaxDate = allDatesInFinalData[allDatesInFinalData.length - 1];
-                
-                if (!isSpecificMeetSelectedFlag) { 
-                    if (isAllResultsSelectedExplicitly || seasonFilter === "all-seasons-explicit") {
-                        headerTitle = "All Meets Combined";
-                        headerDate = formatHeaderDateRange(finalMinDate, finalMaxDate); // Use new function for range
-                    } else if (isSeasonFilterActive || nameFilter !== "" || strokeFilter !== "") {
-                        headerTitle = `Filtered Results`;
-                        if (seasonFilter !== "") {
-                            headerTitle += ` (Season ${seasonFilter})`;
-                        }
-                        headerDate = formatHeaderDateRange(finalMinDate, finalMaxDate); // Use new function for range
-                    } else { 
-                        headerTitle = "No Data Loaded for Filters"; 
-                        headerDate = "";
-                    }
-                    meetCourseForRendering = 'mixed';
-                }
-                // If isSpecificMeetSelectedFlag is true, headerTitle/Date/Course are already set.
-            } else { 
-                headerTitle = "No Data Loaded for Filters";
-                headerDate = "";
-            }
-
-            console.log("Final filtered data for rendering (after all steps):", filteredDataForDisplay.length, "records");
-            
-            renderTable(filteredDataForDisplay, isSpecificMeetSelectedFlag, meetCourseForRendering);
-            updateReportHeaderDisplay(headerTitle, headerDate, isAllResultsSelectedExplicitly || isAllMeetsForSeasonSelected); 
-        }
-
-        function renderTable(data, isSpecificMeetSelected = false, meetCourse = 'mixed') { 
-            console.log(`RENDER TABLE DEBUG: isSpecificMeetSelected=${isSpecificMeetSelected}, meetCourse=${meetCourse}`); 
-            reportTableBody.innerHTML = '';
-            summaryChartTableBody.innerHTML = ''; 
-            individualAthleteSummary.style.display = 'none'; 
-
-            const athletesGrouped = data.reduce((acc, current) => {
-                const uniqueAthleteGroupId = `${current.lastName}-${current.firstName}-${current.category}`; 
-                
-                if (!acc[uniqueAthleteGroupId]) {
-                    acc[uniqueAthleteGroupId] = {
-                        id: uniqueAthleteGroupId,
-                        lastName: current.lastName, 
-                        firstName: current.firstName, 
-                        category: current.category, 
-                        events: []
-                    };
-                }
-                acc[uniqueAthleteGroupId].events.push(current);
+                acc[current.eventSwum].push(current);
                 return acc;
             }, {});
 
-            const athleteGroups = Object.values(athletesGrouped).sort((a, b) => {
-                const lastNameCompare = a.lastName.localeCompare(b.lastName);
-                if (lastNameCompare !== 0) {
-                    return lastNameCompare;
-                }
-                return a.firstName.localeCompare(b.firstName);
-            });
+            const sortedEventTypes = Object.keys(eventsByEventSwum).sort();
 
-            let colspan = 9; 
-            if (isSpecificMeetSelected && meetCourse === 'y') {
-                colspan = 10; 
-            }
+            sortedEventTypes.forEach(eventSwumType => {
+                const eventPerformances = eventsByEventSwum[eventSwumType].sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
 
-            if (athleteGroups.length === 0) {
-                const noResultsRow = document.createElement('tr');
-                noResultsRow.innerHTML = `
-                    <td colspan="${colspan}" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        No results found matching your filters.
-                    </td>
-                `;
-                reportTableBody.appendChild(noResultsRow);
-                return;
-            }
+                eventPerformances.forEach(eventData => {
+                    const seedSeconds = timeToSeconds(eventData.seedTimeOriginal); 
+                    const resultSeconds = timeToSeconds(eventData.resultTimeOriginal); 
 
-            const isSingleAthleteView = athleteGroups.length === 1 && filterNameInput.value.trim() !== '';
-            let singleAthleteDisplayName = '';
-
-            athleteGroups.forEach(athleteGroup => {
-                let athleteDisplayName = `${athleteGroup.lastName}, ${athleteGroup.firstName}`;
-                if (isSpecificMeetSelected && athleteGroup.events.length > 0) {
-                    athleteDisplayName += ` (${athleteGroup.events[0].age})`; 
-                }
-                athleteDisplayName += ` - ${athleteGroup.category}`;
-
-                if (isSingleAthleteView) {
-                    singleAthleteDisplayName = athleteDisplayName;
-                }
-
-                const athleteHeaderRow = document.createElement('tr');
-                athleteHeaderRow.className = 'athlete-header-row';
-                athleteHeaderRow.innerHTML = `
-                    <td colspan="${colspan}" style="background-color: #0156B3; color: white; text-align: left !important; font-weight: bold; padding: 6px 10px;">${athleteDisplayName}</td>
-                `;
-                reportTableBody.appendChild(athleteHeaderRow);
-
-                const eventSubHeaderRow = document.createElement('tr');
-                eventSubHeaderRow.className = 'event-subheader-row';
-
-                let headerHtml = `
-                    <th style="width: 1%;"></th> <th>Meet Date</th>
-                    <th>Meet Name</th>
-                    <th>Event</th>
-                `;
-
-                if (isSpecificMeetSelected && meetCourse === 'y') {
-                    headerHtml += `<th>Seed (Yds)</th><th>Final (Yds)</th><th>SCM Time</th>`; 
-                } else {
-                    headerHtml += `<th>Seed (SCM)</th><th>Final (SCM)</th>`; 
-                }
-
-                headerHtml += `
-                    <th>Place</th>
-                    <th>Points</th>
-                    <th>% Improvement</th>
-                `;
-                eventSubHeaderRow.innerHTML = headerHtml;
-                reportTableBody.appendChild(eventSubHeaderRow);
-
-                const eventsByEventSwum = athleteGroup.events.reduce((acc, current) => {
-                    if (!acc[current.eventSwum]) {
-                        acc[current.eventSwum] = [];
-                    }
-                    acc[current.eventSwum].push(current);
-                    return acc;
-                }, {});
-
-                const sortedEventTypes = Object.keys(eventsByEventSwum).sort();
-
-                sortedEventTypes.forEach(eventSwumType => {
-                    const eventPerformances = eventsByEventSwum[eventSwumType].sort((a, b) => new Date(a.meetDate) - new Date(b.meetDate));
-
-                    eventPerformances.forEach(eventData => {
-                        const seedSeconds = timeToSeconds(eventData.seedTimeOriginal); 
-                        const resultSeconds = timeToSeconds(eventData.resultTimeOriginal); 
-
-                        let improvement = 'N/A';
-                        if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
-                            improvement = (((seedSeconds - resultSeconds) / seedSeconds) * 100).toFixed(2);
-                            if (parseFloat(improvement) > 0) {
-                                improvement = `+${improvement}%`;
-                            } else {
-                                improvement = `${improvement}%`;
-                            }
-                        }
-
-                        let cellsHtml = `
-                            <td style="width: 1%;"></td> 
-                            <td>${formatMMDDYYYY(eventData.meetDate)}</td>
-                            <td>${eventData.meetName}</td>
-                            <td>${eventData.eventSwum}</td>
-                        `;
-
-                        if (isSpecificMeetSelected && meetCourse === 'y') {
-                            cellsHtml += `
-                                <td>${eventData.seedTimeOriginal}</td> 
-                                <td>${eventData.resultTimeOriginal}</td> 
-                                <td>${eventData.resultTimeSCM}</td> 
-                            `;
+                    let improvement = 'N/A';
+                    if (seedSeconds !== Infinity && resultSeconds !== Infinity && seedSeconds > 0) {
+                        improvement = (((seedSeconds - resultSeconds) / seedSeconds) * 100).toFixed(2);
+                        if (parseFloat(improvement) > 0) {
+                            improvement = `+${improvement}%`;
                         } else {
-                            let displaySeedSCM = eventData.seedTimeSCM;
-                            if (eventData.seedConverted) { 
-                                displaySeedSCM += '*';
-                            }
-                            let displayFinalSCM = eventData.resultTimeSCM;
-                            if (eventData.finalConverted) { 
-                                displayFinalSCM += '*';
-                            }
-                            cellsHtml += `
-                                <td>${displaySeedSCM}</td> 
-                                <td>${displayFinalSCM}</td> 
-                            `;
+                            improvement = `${improvement}%`;
                         }
-
-                        cellsHtml += `
-                            <td>${eventData.place}</td>
-                            <td>${eventData.points}</td>
-                            <td>${improvement}</td>
-                        `;
-                        const eventRow = document.createElement('tr');
-                        eventRow.className = 'event-data-row hover:bg-gray-50';
-                        eventRow.innerHTML = cellsHtml;
-                        reportTableBody.appendChild(eventRow);
-                    });
-
-                    if (isSingleAthleteView && eventPerformances.length > 1) {
-                        const firstPerformance = eventPerformances[0];
-                        const lastPerformance = eventPerformances[eventPerformances.length - 1];
-
-                        const firstTime = timeToSeconds(firstPerformance.resultTimeOriginal); 
-                        const lastTime = timeToSeconds(lastPerformance.resultTimeOriginal);
-
-                        let overallImprovement = 'N/A';
-                        if (firstTime !== Infinity && lastTime !== Infinity && firstTime > 0) {
-                            const improvementPercentage = (((firstTime - lastTime) / firstTime) * 100).toFixed(2);
-                            if (parseFloat(improvementPercentage) > 0) {
-                                overallImprovement = `+${improvementPercentage}%`;
-                            } else {
-                                overallImprovement = `${improvementPercentage}%`;
-                            }
-                        }
-
-                        let displayFirstTimeSummary = firstPerformance.resultTimeSCM;
-                        if (firstPerformance.finalConverted) {
-                            displayFirstTimeSummary += '*';
-                        }
-                        let displayLastTimeSummary = lastPerformance.resultTimeSCM;
-                        if (lastPerformance.finalConverted) {
-                            displayLastTimeSummary += '*';
-                        }
-                        
-                        const summaryChartRow = document.createElement('tr');
-                        summaryChartRow.innerHTML = `
-                            <td>${eventSwumType}</td>
-                            <td>${displayFirstTimeSummary}</td>
-                            <td>${displayLastTimeSummary}</td>
-                            <td>${overallImprovement}</td>
-                        `;
-                        summaryChartTableBody.appendChild(summaryChartRow);
                     }
-                });
-            });
 
-            if (isSingleAthleteView && summaryChartTableBody.children.length > 0) {
-                summaryChartTitle.textContent = `Overall Improvement for ${singleAthleteDisplayName}`;
-                individualAthleteSummary.style.display = 'block';
-            }
+                    let cellsHtml = `
+                        <td style="width: 1%;"></td> 
+                        <td>${formatMMDDYYYY(eventData.meetDate)}</td>
+                        <td>${eventData.meetName}</td>
+                        <td>${eventData.eventSwum}</td>
+                    `;
+
+                    if (isSpecificMeetSelected && meetCourse === 'y') {
+                        cellsHtml += `
+                            <td>${eventData.seedTimeOriginal}</td> 
+                            <td>${eventData.resultTimeOriginal}</td> 
+                            <td>${eventData.resultTimeSCM}</td> 
+                        `;
+                    } else {
+                        let displaySeedSCM = eventData.seedTimeSCM;
+                        if (eventData.seedConverted) { 
+                            displaySeedSCM += '*';
+                        }
+                        let displayFinalSCM = eventData.resultTimeSCM;
+                        if (eventData.finalConverted) { 
+                            displayFinalSCM += '*';
+                        }
+                        cellsHtml += `
+                            <td>${displaySeedSCM}</td> 
+                            <td>${displayFinalSCM}</td> 
+                        `;
+                    }
+
+                    cellsHtml += `
+                        <td>${eventData.place}</td>
+                        <td>${eventData.points}</td>
+                        <td>${improvement}</td>
+                    `;
+                    const eventRow = document.createElement('tr');
+                    eventRow.className = 'event-data-row hover:bg-gray-50';
+                    eventRow.innerHTML = cellsHtml;
+                    reportTableBody.appendChild(eventRow);
+                });
+
+                if (isSingleAthleteView && eventPerformances.length > 1) {
+                    const firstPerformance = eventPerformances[0];
+                    const lastPerformance = eventPerformances[eventPerformances.length - 1];
+
+                    const firstTime = timeToSeconds(firstPerformance.resultTimeOriginal); 
+                    const lastTime = timeToSeconds(lastPerformance.resultTimeOriginal);
+
+                    let overallImprovement = 'N/A';
+                    if (firstTime !== Infinity && lastTime !== Infinity && firstTime > 0) {
+                        const improvementPercentage = (((firstTime - lastTime) / firstTime) * 100).toFixed(2);
+                        if (parseFloat(improvementPercentage) > 0) {
+                            overallImprovement = `+${improvementPercentage}%`;
+                        } else {
+                            overallImprovement = `${improvementPercentage}%`;
+                        }
+                    }
+
+                    let displayFirstTimeSummary = firstPerformance.resultTimeSCM;
+                    if (firstPerformance.finalConverted) {
+                        displayFirstTimeSummary += '*';
+                    }
+                    let displayLastTimeSummary = lastPerformance.resultTimeSCM;
+                    if (lastPerformance.finalConverted) {
+                        displayLastTimeSummary += '*';
+                    }
+                    
+                    const summaryChartRow = document.createElement('tr');
+                    summaryChartRow.innerHTML = `
+                        <td>${eventSwumType}</td>
+                        <td>${displayFirstTimeSummary}</td>
+                        <td>${displayLastTimeSummary}</td>
+                        <td>${overallImprovement}</td>
+                    `;
+                    summaryChartTableBody.appendChild(summaryChartRow);
+                }
+            });
+        });
+
+        if (isSingleAthleteView && summaryChartTableBody.children.length > 0) {
+            summaryChartTitle.textContent = `Overall Improvement for ${singleAthleteDisplayName}`;
+            individualAthleteSummary.style.display = 'block';
         }
+    }
 
         if (applyFiltersButton) applyFiltersButton.remove(); 
 
