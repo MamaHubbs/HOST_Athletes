@@ -84,9 +84,9 @@
       const selectSeason = document.getElementById('seasonFilter');
       const toggleMeetScope = document.getElementById('meetScopeToggle');
 
-      function normalizeEventName(name) {
-        return name.replace(/\d{2}-\d{2}\s*/g, '').trim();
-      }
+function normalizeEventName(name) {
+  return name.replace(/\d{2}-\d{2}\s*/, '').trim();
+}
 
       function updateSpecialtyChart(swimmerId) {
         const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
@@ -161,10 +161,16 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
           const opt = document.createElement('option'); opt.value = id; opt.textContent = name;
           selectSwimmer.appendChild(opt);
         });
-        [...eventSet].sort().forEach(e => {
-          const opt = document.createElement('option'); opt.value = e; opt.textContent = e;
-          selectEvent.appendChild(opt);
-        });
+const seen = new Set();
+[...eventSet].sort().forEach(e => {
+  if (!seen.has(e)) {
+    const opt = document.createElement('option');
+    opt.value = e;
+    opt.textContent = e;
+    selectEvent.appendChild(opt);
+    seen.add(e);
+  }
+});
         [...strokeSet].sort().forEach(s => {
           const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
           selectStroke.appendChild(opt);
@@ -176,15 +182,34 @@ swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && is
       }
 
       function handleFilters() {
-        const swimmerId = selectSwimmer.value;
+const swimmerId = selectSwimmer.value;
+const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
         const eventLabel = selectEvent.value;
         if (swimmerId) updateSpecialtyChart(swimmerId);
         if (swimmerId && eventLabel) updateProgressionChart(swimmerId, eventLabel);
       }
 
-      [selectSwimmer, selectEvent, selectStroke, selectSeason, toggleMeetScope].forEach(el => {
-        el.addEventListener('change', handleFilters);
-      });
+// Clear and repopulate event and stroke dropdowns
+selectEvent.innerHTML = '<option value="">All</option>';
+selectStroke.innerHTML = '<option value="">All</option>';
+
+const localEventSet = new Set();
+const localStrokeSet = new Set();
+
+swimmerData.forEach(row => {
+  localEventSet.add(normalizeEventName(row.eventSwum));
+  const stroke = row.eventSwum.match(/Freestyle|Backstroke|Breaststroke|Butterfly|IM/i)?.[0];
+  if (stroke) localStrokeSet.add(stroke);
+});
+
+[...localEventSet].sort().forEach(e => {
+  const opt = document.createElement('option'); opt.value = e; opt.textContent = e;
+  selectEvent.appendChild(opt);
+});
+[...localStrokeSet].sort().forEach(s => {
+  const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
+  selectStroke.appendChild(opt);
+});
 
       async function fetchAllData() {
         const allData = await Promise.all(
