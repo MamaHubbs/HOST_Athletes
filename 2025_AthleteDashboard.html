@@ -111,7 +111,8 @@
         const swimmerData = allAthleteData.filter(d => d.id === swimmerId);
         const allDates = [...new Set(swimmerData.map(d => d.meetDate))].sort((a, b) => new Date(a) - new Date(b));
         const timesByDate = {};
-        swimmerData.filter(d => normalizeEventName(d.eventSwum) === eventLabel && isFinite(timeToSeconds(d.resultTime)))
+        const normEventLabel = normalizeEventName(eventLabel);
+swimmerData.filter(d => normalizeEventName(d.eventSwum) === normEventLabel && isFinite(timeToSeconds(d.resultTime)))
           .forEach(d => {
             timesByDate[d.meetDate] = timeToSeconds(d.resultTime);
           });
@@ -146,6 +147,7 @@
         const eventSet = new Set();
         const strokeSet = new Set();
         const seasonSet = new Set();
+        selectEvent.disabled = false;
 
         allAthleteData.forEach(row => {
           const id = `${row.lastName}-${row.firstName}`.toLowerCase();
